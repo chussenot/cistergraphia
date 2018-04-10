@@ -2,10 +2,10 @@ cistergraphia
 =============
 
 Cipher your message with some techniques to a number sequence
-and then use the cistercian numbers and nice placement.
+and then use the cistercian numbers and a nice snail placement.
 
 
-Referecnes
+References
 ==========
 
 - [cistercian numbers](https://glossographia.wordpress.com/2013/07/09/cistercian-number-magic-of-the-boy-scouts/)
