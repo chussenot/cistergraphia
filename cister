@@ -36,7 +36,7 @@ message = "Salut, les amis!"
 
 def cister(message)
   message.downcase
-  .gsub(/\W/, ' ')
+  .gsub(/\W/, '')
   .squeeze
   .chars
   .map do |c|
