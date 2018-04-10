@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+
+TABLET = {
+  a: 1,
+  b: 2,
+  c: 3,
+  d: 4,
+  e: 5,
+  f: 6,
+  g: 7,
+  h: 8,
+  i: 9,
+  j: 10,
+  k: 11,
+  l: 12,
+  m: 13,
+  n: 14,
+  o: 15,
+  p: 16,
+  q: 18,
+  r: 19,
+  s: 100,
+  t: 200,
+  u: 300,
+  v: 400,
+  w: 500,
+  x: 600,
+  y: 700,
+  z: 800,
+  " ": 900
+}
+
+message = "Salut, les amis!"
+
+def cister(message)
+  message.downcase
+  .gsub(/\W/, ' ')
+  .squeeze
+  .chars
+  .map do |c| 
+    n = TABLET[c.to_sym]
+    r = rand(n)
+    [n - r, r].shuffle
+   end.join(",")
+end
+
+puts cister(message)
