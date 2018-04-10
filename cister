@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'pry'
+
 TABLET = {
   a: 1,
   b: 2,
@@ -37,11 +39,16 @@ def cister(message)
   .gsub(/\W/, ' ')
   .squeeze
   .chars
-  .map do |c| 
-    n = TABLET[c.to_sym]
+  .map do |c|
+    n = TABLET[c.to_sym] * 10
     r = rand(n)
     [n - r, r].shuffle
-   end.join(",")
+  end.flatten
 end
 
-puts cister(message)
+def snail(array)
+  array.empty? ? [] : array.shift + snail(array.transpose.reverse)
+end
+
+sequence = cister(message)
+puts sequence.join '|'
