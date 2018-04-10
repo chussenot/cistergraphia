@@ -46,6 +46,17 @@ def cister(message)
   end.flatten
 end
 
+# Extract units, tens, thousands, hundreds
+def spread(num)
+  cs = num.to_s.chars
+  [].tap do |o|
+    while cs.size > 0 do
+      c = cs.shift
+      o << (c + Array.new(cs.length) {|i| 0 }.join ).to_i
+    end
+  end
+end
+
 def snail(array)
   array.empty? ? [] : array.shift + snail(array.transpose.reverse)
 end
