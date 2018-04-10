@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'rasem'
 require 'pry'
 
 TABLET = {
@@ -47,7 +48,7 @@ def cister(message)
 end
 
 # Extract units, tens, thousands, hundreds
-def spread(num)
+def digits(num)
   cs = num.to_s.chars
   [].tap do |o|
     while cs.size > 0 do
@@ -62,4 +63,24 @@ def snail(array)
 end
 
 sequence = cister(message)
+sequence.map!{|n| digits(n) }
+
+img = Rasem::SVGImage.new(:width=>100, :height=>100) do
+  # Line that always appear
+  line 50, 0, 50, 100
+  # Lines that may or may not appear depending of the digit
+  # Units
+  line 50, 0, 100, 0
+  line 50, 50, 100, 0
+  line 50, 50, 100, 50
+  line 50, 0, 100, 50
+  # Tens
+  # Hundreds
+  # Thousands
+end
+
+File.open("tmp/test.svg", "w") do |f|
+  img.write(f)
+end
+
 puts sequence.join '|'
