@@ -62,25 +62,39 @@ def snail(array)
   array.empty? ? [] : array.shift + snail(array.transpose.reverse)
 end
 
+def symbol()
+  img = Rasem::SVGImage.new(width: 100, height: 100) do
+    # Line that always appear
+    line 50, 0, 50, 100
+    # Lines that may or may not appear depending of the digit
+    # Units
+    line 50, 0, 100, 0
+    line 50, 50, 100, 0
+    line 50, 50, 100, 50
+    line 100, 0, 100, 50
+    # Tens
+    line 50, 0, 0, 0
+    line 0, 50, 0, 0
+    line 50, 50, 0, 50
+    line 50, 50, 0, 0
+    # Hundreds
+    line 50, 50, 100, 50
+    line 100, 50, 100, 100
+    line 50, 100, 100, 100
+    line 50, 50, 100, 100
+    # Thousands
+    line 50, 50, 0, 50
+    line 50, 50, 0, 100
+    line 0, 50, 0, 100
+    line 50, 100, 0, 100
+  end
+
+  File.open("tmp/test.svg", "w") do |f|
+    img.write(f)
+  end
+end
+
 sequence = cister(message)
 sequence.map!{|n| digits(n) }
-
-img = Rasem::SVGImage.new(:width=>100, :height=>100) do
-  # Line that always appear
-  line 50, 0, 50, 100
-  # Lines that may or may not appear depending of the digit
-  # Units
-  line 50, 0, 100, 0
-  line 50, 50, 100, 0
-  line 50, 50, 100, 50
-  line 50, 0, 100, 50
-  # Tens
-  # Hundreds
-  # Thousands
-end
-
-File.open("tmp/test.svg", "w") do |f|
-  img.write(f)
-end
-
 puts sequence.join '|'
+symbol
