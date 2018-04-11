@@ -37,8 +37,9 @@ message = "Salut, les amis!"
 
 def cister(message)
   message.downcase
-  .gsub(/\W/, '')
+  .gsub(/\W/, ' ')
   .squeeze
+  .strip
   .chars
   .map do |c|
     n = TABLET[c.to_sym] * 10
@@ -62,63 +63,66 @@ def snail(array)
   array.empty? ? [] : array.shift + snail(array.transpose.reverse)
 end
 
-def symbol(num)
+def symbol(d)
   img = Rasem::SVGImage.new(width: 100, height: 100) do
     # Line that always appear
     line 50, 0, 50, 100
     # Lines that may or may not appear depending of the digit
-    case num
-      when 1
-        line 50, 0, 100, 0 # 1579 -
-      when 2
-        line 50, 50, 100, 50 # 289 _
-      when 3
-        line 50, 0, 100, 50 # 3 \
-      when 4
-        line 50, 50, 100, 0 # 45 /
-      when 5
-        line 50, 0, 100, 0 # 1579 -
-        line 50, 50, 100, 0 # 45 /
-      when 6
-        line 100, 0, 100, 50 # 6789 |
-      when 7
-        line 50, 0, 100, 0 # 1579 -
-        line 100, 0, 100, 50 # 6789 |
-      when 8
-        line 100, 0, 100, 50 # 6789 |
-        line 50, 50, 100, 50 # 289 _
-      when 9
-        line 50, 0, 100, 0 # 1579 -
-        line 100, 0, 100, 50 # 6789 |
-        line 50, 50, 100, 50 # 289 _
-      when 10
-      when 20
-      when 30
-      when 40
-      when 50
-      when 60
-      when 70
-      when 80
-      when 90
-      when 100
-      when 200
-      when 300
-      when 400
-      when 500
-      when 600
-      when 700
-      when 800
-      when 900
-      when 1000
-      when 2000
-      when 3000
-      when 4000
-      when 5000
-      when 6000
-      when 7000
-      when 8000
-      when 9000
+    d.each do |num|
+      case num
+        when 1
+          line 50, 0, 100, 0 # 1579 -
+        when 2
+          line 50, 50, 100, 50 # 289 _
+        when 3
+          line 50, 0, 100, 50 # 3 \
+        when 4
+          line 50, 50, 100, 0 # 45 /
+        when 5
+          line 50, 0, 100, 0 # 1579 -
+          line 50, 50, 100, 0 # 45 /
+        when 6
+          line 100, 0, 100, 50 # 6789 |
+        when 7
+          line 50, 0, 100, 0 # 1579 -
+          line 100, 0, 100, 50 # 6789 |
+        when 8
+          line 100, 0, 100, 50 # 6789 |
+          line 50, 50, 100, 50 # 289 _
+        when 9
+          line 50, 0, 100, 0 # 1579 -
+          line 100, 0, 100, 50 # 6789 |
+          line 50, 50, 100, 50 # 289 _
+        when 10
+        when 20
+        when 30
+        when 40
+        when 50
+        when 60
+        when 70
+        when 80
+        when 90
+        when 100
+        when 200
+        when 300
+        when 400
+        when 500
+        when 600
+        when 700
+        when 800
+        when 900
+        when 1000
+        when 2000
+        when 3000
+        when 4000
+        when 5000
+        when 6000
+        when 7000
+        when 8000
+        when 9000
+      end
     end
+
     # Units
     # line 50, 0, 100, 0 # 1579 -
     # line 50, 50, 100, 0 # 45 /
@@ -150,4 +154,4 @@ end
 sequence = cister(message)
 sequence.map!{|n| digits(n) }
 puts sequence.join '|'
-symbol(8)
+symbol([8])
