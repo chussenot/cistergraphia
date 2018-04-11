@@ -68,10 +68,11 @@ def symbol()
     line 50, 0, 50, 100
     # Lines that may or may not appear depending of the digit
     # Units
-    line 50, 0, 100, 0
-    line 50, 50, 100, 0
-    line 50, 50, 100, 50
-    line 100, 0, 100, 50
+    line 50, 0, 100, 0 # 1579 -
+    line 50, 50, 100, 0 # 45 /
+    line 100, 0, 100, 50 # 6789 |
+    line 50, 0, 100, 50 # 3 \
+    line 50, 50, 100, 50 # 289 _
     # Tens
     line 50, 0, 0, 0
     line 0, 50, 0, 0
