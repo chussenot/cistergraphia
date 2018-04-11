@@ -91,6 +91,33 @@ def symbol(num)
         line 50, 0, 100, 0 # 1579 -
         line 100, 0, 100, 50 # 6789 |
         line 50, 50, 100, 50 # 289 _
+      when 10
+      when 20
+      when 30
+      when 40
+      when 50
+      when 60
+      when 70
+      when 80
+      when 90
+      when 100
+      when 200
+      when 300
+      when 400
+      when 500
+      when 600
+      when 700
+      when 800
+      when 900
+      when 1000
+      when 2000
+      when 3000
+      when 4000
+      when 5000
+      when 6000
+      when 7000
+      when 8000
+      when 9000
     end
     # Units
     # line 50, 0, 100, 0 # 1579 -
@@ -99,10 +126,10 @@ def symbol(num)
     # line 50, 0, 100, 50 # 3 \
     # line 50, 50, 100, 50 # 289 _
     # # Tens
-    # line 50, 0, 0, 0
-    # line 0, 50, 0, 0
-    # line 50, 50, 0, 50
-    # line 50, 50, 0, 0
+    # line 50, 0, 0, 0 # 1579 -
+    # line 0, 50, 0, 0 # 6789 |
+    # line 50, 50, 0, 50 # 289 _
+    # line 50, 50, 0, 0 # 45 \
     # # Hundreds
     # line 50, 50, 100, 50
     # line 100, 50, 100, 100
