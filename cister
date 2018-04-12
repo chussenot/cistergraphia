@@ -63,6 +63,38 @@ def snail(array)
   array.empty? ? [] : array.shift + snail(array.transpose.reverse)
 end
 
+# Insert at random place symbols.
+# Every symbol before the 9999 symbol
+# should be ignored to uncipher the message
+def be_evil(array)
+  # Should be implemented
+end
+
+
+# Units
+# line 50, 0, 100, 0 # 1579 -
+# line 50, 50, 100, 0 # 45 /
+# line 100, 0, 100, 50 # 6789 |
+# line 50, 0, 100, 50 # 3 \
+# line 50, 50, 100, 50 # 289 _
+# # Tens
+# line 50, 0, 0, 0 # 1579 -
+# line 0, 50, 0, 0 # 6789 |
+# line 50, 50, 0, 50 # 289 _
+# line 50, 50, 0, 0 # 45 \
+# line 50, 0, 0, 50 # 3 /
+# # Hundreds
+# line 50, 50, 100, 50 # 289 -
+# line 100, 50, 100, 100 # 1579 _
+# line 50, 100, 100, 100 # 6789 |
+# line 50, 50, 100, 100 # 45 \
+# line 50, 100, 100, 50 # 3 /
+# # Thousands
+# line 50, 50, 0, 50 # 289 -
+# line 50, 50, 0, 100 # 45 /
+# line 0, 50, 0, 100 # 6789 |
+# line 50, 100, 0, 100 # 1579 _
+# line 50, 100, 0, 50 # 3 \
 def symbol(d, path)
   img = Rasem::SVGImage.new(width: 100, height: 100) do
     # Line that always appear
@@ -94,56 +126,76 @@ def symbol(d, path)
           line 100, 0, 100, 50 # 6789 |
           line 50, 50, 100, 50 # 289 _
         when 10
+          line 50, 0, 0, 0 # 1579 -
         when 20
+          line 50, 50, 0, 50 # 289 _
         when 30
+          line 50, 0, 0, 50 # 3 /
         when 40
+          line 50, 50, 0, 0 # 45 \
         when 50
+          line 50, 50, 0, 0 # 45 \
+          line 50, 0, 0, 0 # 1579 -
         when 60
+          line 0, 50, 0, 0 # 6789 |
         when 70
+          line 0, 50, 0, 0 # 6789 |
+          line 50, 0, 0, 0 # 1579 -
         when 80
+          line 50, 50, 0, 50 # 289 _
+          line 0, 50, 0, 0 # 6789 |
         when 90
+          line 0, 50, 0, 0 # 6789 |
+          line 50, 0, 0, 0 # 1579 -
+          line 50, 50, 0, 50 # 289 _
         when 100
+          line 50, 100, 100, 100 # 1579 _
         when 200
+          line 50, 50, 100, 50 # 289 -
         when 300
+          line 50, 100, 100, 50 # 3 /
         when 400
+          line 50, 50, 100, 100 # 45 \
         when 500
+          line 50, 50, 100, 100 # 45 \
+          line 50, 100, 100, 100 # 1579 _
         when 600
+          line 100, 50, 100, 100 # 6789 |
         when 700
+          line 100, 50, 100, 100 # 6789 |
+          line 50, 100, 100, 100 # 1579 _
         when 800
+          line 100, 50, 100, 100 # 6789 |
+          line 50, 50, 100, 50 # 289 -
         when 900
+          line 100, 50, 100, 100 # 6789 |
+          line 50, 100, 100, 100 # 1579 _
+          line 50, 50, 100, 50 # 289 -
         when 1000
+          line 50, 100, 0, 100 # 1579 _
         when 2000
+          line 50, 50, 0, 50 # 289 -
         when 3000
+          line 50, 100, 0, 50 # 3 \
         when 4000
+          line 50, 50, 0, 100 # 45 /
         when 5000
+          line 50, 50, 0, 100 # 45 /
+          line 50, 100, 0, 100 # 1579 _
         when 6000
+          line 0, 50, 0, 100 # 6789 |
         when 7000
+          line 50, 100, 0, 100 # 1579 _
+          line 0, 50, 0, 100 # 6789 |
         when 8000
+          line 0, 50, 0, 100 # 6789 |
+          line 50, 50, 0, 50 # 289 -
         when 9000
+          line 0, 50, 0, 100 # 6789 |
+          line 50, 100, 0, 100 # 1579 _
+          line 50, 50, 0, 50 # 289 -
       end
     end
-
-    # Units
-    # line 50, 0, 100, 0 # 1579 -
-    # line 50, 50, 100, 0 # 45 /
-    # line 100, 0, 100, 50 # 6789 |
-    # line 50, 0, 100, 50 # 3 \
-    # line 50, 50, 100, 50 # 289 _
-    # # Tens
-    # line 50, 0, 0, 0 # 1579 -
-    # line 0, 50, 0, 0 # 6789 |
-    # line 50, 50, 0, 50 # 289 _
-    # line 50, 50, 0, 0 # 45 \
-    # # Hundreds
-    # line 50, 50, 100, 50
-    # line 100, 50, 100, 100
-    # line 50, 100, 100, 100
-    # line 50, 50, 100, 100
-    # # Thousands
-    # line 50, 50, 0, 50
-    # line 50, 50, 0, 100
-    # line 0, 50, 0, 100
-    # line 50, 100, 0, 100
   end
 
   File.open(path, "w") do |f|
@@ -154,5 +206,4 @@ end
 sequence = cister(message)
 sequence.map!{|n| digits(n) }
 puts sequence.join '|'
-
-(1..9).each {|n| symbol([n], "tmp/#{n}.svg")}
+(1..9999).each {|n| symbol(digits(n), "tmp/#{n}.svg")}
