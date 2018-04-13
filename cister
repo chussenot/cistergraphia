@@ -36,7 +36,7 @@ TABLET = {
 message = <<EOS
 Louis de Rouvroy, duc de Saint-Simon, fut l'un des favoris de la cour
 de Louis XIV. Grand seigneur, il eut le privilège de loger à Versailles
-et d'y observer les intrigues de palais. Durant plus de trente ans, 
+et d'y observer les intrigues de palais. Durant plus de trente ans,
 Saint-Simon va être l'historiographe du roi et de la cour.
 EOS
 
@@ -75,7 +75,7 @@ def be_evil(array)
   array.insert(
     rand(0..array.length),
     [rand(9999), 9999]
-  )
+  ).flatten!
 end
 
 # Find the perfect square
@@ -212,12 +212,15 @@ def symbol(ds, index)
 end
 
 sequence = cister(message)
+until perfect_square?(sequence.size) do
+  be_evil(sequence)
+end
+
 SPACE = 20
 symbols_size = sequence.size
 path = "tmp/inline.svg"
 img = Rasem::SVGImage.new(width: 100 * sequence.size , height: 100) do
-  sequence.map!{|n| digits(n) }
-  sequence.each_with_index {|ds, index| symbol(ds, index)}
+  sequence.each_with_index {|n, index| symbol(digits(n), index)}
 end
 File.open(path, "w") do |f|
   img.write(f)
