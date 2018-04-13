@@ -4,6 +4,7 @@ cistergraphia
 Cipher your message with some techniques to a number sequence
 and then use the cistercian numbers and a nice snail placement.
 
+![chars](chars.png)
 
 References
 ==========
