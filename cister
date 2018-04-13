@@ -3,6 +3,7 @@
 require 'rasem'
 require 'pry'
 
+SPACE = 20
 TABLET = {
   a: 1,
   b: 2,
@@ -71,7 +72,7 @@ end
 # Insert at random place symbols.
 # Every symbol before the 9999 symbol
 # should be ignored to uncipher the message
-def be_evil(array)
+def inject_evil_symbols(array)
   array.insert(
     rand(0..array.length),
     [rand(9999), 9999]
@@ -213,11 +214,9 @@ end
 
 sequence = cister(message)
 until perfect_square?(sequence.size) do
-  be_evil(sequence)
+  inject_evil_symbols(sequence)
 end
-
-SPACE = 20
-symbols_size = sequence.size
+puts sequence.join '|'
 path = "tmp/inline.svg"
 img = Rasem::SVGImage.new(width: 100 * sequence.size , height: 100) do
   sequence.each_with_index {|n, index| symbol(digits(n), index)}
@@ -225,6 +224,3 @@ end
 File.open(path, "w") do |f|
   img.write(f)
 end
-
-puts sequence.join '|'
-# (1..9999).each {|n| symbol(digits(n), "tmp/#{n}.svg")}
