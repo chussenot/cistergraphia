@@ -33,7 +33,12 @@ TABLET = {
   " ": 900
 }
 
-message = "Salut, les amis!"
+message = <<EOS
+Louis de Rouvroy, duc de Saint-Simon, fut l'un des favoris de la cour
+de Louis XIV. Grand seigneur, il eut le privilège de loger à Versailles
+et d'y observer les intrigues de palais. Durant plus de trente ans, 
+Saint-Simon va être l'historiographe du roi et de la cour.
+EOS
 
 def cister(message)
   message.downcase
