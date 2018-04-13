@@ -67,7 +67,15 @@ end
 # Every symbol before the 9999 symbol
 # should be ignored to uncipher the message
 def be_evil(array)
-  # Should be implemented
+  array.insert(
+    rand(0..array.length),
+    [rand(9999), 9999]
+  )
+end
+
+# Find the perfect square
+def perfect_square?(x)
+   Math.sqrt(x) % 1 == 0
 end
 
 
