@@ -36,13 +36,13 @@ TABLET = {
 
 message = <<EOS
 Louis de Rouvroy, duc de Saint-Simon, fut l'un des favoris de la cour
-de Louis XIV. 
+de Louis XIV.
 EOS
 
 def cister(message)
   message.downcase
   .gsub(/\W/, ' ')
-  .squeeze
+  .squeeze(' ')
   .strip
   .chars
   .map do |c|
