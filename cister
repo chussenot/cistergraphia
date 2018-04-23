@@ -34,10 +34,10 @@ TABLET = {
   " ": 900
 }
 
-message = <<EOS
-Louis de Rouvroy, duc de Saint-Simon, fut l'un des favoris de la cour
-de Louis XIV.
-EOS
+# processing
+print "What is your message? "
+message = gets
+puts message
 
 def cister(message)
   message.downcase
@@ -214,7 +214,6 @@ until perfect_square?(sequence.size) do
   inject_evil_symbols(sequence)
 end
 
-puts sequence.join '|'
 path = "tmp/inline.svg"
 y = 0
 img = Rasem::SVGImage.new(width: 100 * sequence.size , height: 100) do
