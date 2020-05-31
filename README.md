@@ -1,18 +1,30 @@
 cistergraphia
 =============
 
-Cipher your message with some techniques to a number sequence
+About
+-----
+
+...an old index full of mystery that the cistercian monks used to make 
+an inventory of their library serves as a pretext for an encryption game. 
+Many ideas are behind it, such as the way the Easter Island natives used to write... snail-shaped.
+
+![monk](monk.png)
+
+Usage
+-----
+
+So you want to Cipher your message with some techniques to a number sequence
 and then use the cistercian numbers and a nice snail placement.
 
 To use this cipher, you just have to run `./cipher` ruby script.
 
 ```
-# chussenot in ~/Sites/misc/cistergraphia on git:master ✔, ruby:2.4.1, node:v8.3.0, tf:0.11.2, tg:0.13.7, aws:default
+# chussenot in ~/misc/cistergraphia on git:master ✔
 $ ./cister
 What is your message? La navire est proche du point de rendez-vous
-La navire est proche du point de rendez-vous
+-> Le navire est proche du point de rendez-vous
 
-# chussenot in ~/Sites/misc/cistergraphia on git:master ✔, ruby:2.4.1, node:v8.3.0, tf:0.11.2, tg:0.13.7, aws:default
+# chussenot in ~/misc/cistergraphia on git:master ✔
 $ cat tmp/inline.svg
 <?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -23,6 +35,12 @@ $ cat tmp/inline.svg
 ```
 
 ![chars](chars-square.png)
+
+Dependencies
+------------
+
+* ruby
+* a svg gem.
 
 References
 ==========
