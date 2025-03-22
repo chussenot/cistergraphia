@@ -1,4 +1,4 @@
-cistergraphia
+Cistergraphia
 =============
 
 About
@@ -16,7 +16,7 @@ Usage
 So you want to Cipher your message with some techniques to a number sequence
 and then use the cistercian numbers and a nice snail placement.
 
-To use this cipher, you just have to run `./cipher` ruby script.
+To use this cipher, you just have to run `./cistergraphia` ruby script.
 
 ```
 # chussenot in ~/misc/cistergraphia on git:master ✔
