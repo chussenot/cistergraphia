@@ -49,8 +49,9 @@ Dependencies
 References
 ==========
 
-- [cistercian numbers](https://glossographia.wordpress.com/2013/07/09/cistercian-number-magic-of-the-boy-scouts/)
-- [the ciphers of the monks](https://en.wikipedia.org/wiki/The_Ciphers_of_the_Monks)
-- [King Ciphers](http://akira.ruc.dk/~jensh/Publications/2002%7bR%7d21_King_Ciphers.PDF)
-- [cistercian-numerals-ciphers-of-monks](http://luxoccultapress.blogspot.fr/2013/01/cistercian-numerals-ciphers-of-monks.html)
-- [create a stacked cipher](https://www.wikihow.com/Create-a-Stacked-Cipher)
+- [Cistercian Numbers: Magic of the Boy Scouts](https://glossographia.wordpress.com/2013/07/09/cistercian-number-magic-of-the-boy-scouts/)
+- [The Ciphers of the Monks](https://en.wikipedia.org/wiki/The_Ciphers_of_the_Monks)
+- [King Ciphers PDF](http://akira.ruc.dk/~jensh/Publications/2002%7bR%7d21_King_Ciphers.PDF)
+- [Cistercian Numerals: Ciphers of Monks](http://luxoccultapress.blogspot.fr/2013/01/cistercian-numerals-ciphers-of-monks.html)
+- [Create a Stacked Cipher](https://www.wikihow.com/Create-a-Stacked-Cipher)
+- [History of Cryptography](https://en.wikipedia.org/wiki/History_of_cryptography)
