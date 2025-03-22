@@ -20,7 +20,7 @@ To use this cipher, you just have to run `./cistergraphia` ruby script.
 
 ```
 # chussenot in ~/misc/cistergraphia on git:master ✔
-$ ./cister
+$ ./cistergraphia
 What is your message? La navire est proche du point de rendez-vous
 -> Le navire est proche du point de rendez-vous
 
