@@ -2,109 +2,32 @@
 
 require 'nokogiri'
 require 'pry'
+require_relative 'lib/cistergraphia'
 
-SPACE = 20
-TABLET = {
-  a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9, j: 10,
-  k: 11, l: 12, m: 13, n: 14, o: 15, p: 16, q: 18, r: 19, s: 100,
-  t: 200, u: 300, v: 400, w: 500, x: 600, y: 700, z: 800, " ": 900
-}.freeze
-
-def get_message
-  print 'What is your message? '
-  gets
-end
-
-def cister(message)
-  message.downcase
-         .gsub(/\W/, ' ')
-         .squeeze(' ')
-         .strip
-         .chars
-         .map { |c| TABLET[c.to_sym] * 10 }
-         .flat_map { |n| [n - rand(n), rand(n)].shuffle }
-end
-
-def digits(num)
-  num.to_s.chars.reverse.map.with_index { |c, i| c.to_i * (10**i) }.reverse
-end
-
-def snail(array)
-  return [] if array.empty?
-
-  array.shift + snail(array.transpose.reverse)
-end
-
-def inject_evil_symbols(array)
-  array.insert(rand(0..array.length), [rand(9999), 9999]).flatten!
-end
-
-def perfect_square?(x)
-  Math.sqrt(x) % 1 == 0
-end
-
-def symbol(doc, ds, index, y = 0)
-  x = (100 + SPACE) * index
-  doc.line(
-    x1: 50 + x,
-    y1: 0 + y,
-    x2: 50 + x,
-    y2: 100 + y,
-    style: 'stroke:black; stroke-width:2;'
-  )
-  ds.each { |num| draw_line(doc, num, x, y) }
-end
-
-def draw_line(doc, num, x, y)
-  line_mappings = {
-    [1, 5, 7, 9] => [50, 0, 100, 0],
-    [2, 8, 9] => [50, 50, 100, 50],
-    [3] => [50, 0, 100, 50],
-    [4] => [50, 50, 100, 0],
-    [6, 7, 8, 9] => [100, 0, 100, 50],
-    [10, 50, 70, 90] => [50, 0, 0, 0],
-    [20, 80, 90] => [50, 50, 0, 50],
-    [30] => [50, 0, 0, 50],
-    [40, 50] => [50, 50, 0, 0],
-    [60, 70, 80, 90] => [0, 50, 0, 0],
-    [100, 500, 700, 900] => [50, 100, 100, 100],
-    [200, 800, 900] => [50, 50, 100, 50],
-    [300] => [50, 100, 100, 50],
-    [400, 500] => [50, 50, 100, 100],
-    [600, 700, 800, 900] => [100, 50, 100, 100],
-    [1000, 5000, 7000, 9000] => [50, 100, 0, 100],
-    [2000, 8000, 9000] => [50, 50, 0, 50],
-    [3000] => [50, 100, 0, 50],
-    [4000, 5000] => [50, 50, 0, 100],
-    [6000, 7000, 8000, 9000] => [0, 50, 0, 100]
-  }
-
-  line_mappings.each do |keys, coords|
-    if keys.include?(num)
-      doc.line(
-        x1: coords[0] + x,
-        y1: coords[1] + y,
-        x2: coords[2] + x,
-        y2: coords[3] + y,
-        style: 'stroke:black; stroke-width:2;'
-      )
-      break
-    end
+def get_message(message = nil)
+  if message
+    message
+  else
+    print 'What is your message? '
+    gets
   end
 end
 
 message = get_message
-sequence = cister(message)
-inject_evil_symbols(sequence) until perfect_square?(sequence.size)
+sequence = Cistergraphia.cister(message)
+Cistergraphia.inject_evil_symbols(sequence) until Cistergraphia.perfect_square?(sequence.size)
 
 path = 'tmp/inline.svg'
-y = 0
+y = Cistergraphia::PADDING  # Start with padding
+width, height, cols, rows = Cistergraphia.calculate_dimensions(sequence)
+
 builder = Nokogiri::XML::Builder.new do |doc|
   doc.svg(
     'xmlns' => 'http://www.w3.org/2000/svg',
     'version' => '1.1',
-    'width' => 100 * sequence.size,
-    'height' => 100 * (Math.sqrt(sequence.size) + 1),
+    'width' => width,
+    'height' => height,
+    'viewBox' => "0 0 #{width} #{height}",
     'style' => 'background-color: white'
   ) do
     # Add a white background rectangle
@@ -113,10 +36,11 @@ builder = Nokogiri::XML::Builder.new do |doc|
       'height' => '100%',
       'fill' => 'white'
     )
-    sequence.map { |s| digits(s) }
-            .each_slice(Math.sqrt(sequence.size).to_i) do |slice|
-              y += SPACE + 100
-              slice.each_with_index { |s, i| symbol(doc, s, i, y) }
+    
+    sequence.map { |s| Cistergraphia.digits(s) }
+            .each_slice(cols) do |slice|
+              slice.each_with_index { |s, i| Cistergraphia.symbol(doc, s, i, y) }
+              y += Cistergraphia::SYMBOL_HEIGHT + Cistergraphia::SPACE
             end
   end
 end
@@ -129,4 +53,9 @@ formatted_xml = builder.to_xml(
 )
 
 File.open(path, 'w') { |f| f.write(formatted_xml) }
+
+# Display with chafa if available
 system("chafa #{path}") if system("which chafa >/dev/null 2>&1")
+
+# Update PNG conversion to maintain aspect ratio
+system("convert tmp/inline.svg tmp/output.png")

@@ -40,7 +40,11 @@ Dependencies
 ------------
 
 * ruby
-* a svg gem.
+* nokogiri
+* librsvg2-bin (for SVG to PNG conversion)
+  - Ubuntu/Debian: `sudo apt install librsvg2-bin`
+  - macOS: `brew install librsvg`
+  - Fedora: `sudo dnf install librsvg2-tools`
 
 References
 ==========
