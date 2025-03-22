@@ -1,61 +1,74 @@
 #!/usr/bin/env ruby
 
 require 'nokogiri'
-require 'pry'
+require 'optparse'
 require_relative 'lib/cistergraphia'
 
-def get_message(message = nil)
-  if message
-    message
-  else
-    print 'What is your message? '
-    gets
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: cistergraphia_cli.rb [options]"
+
+  opts.on("-m", "--message MESSAGE", "The message to convert") do |m|
+    options[:message] = m
   end
+
+  opts.on("-o", "--output FILE", "The output file path for the SVG") do |o|
+    options[:output] = o
+  end
+
+  opts.on("-p", "--png FILE", "The output file path for the PNG") do |p|
+    options[:png] = p
+  end
+end.parse!
+
+def generate_sequence(message)
+  sequence = Cistergraphia.cister(message)
+  Cistergraphia.inject_evil_symbols(sequence) until Cistergraphia.perfect_square?(sequence.size)
+  sequence
 end
 
-message = get_message
-sequence = Cistergraphia.cister(message)
-Cistergraphia.inject_evil_symbols(sequence) until Cistergraphia.perfect_square?(sequence.size)
+def build_svg(sequence, path)
+  y = Cistergraphia::PADDING
+  width, height, cols, _rows = Cistergraphia.calculate_dimensions(sequence)
 
-path = 'tmp/inline.svg'
-y = Cistergraphia::PADDING  # Start with padding
-width, height, cols, rows = Cistergraphia.calculate_dimensions(sequence)
+  builder = Nokogiri::XML::Builder.new do |doc|
+    doc.svg(
+      'xmlns' => 'http://www.w3.org/2000/svg',
+      'version' => '1.1',
+      'width' => width,
+      'height' => height,
+      'viewBox' => "0 0 #{width} #{height}",
+      'style' => 'background-color: white'
+    ) do
+      doc.rect('width' => '100%', 'height' => '100%', 'fill' => 'white')
 
-builder = Nokogiri::XML::Builder.new do |doc|
-  doc.svg(
-    'xmlns' => 'http://www.w3.org/2000/svg',
-    'version' => '1.1',
-    'width' => width,
-    'height' => height,
-    'viewBox' => "0 0 #{width} #{height}",
-    'style' => 'background-color: white'
-  ) do
-    # Add a white background rectangle
-    doc.rect(
-      'width' => '100%',
-      'height' => '100%',
-      'fill' => 'white'
-    )
-    
-    sequence.map { |s| Cistergraphia.digits(s) }
-            .each_slice(cols) do |slice|
-              slice.each_with_index { |s, i| Cistergraphia.symbol(doc, s, i, y) }
-              y += Cistergraphia::SYMBOL_HEIGHT + Cistergraphia::SPACE
-            end
+      sequence.map { |s| Cistergraphia.digits(s) }
+              .each_slice(cols) do |slice|
+                slice.each_with_index { |s, i| Cistergraphia.symbol(doc, s, i, y) }
+                y += Cistergraphia::SYMBOL_HEIGHT + Cistergraphia::SPACE
+              end
+    end
   end
+
+  formatted_xml = builder.to_xml(encoding: 'UTF-8', indent: 2, indent_text: ' ')
+  File.open(path, 'w') { |f| f.write(formatted_xml) }
 end
 
-# Format the XML properly before writing
-formatted_xml = builder.to_xml(
-  encoding: 'UTF-8',
-  indent: 2,
-  indent_text: ' '
-)
+def display_svg(path)
+  system("chafa #{path}") if system("which chafa >/dev/null 2>&1")
+end
 
-File.open(path, 'w') { |f| f.write(formatted_xml) }
+def convert_to_png(input_path, output_path)
+  system("convert #{input_path} #{output_path}")
+end
 
-# Display with chafa if available
-system("chafa #{path}") if system("which chafa >/dev/null 2>&1")
+message = options[:message] || begin
+  print 'What is your message? '
+  gets.chomp
+end
 
-# Update PNG conversion to maintain aspect ratio
-system("convert tmp/inline.svg tmp/output.png")
+sequence = generate_sequence(message)
+svg_path = options[:output] || 'tmp/inline.svg'
+build_svg(sequence, svg_path)
+display_svg(svg_path)
+convert_to_png(svg_path, options[:png] || 'tmp/output.png')

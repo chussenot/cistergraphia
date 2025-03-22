@@ -34,7 +34,7 @@ $ cat tmp/inline.svg
 
 ```
 
-![chars](chars-square.png)
+![chars](output.png)
 
 Dependencies
 ------------
