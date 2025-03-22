@@ -46,6 +46,14 @@ Dependencies
   - macOS: `brew install librsvg`
   - Fedora: `sudo dnf install librsvg2-tools`
 
+Web UI
+------
+
+To run the web UI, you can use the `rackup` command.
+
+![web ui](image.png)
+
+
 References
 ==========
 
