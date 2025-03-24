@@ -1,5 +1,24 @@
 #!/usr/bin/env ruby
 
+# Cistergraphia CLI Tool
+# ======================
+#
+# Purpose:
+# - Command-line interface for the Cistergraphia cipher system
+# - Converts messages to SVG and optionally PNG
+#
+# Design Decisions:
+# - Uses OptionParser for command-line argument parsing
+# - Generates SVG using Nokogiri
+# - Modular functions for sequence generation and SVG building
+#
+# Constraints:
+# - Messages must be alphanumeric (non-word chars converted to spaces)
+# - Output is always a perfect square grid
+# - SVG dimensions based on content size
+# - Requires Nokogiri for XML/SVG handling
+# - Optional PNG output requires additional conversion step
+
 require 'nokogiri'
 require 'optparse'
 require_relative 'lib/cistergraphia'

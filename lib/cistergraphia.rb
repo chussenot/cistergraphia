@@ -1,3 +1,23 @@
+# Cistergraphia Core Module
+# ========================
+#
+# Purpose:
+# - Core encryption logic for the Cistercian number system
+# - SVG symbol generation and layout calculations
+#
+# Design Decisions:
+# - Module-based design for encapsulation
+# - Fixed symbol dimensions for consistent layout
+# - Randomized number splitting for added complexity
+# - Snail pattern layout for aesthetic presentation
+# - Evil symbol injection for perfect square grid
+#
+# Constraints:
+# - Limited to ASCII characters defined in TABLET
+# - Symbol dimensions are fixed (100x100)
+# - Numbers must be converted to specific line patterns
+# - Grid must be a perfect square
+
 # Move the core functionality into a module
 module Cistergraphia
   # Constants for layout and symbol dimensions

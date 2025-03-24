@@ -1,3 +1,23 @@
+# Cistergraphia Web Application
+# ============================
+# 
+# Purpose:
+# - Provides a web interface for the Cistergraphia cipher system
+# - Handles message encryption and SVG generation
+#
+# Design Decisions:
+# - Uses Sinatra for lightweight web framework
+# - Modular design with separate cipher logic in lib/
+# - SVG generation for vector-based cipher display
+# - Error handling with custom error pages
+# - Development mode with auto-reloading
+#
+# Constraints:
+# - Messages must be alphanumeric (non-word chars converted to spaces)
+# - Output is always a perfect square grid
+# - SVG dimensions based on content size
+# - Requires Nokogiri for XML/SVG handling
+
 require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'nokogiri'

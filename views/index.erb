@@ -1,3 +1,22 @@
+<%# 
+Cistergraphia Input Form
+=======================
+
+Purpose:
+- Provides user interface for message input
+- Simple, focused single-purpose form
+
+Design Decisions:
+- Minimal form fields
+- Clear labeling
+- Required field validation
+- Consistent styling with layout
+
+Constraints:
+- Single text input field
+- Must validate non-empty input
+- Posts to /generate endpoint
+%>
 <form method="post" action="/generate">
   <label for="message">Enter your message:</label><br>
   <input type="text" id="message" name="message" required><br>
