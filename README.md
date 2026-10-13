@@ -39,9 +39,8 @@ $ cat tmp/inline.svg
 Dependencies
 ------------
 
-* ruby
-* nokogiri
-* librsvg2-bin (for SVG to PNG conversion)
+* ruby >= 3.2 and bundler (`bundle install`)
+* librsvg2-bin (for SVG to PNG conversion; ImageMagick is used as a fallback)
   - Ubuntu/Debian: `sudo apt install librsvg2-bin`
   - macOS: `brew install librsvg`
   - Fedora: `sudo dnf install librsvg2-tools`
@@ -49,10 +48,18 @@ Dependencies
 Web UI
 ------
 
-To run the web UI, you can use the `rackup` command.
+To run the web UI, use `bundle exec rackup` and open http://localhost:9292.
 
 ![web ui](image.png)
 
+
+Development
+-----------
+
+```
+bundle exec rake test   # unit + HTTP tests
+bundle exec rubocop     # lint
+```
 
 References
 ==========
