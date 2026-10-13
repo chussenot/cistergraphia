@@ -1,20 +1,35 @@
 <div class="result-container">
   <h2>Generated Cistergraphia for: <%= @message %></h2>
+  <% if @normalized != @message %>
+    <p class="note">Enciphered as: <code><%= @normalized %></code></p>
+  <% end %>
   <div class="svg-container" id="svg-display">
     <%== @svg_content %>
   </div>
   <button type="button" onclick="copySvg()">Copy SVG Code</button>
+  <button type="button" onclick="downloadSvg()">Download SVG</button>
   <a href="/" class="generate-link">Generate another</a>
+  <a href="/decode">Decode one</a>
 </div>
 
 <script>
+  function svgSource() {
+    return document.querySelector('#svg-display svg').outerHTML;
+  }
+
   async function copySvg() {
-    const svg = document.querySelector('#svg-display svg').outerHTML;
     try {
-      await navigator.clipboard.writeText(svg);
+      await navigator.clipboard.writeText(svgSource());
       alert('SVG code copied to clipboard!');
     } catch (e) {
       alert('Could not copy to clipboard: ' + e.message);
     }
+  }
+
+  function downloadSvg() {
+    const url = URL.createObjectURL(new Blob([svgSource()], { type: 'image/svg+xml' }));
+    const link = Object.assign(document.createElement('a'), { href: url, download: 'cistergraphia.svg' });
+    link.click();
+    URL.revokeObjectURL(url);
   }
 </script>
