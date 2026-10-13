@@ -103,6 +103,54 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'No Cistergraphia symbols found'
   end
 
+  def test_secret_mode_round_trip_through_the_web
+    post '/generate', message: 'Cîteaux, 1098!', passphrase: 'abbey of molesme'
+
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'Secret mode'
+    svg = last_response.body[%r{<svg xmlns.*?</svg>}m]
+
+    post '/decode', svg: svg, passphrase: 'abbey of molesme'
+
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'Cîteaux, 1098!'
+  end
+
+  def test_blank_passphrase_means_game_mode
+    post '/generate', message: 'Agent 007', passphrase: ''
+
+    assert_includes last_response.body, 'Enciphered as: <code>agent</code>'
+  end
+
+  def test_secret_mode_rejects_short_passphrase
+    post '/generate', message: 'hello', passphrase: 'short'
+
+    assert_equal 400, last_response.status
+    assert_includes last_response.body, 'at least 8 characters'
+  end
+
+  def test_decode_secret_image_with_wrong_passphrase
+    svg = Cistergraphia.to_svg(Cistergraphia.encode('hidden', passphrase: 'right passphrase'))
+    post '/decode', svg: svg, passphrase: 'wrong passphrase'
+
+    assert_equal 400, last_response.status
+    assert_includes last_response.body, 'Wrong passphrase'
+  end
+
+  def test_decode_secret_image_without_passphrase_hints_at_secret_mode
+    post '/decode', svg: Cistergraphia.to_svg(Cistergraphia.encode('hidden', passphrase: 'right passphrase'))
+
+    assert_equal 400, last_response.status
+    assert_includes last_response.body, 'enter its passphrase'
+  end
+
+  def test_largest_secret_message_fits_the_upload_limit
+    message = '🙏' * CistergraphiaApp::MAX_MESSAGE_LENGTH
+    svg = Cistergraphia.to_svg(Cistergraphia.encode(message, passphrase: 'abbey of molesme'))
+
+    assert_operator svg.bytesize, :<, CistergraphiaApp::MAX_SVG_BYTES
+  end
+
   def test_decode_rejects_oversized_svg
     post '/decode', svg: ' ' * (CistergraphiaApp::MAX_SVG_BYTES + 1)
 

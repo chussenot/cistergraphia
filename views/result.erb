@@ -1,6 +1,8 @@
 <div class="result-container">
   <h2>Generated Cistergraphia for: <%= @message %></h2>
-  <% if @normalized != @message %>
+  <% if @secret %>
+    <p class="note">Secret mode: encrypted with your passphrase. Without it, this image reveals nothing but its approximate length.</p>
+  <% elsif @normalized != @message %>
     <p class="note">Enciphered as: <code><%= @normalized %></code></p>
   <% end %>
   <div class="svg-container" id="svg-display">
