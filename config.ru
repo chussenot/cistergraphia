@@ -1,25 +1,12 @@
+# frozen_string_literal: true
+
 # Cistergraphia Rack Configuration
-# ==============================
+# ================================
 #
 # Purpose:
-# - Application entry point
-# - Rack middleware configuration
-# - Environment setup
-#
-# Design Decisions:
-# - Minimal middleware stack
-# - CORS support for API access
-# - Bundler for dependency management
-#
-# Constraints:
-# - Must work with various Rack servers
-# - Handles both development and production
-# - Maintains security headers
+# - Application entry point for any Rack server (`bundle exec rackup`)
 
-require 'rubygems'
-require 'bundler'
+require 'bundler/setup'
+require_relative 'app'
 
-Bundler.require
-
-require './app'
-run CistergraphiaApp 
+run CistergraphiaApp
