@@ -4,34 +4,36 @@
 # ========================
 #
 # Purpose:
-# - Core encryption logic for the Cistercian number system
-# - SVG symbol generation and layout calculations
+# - Encrypt a message into Cistercian numerals laid out as a snail (spiral)
+# - Decrypt an SVG produced by this module back into the message
 #
 # Design Decisions:
 # - Module-based design for encapsulation
-# - Fixed symbol dimensions for consistent layout
-# - Randomized number splitting for added complexity
-# - Evil symbol injection for perfect square grid
-# - Single SVG renderer shared by the CLI and the web app
+# - Glyph geometry lives in Cistergraphia::Glyphs, SVG layout and parsing in
+#   Cistergraphia::SVG; this file holds the cipher and the public entry points
+# - Each character value is split into two random parts (same message, a
+#   different picture every time)
+# - 'Evil' pairs [noise, 9999] pad the sequence to a perfect square; 9999 can
+#   never come from a character, so the decoder can drop them reliably
+# - The sequence is laid out along a snail (clockwise spiral from the top-left)
 #
 # Constraints:
 # - Limited to the characters defined in TABLET; anything else is a separator
-# - Symbol dimensions are fixed (100x100)
-# - Numbers must be converted to specific line patterns
+# - Symbol dimensions are fixed (100x150)
 # - Grid must be a perfect square
-
-require 'nokogiri'
+# - Only SVGs rendered by this module can be decoded (geometry is matched exactly)
 
 module Cistergraphia
-  # Raised when a message contains nothing that can be enciphered
-  class EmptyMessageError < ArgumentError; end
+  # Base class for every error raised on bad user input
+  class Error < ArgumentError; end
 
-  # Constants for layout and symbol dimensions
-  SPACE = 20
-  PADDING = 50 # Add padding around the content
-  SYMBOL_WIDTH = 100 # Width of each symbol
-  SYMBOL_HEIGHT = 100 # Height of each symbol
-  STROKE = { 'stroke' => 'black', 'stroke-width' => 2 }.freeze
+  # Raised when a message contains nothing that can be enciphered
+  class EmptyMessageError < Error; end
+
+  # Raised when an SVG or a sequence cannot be deciphered
+  class DecodeError < Error; end
+
+  EVIL_MARKER = 9999 # Never produced by a character (max value is 9000)
 
   # Mapping of characters to numerical values
   TABLET = {
@@ -40,37 +42,15 @@ module Cistergraphia
     t: 200, u: 300, v: 400, w: 500, x: 600, y: 700, z: 800, ' ': 900
   }.freeze
 
-  # Strokes (x1, y1, x2, y2 relative to the symbol origin) and the place values
-  # that use them. Compound digits (5, 7, 8, 9) are made of several strokes.
-  STROKES = {
-    [1, 5, 7, 9] => [50, 0, 100, 0],
-    [2, 8, 9] => [50, 50, 100, 50],
-    [3] => [50, 0, 100, 50],
-    [4, 5] => [50, 50, 100, 0],
-    [6, 7, 8, 9] => [100, 0, 100, 50],
-    [10, 50, 70, 90] => [50, 0, 0, 0],
-    [20, 80, 90] => [50, 50, 0, 50],
-    [30] => [50, 0, 0, 50],
-    [40, 50] => [50, 50, 0, 0],
-    [60, 70, 80, 90] => [0, 50, 0, 0],
-    [100, 500, 700, 900] => [50, 100, 100, 100],
-    [200, 800, 900] => [50, 50, 100, 50],
-    [300] => [50, 100, 100, 50],
-    [400, 500] => [50, 50, 100, 100],
-    [600, 700, 800, 900] => [100, 50, 100, 100],
-    [1000, 5000, 7000, 9000] => [50, 100, 0, 100],
-    [2000, 8000, 9000] => [50, 50, 0, 50],
-    [3000] => [50, 100, 0, 50],
-    [4000, 5000] => [50, 50, 0, 100],
-    [6000, 7000, 8000, 9000] => [0, 50, 0, 100]
-  }.freeze
-
-  # Inverted STROKES: place value => list of strokes, built once at load time
-  LINES = STROKES.each_with_object({}) do |(values, coords), lines|
-    values.each { |value| (lines[value] ||= []) << coords.freeze }
-  end.freeze
+  # Value => character, for decoding
+  CHARACTERS = TABLET.to_h { |char, value| [value * 10, char.to_s] }.freeze
 
   module_function
+
+  # Lower-cases the message and turns everything missing from TABLET into single spaces
+  def normalize(message)
+    message.to_s.downcase.gsub(/[^a-z ]/, ' ').squeeze(' ').strip
+  end
 
   # Full pipeline: message => sequence padded to a perfect square
   def encode(message)
@@ -79,18 +59,34 @@ module Cistergraphia
     sequence
   end
 
+  # Full pipeline: SVG rendered by #to_svg => message (normalized)
+  def decode(svg)
+    decipher(SVG.read(svg))
+  end
+
+  # Renders a sequence as an SVG document, laid out as a snail
+  def to_svg(sequence)
+    SVG.render(sequence)
+  end
+
   # Converts a message into a sequence of numbers using the TABLET mapping
   def cister(message)
-    chars = message.to_s
-                   .downcase
-                   .gsub(/[^a-z ]/, ' ') # Characters missing from TABLET become separators
-                   .squeeze(' ')
-                   .strip
-                   .chars
+    chars = normalize(message).chars
     raise EmptyMessageError, 'Message has no characters that can be enciphered' if chars.empty?
 
     chars.map { |c| TABLET.fetch(c.to_sym) * 10 }
          .flat_map { |n| split(n) }
+  end
+
+  # Inverse of #encode: drops evil symbols and joins the pairs back
+  def decipher(sequence)
+    values = strip_evil_symbols(sequence)
+    raise DecodeError, 'No enciphered characters found' if values.empty?
+    raise DecodeError, 'Sequence has an odd number of values' if values.size.odd?
+
+    values.each_slice(2).map do |a, b|
+      CHARACTERS.fetch(a + b) { raise DecodeError, "#{a} + #{b} is not a known character" }
+    end.join
   end
 
   # Splits a number into two random parts that add up to it
@@ -99,78 +95,39 @@ module Cistergraphia
     [num - part, part].shuffle
   end
 
-  # Breaks a number into its individual digits, each multiplied by its place value
-  def digits(num)
-    num.to_s.chars.reverse.map.with_index { |c, i| c.to_i * (10**i) }.reverse
+  # Reads an array of rows in a snail pattern (clockwise spiral from the top-left)
+  def snail(matrix)
+    return [] if matrix.empty?
+
+    matrix.first + snail(matrix.drop(1).transpose.reverse)
   end
 
-  # Arranges an array in a snail pattern (spiral order)
-  def snail(array)
-    return [] if array.empty?
-
-    array.shift + snail(array.transpose.reverse)
+  # [row, col] of each grid cell, in snail order
+  def spiral_coordinates(size)
+    snail(Array.new(size) { |row| Array.new(size) { |col| [row, col] } })
   end
 
-  # Randomly inserts a pair of 'evil' symbols into the array
+  # Inserts a pair of 'evil' symbols between two character pairs
   def inject_evil_symbols(array)
-    array.insert(rand(0..array.length), [rand(9999), 9999]).flatten!
+    array.insert(2 * rand(0..(array.length / 2)), rand(EVIL_MARKER), EVIL_MARKER)
+  end
+
+  # Removes every [noise, EVIL_MARKER] pair. Each marker removes the value right
+  # before it, which also unwinds pairs nested inside other pairs.
+  def strip_evil_symbols(sequence)
+    sequence.each_with_object([]) do |value, kept|
+      next kept << value unless value == EVIL_MARKER
+      raise DecodeError, 'Evil symbol without its noise value' if kept.empty?
+
+      kept.pop
+    end
   end
 
   # Checks if a number is a perfect square (exact, no floating point)
   def perfect_square?(num)
     Integer.sqrt(num)**2 == num
   end
-
-  # Calculates the dimensions needed to display the sequence in a grid
-  def calculate_dimensions(sequence)
-    cols = Integer.sqrt(sequence.size)
-    raise EmptyMessageError, 'Cannot lay out an empty sequence' if cols.zero?
-
-    rows = sequence.size.ceildiv(cols)
-    width = ((SYMBOL_WIDTH + SPACE) * cols) + (PADDING * 2)
-    height = ((SYMBOL_HEIGHT + SPACE) * rows) + (PADDING * 2)
-
-    [width, height, cols, rows]
-  end
-
-  # Renders the sequence as a standalone SVG document
-  def to_svg(sequence)
-    width, height, cols, _rows = calculate_dimensions(sequence)
-
-    Nokogiri::XML::Builder.new(encoding: 'UTF-8') do |doc|
-      doc.svg(
-        'xmlns' => 'http://www.w3.org/2000/svg',
-        'version' => '1.1',
-        'width' => width,
-        'height' => height,
-        'viewBox' => "0 0 #{width} #{height}"
-      ) do
-        doc.rect('width' => '100%', 'height' => '100%', 'fill' => 'white')
-        doc.g(STROKE) { draw_grid(doc, sequence, cols) }
-      end
-    end.to_xml
-  end
-
-  # Draws the sequence row by row, `cols` symbols per row
-  def draw_grid(doc, sequence, cols)
-    sequence.each_slice(cols).with_index do |row, r|
-      y = PADDING + ((SYMBOL_HEIGHT + SPACE) * r)
-      row.each_with_index { |num, i| symbol(doc, digits(num), i, y) }
-    end
-  end
-
-  # Draws a symbol at a specific position in the document
-  def symbol(doc, ds, index, y = 0)
-    x = PADDING + ((SYMBOL_WIDTH + SPACE) * index)
-    # Main vertical stem of the symbol
-    doc.line(x1: 50 + x, y1: y, x2: 50 + x, y2: SYMBOL_HEIGHT + y)
-    ds.each { |num| draw_line(doc, num, x, y) }
-  end
-
-  # Draws every stroke making up a single place value (e.g. 9 => three strokes)
-  def draw_line(doc, num, x, y)
-    LINES.fetch(num, []).each do |x1, y1, x2, y2|
-      doc.line(x1: x1 + x, y1: y1 + y, x2: x2 + x, y2: y2 + y)
-    end
-  end
 end
+
+require_relative 'cistergraphia/glyphs'
+require_relative 'cistergraphia/svg'

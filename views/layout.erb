@@ -56,7 +56,8 @@ Constraints:
     form {
       margin: 20px 0;
     }
-    input[type="text"] {
+    input[type="text"], textarea {
+      box-sizing: border-box;
       width: 100%;
       padding: 10px;
       margin: 10px 0;
@@ -79,6 +80,19 @@ Constraints:
     .svg-container {
       overflow-x: auto;
       margin: 20px 0;
+      padding: 10px;
+      background: #fff3e0;
+      border: 2px solid #ff9800;
+      border-radius: 8px;
+    }
+    textarea {
+      font-family: monospace;
+    }
+    button {
+      margin: 4px 4px 4px 0;
+    }
+    .decoded {
+      font-size: 1.5em;
       padding: 10px;
       background: #fff3e0;
       border: 2px solid #ff9800;

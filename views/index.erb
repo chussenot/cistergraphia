@@ -16,9 +16,11 @@ Constraints:
 - Single text input field
 - Must validate non-empty input
 - Posts to /generate endpoint
+- Links to the /decode form
 %>
 <form method="post" action="/generate">
   <label for="message">Enter your message:</label><br>
-  <input type="text" id="message" name="message" required><br>
+  <input type="text" id="message" name="message" maxlength="500" required><br>
   <input type="submit" value="Generate">
-</form> 
+</form>
+<p>Received a Cistergraphia? <a href="/decode">Decode it</a>.</p> 

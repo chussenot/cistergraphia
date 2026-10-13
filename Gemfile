@@ -3,10 +3,10 @@
 source 'https://rubygems.org'
 
 gem 'erubi' # ERB engine with HTML auto-escaping (escape_html: true)
-gem 'nokogiri'
 gem 'puma'
 gem 'rack', '~> 3.2'
 gem 'rackup', '~> 2.3'
+gem 'rexml' # Pure-Ruby XML parser, only used to decode SVGs
 gem 'sinatra', '~> 4.2'
 
 group :development do
