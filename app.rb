@@ -6,6 +6,7 @@
 # Purpose:
 # - Provides a web interface for the Cistergraphia cipher system
 # - Handles message encryption (SVG generation) and decryption (SVG upload)
+# - Game mode without a passphrase, secret mode (AES-256-GCM) with one
 #
 # Design Decisions:
 # - Modular Sinatra app (sinatra/base), no classic top-level DSL
@@ -57,7 +58,8 @@ class CistergraphiaApp < Sinatra::Base
     @message = params[:message].to_s
     halt_with 413, "Message is limited to #{MAX_MESSAGE_LENGTH} characters" if @message.length > MAX_MESSAGE_LENGTH
 
-    @svg_content = Cistergraphia.to_svg(Cistergraphia.encode(@message))
+    @secret = !passphrase.nil?
+    @svg_content = Cistergraphia.to_svg(Cistergraphia.encode(@message, passphrase: passphrase))
     @normalized = Cistergraphia.normalize(@message)
     erb :result
   end
@@ -67,11 +69,21 @@ class CistergraphiaApp < Sinatra::Base
   end
 
   post '/decode' do
-    @message = Cistergraphia.decode(submitted_svg)
+    @message = Cistergraphia.decode(submitted_svg, passphrase: passphrase)
     erb :decoded
+  rescue Cistergraphia::DecodeError => e
+    raise if passphrase
+
+    raise Cistergraphia::DecodeError, "#{e.message}. If this image was made in secret mode, enter its passphrase."
   end
 
   private
+
+  # Blank means game mode
+  def passphrase
+    value = params[:passphrase].to_s
+    value.empty? ? nil : value
+  end
 
   # SVG from the file upload when one was chosen, otherwise from the textarea
   def submitted_svg

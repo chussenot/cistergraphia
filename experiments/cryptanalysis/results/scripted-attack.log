@@ -1,0 +1,60 @@
+10 game ciphertexts in $WORK/game
+10 secret ciphertexts in $WORK/secret
+
+##### GAME MODE (no passphrase) #####
+
+=== 1 ciphertext(s) ===
+[glyphs] read 196 symbols in 1 file(s); most frequent value 9999 (x17) -> padding-marker hypothesis
+[order] 96 (route, marker-side) hypotheses; best: 100% of pairs sum to a multiple of 10 (chance: 10%)
+[order] 8 route(s) tie; language picks spiral/id, marker drops the prev value
+[pairs] 81 characters, 20 distinct pair sums
+[substitution] space = 9000 (most frequent sum); best solver: monotone
+  OK  the harvest will be stored in the western granary until the feast of saint martin
+  character accuracy: 100.0%; messages fully recovered: 1/1
+
+=== 3 ciphertext(s) ===
+[glyphs] read 484 symbols in 3 file(s); most frequent value 9999 (x23) -> padding-marker hypothesis
+[order] 96 (route, marker-side) hypotheses; best: 100% of pairs sum to a multiple of 10 (chance: 10%)
+[order] 8 route(s) tie; language picks spiral/id, marker drops the prev value
+[pairs] 219 characters, 24 distinct pair sums
+[substitution] space = 9000 (most frequent sum); best solver: monotone
+  OK  the harvest will be stored in the western granary until the feast of saint martin
+      lock the scriqtorium every night and give the key only to the librarian
+  OK  a traveller from citeaux brought letters for the abbot this morning
+  character accuracy: 99.5%; messages fully recovered: 2/3
+
+=== 10 ciphertext(s) ===
+[glyphs] read 1596 symbols in 10 file(s); most frequent value 9999 (x137) -> padding-marker hypothesis
+[order] 96 (route, marker-side) hypotheses; best: 100% of pairs sum to a multiple of 10 (chance: 10%)
+[order] 8 route(s) tie; language picks spiral/id, marker drops the prev value
+[pairs] 661 characters, 26 distinct pair sums
+[substitution] space = 9000 (most frequent sum); best solver: monotone
+  OK  the harvest will be stored in the western granary until the feast of saint martin
+  OK  lock the scriptorium every night and give the key only to the librarian
+  OK  a traveller from citeaux brought letters for the abbot this morning
+  OK  we need more ink and parchment before the copying of the psalter can begin
+  OK  la cloche sonnera trois fois quand le danger approche
+  OK  the bridge over the river collapsed so the pilgrims must wait at the hospice
+  OK  count the silver coins twice and record the total in the ledger
+  OK  brother thomas has fallen ill and cannot sing the evening office
+  OK  hide the relics in the cellar if soldiers come to the gate
+  OK  tomorrow we begin the long journey to the mother house
+  character accuracy: 100.0%; messages fully recovered: 10/10
+
+##### SECRET MODE (passphrase, AES-256-GCM) #####
+
+=== 10 ciphertext(s) ===
+[glyphs] read 776 symbols in 10 file(s); most frequent value 0 (x10) -> padding-marker hypothesis
+[order] 96 (route, marker-side) hypotheses; best: 13% of pairs sum to a multiple of 10 (chance: 10%)
+[order] no route shows the pair structure -> attack stops: nothing to decipher
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  character accuracy: 0.0%; messages fully recovered: 0/10

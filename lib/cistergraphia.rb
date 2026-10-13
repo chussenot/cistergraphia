@@ -6,11 +6,14 @@
 # Purpose:
 # - Encrypt a message into Cistercian numerals laid out as a snail (spiral)
 # - Decrypt an SVG produced by this module back into the message
+# - Two modes: the game (a keyless cipher meant to be cracked, see
+#   docs/security-study.md) and secret mode (passphrase, AES-256-GCM)
 #
 # Design Decisions:
 # - Module-based design for encapsulation
 # - Glyph geometry lives in Cistergraphia::Glyphs, SVG layout and parsing in
-#   Cistergraphia::SVG; this file holds the cipher and the public entry points
+#   Cistergraphia::SVG, secret mode in Cistergraphia::Secret; this file holds
+#   the game cipher and the public entry points
 # - Each character value is split into two random parts (same message, a
 #   different picture every time)
 # - 'Evil' pairs [noise, 9999] pad the sequence to a perfect square; 9999 can
@@ -52,16 +55,20 @@ module Cistergraphia
     message.to_s.downcase.gsub(/[^a-z ]/, ' ').squeeze(' ').strip
   end
 
-  # Full pipeline: message => sequence padded to a perfect square
-  def encode(message)
+  # Full pipeline: message => sequence padded to a perfect square.
+  # With a passphrase the message is encrypted (secret mode), otherwise enciphered (game).
+  def encode(message, passphrase: nil)
+    return Secret.encrypt(message, passphrase) if passphrase
+
     sequence = cister(message)
     inject_evil_symbols(sequence) until perfect_square?(sequence.size)
     sequence
   end
 
-  # Full pipeline: SVG rendered by #to_svg => message (normalized)
-  def decode(svg)
-    decipher(SVG.read(svg))
+  # Full pipeline: SVG rendered by #to_svg => message (normalized in game mode)
+  def decode(svg, passphrase: nil)
+    sequence = SVG.read(svg)
+    passphrase ? Secret.decrypt(sequence, passphrase) : decipher(sequence)
   end
 
   # Renders a sequence as an SVG document, laid out as a snail
@@ -131,3 +138,4 @@ end
 
 require_relative 'cistergraphia/glyphs'
 require_relative 'cistergraphia/svg'
+require_relative 'cistergraphia/secret'
