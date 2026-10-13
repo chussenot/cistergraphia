@@ -9,18 +9,12 @@ GEM
     language_server-protocol (3.17.0.6)
     lint_roller (1.1.0)
     logger (1.7.0)
-    mini_portile2 (2.8.9)
     minitest (6.0.6)
       drb (~> 2.0)
       prism (~> 1.5)
     multi_json (1.21.2)
     mustermann (3.1.1)
     nio4r (2.7.5)
-    nokogiri (1.19.4)
-      mini_portile2 (~> 2.8.2)
-      racc (~> 1.4)
-    nokogiri (1.19.4-x86_64-linux-gnu)
-      racc (~> 1.4)
     parallel (2.3.0)
     parser (3.3.12.0)
       ast (~> 2.4.1)
@@ -44,6 +38,7 @@ GEM
     rainbow (3.1.1)
     rake (13.4.2)
     regexp_parser (2.13.1)
+    rexml (3.4.4)
     rubocop (1.92.0)
       json (>= 2.3)
       language_server-protocol (~> 3.17.0.2)
@@ -84,12 +79,12 @@ PLATFORMS
 DEPENDENCIES
   erubi
   minitest
-  nokogiri
   puma
   rack (~> 3.2)
   rack-test
   rackup (~> 2.3)
   rake
+  rexml
   rubocop
   sinatra (~> 4.2)
   sinatra-contrib

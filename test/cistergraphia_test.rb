@@ -3,23 +3,12 @@
 require 'test_helper'
 
 class CistergraphiaTest < Minitest::Test
-  # Records the strokes a symbol draws instead of building XML
-  class StrokeRecorder
-    attr_reader :lines
-
-    def initialize
-      @lines = []
-    end
-
-    def line(x1:, y1:, x2:, y2:)
-      @lines << [x1, y1, x2, y2]
-    end
+  def strokes_for(num)
+    Cistergraphia::Glyphs.strokes(num).drop(1) # drop the stem
   end
 
-  def strokes_for(num)
-    recorder = StrokeRecorder.new
-    Cistergraphia.digits(num).each { |d| Cistergraphia.draw_line(recorder, d, 0, 0) }
-    recorder.lines.sort
+  def glyph(num)
+    Cistergraphia::Glyphs.strokes(num).map(&Cistergraphia::Glyphs::CANONICAL).sort
   end
 
   def test_split_parts_add_back_up_to_the_original_value
@@ -29,6 +18,10 @@ class CistergraphiaTest < Minitest::Test
 
       assert_equal expected, seq.each_slice(2).map(&:sum)
     end
+  end
+
+  def test_normalize_keeps_only_tablet_characters
+    assert_equal 'rendez vous r d', Cistergraphia.normalize('  Rendez-vous, R2-D2!! ')
   end
 
   def test_unsupported_characters_are_separators_instead_of_crashing
@@ -51,46 +44,108 @@ class CistergraphiaTest < Minitest::Test
     end
   end
 
+  def test_evil_symbols_never_split_a_character_pair
+    50.times do
+      sequence = Cistergraphia.encode('hello world')
+      firsts = sequence.each_slice(2).map(&:first)
+
+      refute_includes firsts, Cistergraphia::EVIL_MARKER
+      assert_equal 'hello world', Cistergraphia.decipher(sequence)
+    end
+  end
+
   def test_perfect_square_is_exact_for_large_numbers
     assert Cistergraphia.perfect_square?(((2**30) + 1)**2)
     refute Cistergraphia.perfect_square?((((2**30) + 1)**2) - 1)
   end
 
   def test_compound_digits_draw_every_stroke
-    assert_equal 1, strokes_for(1).size
-    assert_equal 2, strokes_for(5).size
-    assert_equal 2, strokes_for(7).size
-    assert_equal 2, strokes_for(8).size
-    assert_equal 3, strokes_for(9).size
-    assert_equal 3, strokes_for(9000).size
-  end
-
-  def test_all_nine_units_are_distinct
-    glyphs = (1..9).map { |n| strokes_for(n) }
-
-    assert_equal 9, glyphs.uniq.size
-  end
-
-  def test_place_values_are_rotations_of_the_same_glyph
-    (1..9).each do |n|
-      assert_equal strokes_for(n).size, strokes_for(n * 10).size
-      assert_equal strokes_for(n).size, strokes_for(n * 100).size
-      assert_equal strokes_for(n).size, strokes_for(n * 1000).size
+    { 1 => 1, 5 => 2, 7 => 2, 8 => 2, 9 => 3, 9000 => 3, 1993 => 8 }.each do |num, count|
+      assert_equal count, strokes_for(num).size, "strokes for #{num}"
     end
   end
 
-  def test_to_svg_renders_one_stem_per_symbol
-    sequence = [1, 9, 1234, 9999]
-    svg = Nokogiri::XML(Cistergraphia.to_svg(sequence))
-    lines = svg.css('line')
-    stems = lines.count { |l| l['x1'] == l['x2'] && l['y2'].to_i - l['y1'].to_i == Cistergraphia::SYMBOL_HEIGHT }
-
-    assert_equal 'svg', svg.root.name
-    assert_equal sequence.size, stems
-    assert_equal [1, 9, 1234, 9999].sum { |n| strokes_for(n).size } + sequence.size, lines.size
+  def test_every_value_from_0_to_9999_has_a_distinct_glyph
+    assert_equal 10_000, (0..9999).map { |n| glyph(n) }.uniq.size
   end
 
-  def test_snail_returns_spiral_order
-    assert_equal [1, 2, 3, 6, 9, 8, 7, 4, 5], Cistergraphia.snail([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+  def test_place_values_are_mirror_images_of_the_units
+    (1..9).each do |n|
+      units = Cistergraphia::Glyphs::LINES.fetch(n)
+
+      tens = units.map { |x1, y1, x2, y2| [100 - x1, y1, 100 - x2, y2] }
+      hundreds = units.map { |x1, y1, x2, y2| [x1, 150 - y1, x2, 150 - y2] }
+
+      assert_equal tens, Cistergraphia::Glyphs::LINES.fetch(n * 10)
+      assert_equal hundreds, Cistergraphia::Glyphs::LINES.fetch(n * 100)
+    end
+  end
+
+  def test_snail_returns_spiral_order_without_mutating_its_input
+    matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+
+    assert_equal [1, 2, 3, 6, 9, 8, 7, 4, 5], Cistergraphia.snail(matrix)
+    assert_equal [[1, 2, 3], [4, 5, 6], [7, 8, 9]], matrix
+  end
+
+  def test_spiral_coordinates_visit_every_cell_once
+    coords = Cistergraphia.spiral_coordinates(6)
+
+    assert_equal 36, coords.uniq.size
+    assert_equal (0..5).map { |col| [0, col] }, coords.first(6)  # along the top
+    assert_equal (1..5).map { |row| [row, 5] }, coords[6, 5]     # down the right side
+    assert_includes [[2, 2], [2, 3], [3, 2], [3, 3]], coords.last # ends in the middle
+  end
+
+  def test_to_svg_lays_the_sequence_out_as_a_snail
+    sequence = (1..9).to_a
+    doc = REXML::Document.new(Cistergraphia.to_svg(sequence))
+    stems = doc.root.get_elements('//line').select { |l| l['x1'] == l['x2'] && (l['y2'].to_i - l['y1'].to_i) == 150 }
+
+    assert_equal 9, stems.size
+    assert_equal sequence, Cistergraphia::SVG.read(Cistergraphia.to_svg(sequence))
+  end
+
+  def test_round_trip_for_random_messages
+    alphabet = [*'a'..'z', ' ', ' ', ' ']
+    100.times do
+      message = [*'a'..'z'].sample + Array.new(rand(0..80)) { alphabet.sample }.join
+
+      assert_equal Cistergraphia.normalize(message),
+                   Cistergraphia.decode(Cistergraphia.to_svg(Cistergraphia.encode(message)))
+    end
+  end
+
+  def test_decode_tolerates_reversed_strokes_and_float_coordinates
+    line = /x1="(?<x1>\d+)" y1="(?<y1>\d+)" x2="(?<x2>\d+)" y2="(?<y2>\d+)"/
+    svg = Cistergraphia.to_svg(Cistergraphia.encode('monk')).gsub(line) do
+      m = Regexp.last_match
+      %(x1="#{m[:x2]}.0" y1="#{m[:y2]}" x2="#{m[:x1]}" y2="#{m[:y1]}")
+    end
+
+    assert_equal 'monk', Cistergraphia.decode(svg)
+  end
+
+  def test_decipher_unwinds_evil_pairs_nested_inside_other_pairs
+    # Older encoders could insert a pair anywhere, even inside another pair
+    assert_equal 'a', Cistergraphia.decipher([4, 42, 7, 9999, 9999, 6])
+  end
+
+  def test_decode_rejects_input_it_did_not_produce
+    [
+      '', 'hello', '<html/>', '<svg', '<svg xmlns="http://www.w3.org/2000/svg"/>',
+      '<svg><line x1="a" y1="0" x2="0" y2="0"/></svg>',
+      '<svg><line x1="100" y1="50" x2="100" y2="200"/><line x1="100" y1="50" x2="140" y2="90"/></svg>',
+      Cistergraphia.to_svg([10, 9999, 5]).sub('<line', '<line x1="1" y1="1" x2="2" y2="2"/><line')
+    ].each do |svg|
+      assert_raises(Cistergraphia::DecodeError, svg) { Cistergraphia.decode(svg) }
+    end
+  end
+
+  def test_decipher_rejects_sequences_that_are_not_characters
+    assert_raises(Cistergraphia::DecodeError) { Cistergraphia.decipher([9999]) }
+    assert_raises(Cistergraphia::DecodeError) { Cistergraphia.decipher([1, 2]) }
+    assert_raises(Cistergraphia::DecodeError) { Cistergraphia.decipher([10]) }
+    assert_raises(Cistergraphia::DecodeError) { Cistergraphia.decipher([5, 9999]) }
   end
 end
