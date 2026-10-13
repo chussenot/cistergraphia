@@ -1,16 +1,21 @@
 # frozen_string_literal: true
 
-source "https://rubygems.org"
+source 'https://rubygems.org'
 
+gem 'erubi' # ERB engine with HTML auto-escaping (escape_html: true)
 gem 'nokogiri'
-gem 'sinatra'
-gem 'sinatra-contrib'  # For automatic reloading in development
-gem 'puma'  # A better web server
+gem 'puma'
+gem 'rack', '~> 3.2'
+gem 'rackup', '~> 2.3'
+gem 'sinatra', '~> 4.2'
 
 group :development do
   gem 'rubocop', require: false
+  gem 'sinatra-contrib' # Sinatra::Reloader for automatic reloading
 end
 
-gem "rack", "~> 3.1"
-
-gem "rackup", "~> 2.2"
+group :test do
+  gem 'minitest'
+  gem 'rack-test'
+  gem 'rake'
+end
