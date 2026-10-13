@@ -1,23 +1,20 @@
-<!-- Start of Selection -->
 <div class="result-container">
   <h2>Generated Cistergraphia for: <%= @message %></h2>
-  <div class="svg-display">
-    <%= @svg_content %>
+  <div class="svg-container" id="svg-display">
+    <%== @svg_content %>
   </div>
-  <button onclick="copyToClipboard()">Copy SVG Code</button>
+  <button type="button" onclick="copySvg()">Copy SVG Code</button>
   <a href="/" class="generate-link">Generate another</a>
 </div>
 
 <script>
-  function copyToClipboard() {
-    const svgContent = `<%= @svg_content %>`;
-    const tempInput = document.createElement('textarea');
-    tempInput.value = svgContent;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    document.execCommand('copy');
-    document.body.removeChild(tempInput);
-    alert('SVG code copied to clipboard!');
+  async function copySvg() {
+    const svg = document.querySelector('#svg-display svg').outerHTML;
+    try {
+      await navigator.clipboard.writeText(svg);
+      alert('SVG code copied to clipboard!');
+    } catch (e) {
+      alert('Could not copy to clipboard: ' + e.message);
+    }
   }
 </script>
-<!-- End of Selection -->

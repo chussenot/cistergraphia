@@ -1,43 +1,48 @@
+# frozen_string_literal: true
+
 # Cistergraphia Web Application
 # ============================
-# 
+#
 # Purpose:
 # - Provides a web interface for the Cistergraphia cipher system
 # - Handles message encryption and SVG generation
 #
 # Design Decisions:
-# - Uses Sinatra for lightweight web framework
-# - Modular design with separate cipher logic in lib/
-# - SVG generation for vector-based cipher display
-# - Error handling with custom error pages
+# - Modular Sinatra app (sinatra/base), no classic top-level DSL
+# - Cipher and SVG rendering live in lib/, shared with the CLI
+# - ERB output is HTML-escaped by default; raw output must use <%== %>
 # - Development mode with auto-reloading
 #
 # Constraints:
-# - Messages must be alphanumeric (non-word chars converted to spaces)
+# - Characters missing from the cipher table are treated as separators
 # - Output is always a perfect square grid
 # - SVG dimensions based on content size
-# - Requires Nokogiri for XML/SVG handling
 
-require 'sinatra'
-require 'sinatra/reloader' if development?
-require 'nokogiri'
+require 'sinatra/base'
 require_relative 'lib/cistergraphia'
 
 class CistergraphiaApp < Sinatra::Base
   configure do
-    set :root, File.dirname(__FILE__)
-    set :views, Proc.new { File.join(root, "views") }
+    set :root, __dir__
+    set :erb, escape_html: true
     enable :logging
   end
 
   configure :development do
+    require 'sinatra/reloader'
     register Sinatra::Reloader
-    # Also reload the lib files when changed
-    also_reload './lib/**/*.rb'
+    also_reload File.join(__dir__, 'lib/**/*.rb')
   end
 
-  # Add error handling
+  error Cistergraphia::EmptyMessageError do
+    status 400
+    @error_message = env['sinatra.error'].message
+    erb :error
+  end
+
+  # Never echo internal exception details back to the browser
   error do
+    @error_message = 'Unexpected error while generating the cipher.'
     erb :error
   end
 
@@ -46,45 +51,8 @@ class CistergraphiaApp < Sinatra::Base
   end
 
   post '/generate' do
-    begin
-      @message = params[:message]
-      halt 400, 'Message is required' if @message.nil? || @message.empty?
-      
-      sequence = Cistergraphia.cister(@message)
-      Cistergraphia.inject_evil_symbols(sequence) until Cistergraphia.perfect_square?(sequence.size)
-
-      @svg_content = generate_svg(sequence)
-      erb :result
-    rescue => e
-      logger.error "Error generating cipher: #{e.message}"
-      halt 500, "Error generating cipher: #{e.message}"
-    end
+    @message = params[:message].to_s
+    @svg_content = Cistergraphia.to_svg(Cistergraphia.encode(@message))
+    erb :result
   end
-
-  private
-
-  def generate_svg(sequence)
-    y = Cistergraphia::PADDING
-    width, height, cols, _rows = Cistergraphia.calculate_dimensions(sequence)
-
-    builder = Nokogiri::XML::Builder.new do |doc|
-      doc.svg(
-        'xmlns' => 'http://www.w3.org/2000/svg',
-        'version' => '1.1',
-        'width' => width,
-        'height' => height,
-        'viewBox' => "0 0 #{width} #{height}",
-        'style' => 'background-color: white'
-      ) do
-        doc.rect('width' => '100%', 'height' => '100%', 'fill' => 'white')
-
-        sequence.map { |s| Cistergraphia.digits(s) }
-                .each_slice(cols) do |slice|
-                  slice.each_with_index { |s, i| Cistergraphia.symbol(doc, s, i, y) }
-                  y += Cistergraphia::SYMBOL_HEIGHT + Cistergraphia::SPACE
-                end
-      end
-    end
-    builder.to_xml
-  end
-end 
+end

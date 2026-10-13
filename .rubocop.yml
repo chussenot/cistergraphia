@@ -1,0 +1,26 @@
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'vendor/**/*'
+    - 'tmp/**/*'
+
+# Each file opens with a Purpose / Design Decisions / Constraints header instead
+Style/Documentation:
+  Enabled: false
+
+# Geometry code reads best with SVG attribute names
+Naming/MethodParameterName:
+  AllowedNames: [x, y, ds, x1, y1, x2, y2]
+
+Metrics/AbcSize:
+  Exclude:
+    - 'test/**/*'
+
+# Data tables (cipher table, stroke table, SVG attributes) count as one line
+Metrics/ModuleLength:
+  CountAsOne: [array, hash]
+
+Metrics/MethodLength:
+  CountAsOne: [array, hash]

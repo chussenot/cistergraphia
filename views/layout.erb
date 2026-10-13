@@ -21,8 +21,10 @@ Constraints:
 - Handles dynamic content
 %>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cistergraphia</title>
   <style>
     .logo {
@@ -101,7 +103,7 @@ Constraints:
     <path d="M 35 65 Q 50 80, 65 65" stroke="black" stroke-width="2" fill="transparent"/><!-- Mouth -->
   </svg>
   <h1 style="text-align: center; color: #ff5722;">Cistergraphia</h1>
-    <%= yield %>
+    <%== yield %>
   </div>
 </body>
 </html> 

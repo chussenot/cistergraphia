@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 # Cistergraphia CLI Tool
 # ======================
@@ -9,85 +10,73 @@
 #
 # Design Decisions:
 # - Uses OptionParser for command-line argument parsing
-# - Generates SVG using Nokogiri
-# - Modular functions for sequence generation and SVG building
+# - SVG rendering is shared with the web app (lib/cistergraphia.rb)
+# - External tools are invoked without a shell, so paths are never interpreted
 #
 # Constraints:
-# - Messages must be alphanumeric (non-word chars converted to spaces)
+# - Characters missing from the cipher table are treated as separators
 # - Output is always a perfect square grid
-# - SVG dimensions based on content size
-# - Requires Nokogiri for XML/SVG handling
-# - Optional PNG output requires additional conversion step
+# - PNG output requires rsvg-convert (librsvg) or ImageMagick
 
-require 'nokogiri'
+require 'English'
+require 'fileutils'
 require 'optparse'
 require_relative 'lib/cistergraphia'
 
+DEFAULT_DIR = File.join(__dir__, 'tmp')
+
 options = {}
 OptionParser.new do |opts|
-  opts.banner = "Usage: cistergraphia_cli.rb [options]"
+  opts.banner = 'Usage: cistergraphia [options]'
 
-  opts.on("-m", "--message MESSAGE", "The message to convert") do |m|
+  opts.on('-m', '--message MESSAGE', 'The message to convert') do |m|
     options[:message] = m
   end
 
-  opts.on("-o", "--output FILE", "The output file path for the SVG") do |o|
+  opts.on('-o', '--output FILE', 'The output file path for the SVG') do |o|
     options[:output] = o
   end
 
-  opts.on("-p", "--png FILE", "The output file path for the PNG") do |p|
+  opts.on('-p', '--png FILE', 'The output file path for the PNG') do |p|
     options[:png] = p
   end
 end.parse!
 
-def generate_sequence(message)
-  sequence = Cistergraphia.cister(message)
-  Cistergraphia.inject_evil_symbols(sequence) until Cistergraphia.perfect_square?(sequence.size)
-  sequence
-end
-
-def build_svg(sequence, path)
-  y = Cistergraphia::PADDING
-  width, height, cols, _rows = Cistergraphia.calculate_dimensions(sequence)
-
-  builder = Nokogiri::XML::Builder.new do |doc|
-    doc.svg(
-      'xmlns' => 'http://www.w3.org/2000/svg',
-      'version' => '1.1',
-      'width' => width,
-      'height' => height,
-      'viewBox' => "0 0 #{width} #{height}",
-      'style' => 'background-color: white'
-    ) do
-      doc.rect('width' => '100%', 'height' => '100%', 'fill' => 'white')
-
-      sequence.map { |s| Cistergraphia.digits(s) }
-              .each_slice(cols) do |slice|
-                slice.each_with_index { |s, i| Cistergraphia.symbol(doc, s, i, y) }
-                y += Cistergraphia::SYMBOL_HEIGHT + Cistergraphia::SPACE
-              end
-    end
+def command?(name)
+  ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).any? do |dir|
+    File.executable?(File.join(dir, name))
   end
-
-  formatted_xml = builder.to_xml(encoding: 'UTF-8', indent: 2, indent_text: ' ')
-  File.open(path, 'w') { |f| f.write(formatted_xml) }
 end
 
 def display_svg(path)
-  system("chafa #{path}") if system("which chafa >/dev/null 2>&1")
+  system('chafa', path) if command?('chafa')
 end
 
 def convert_to_png(input_path, output_path)
-  system("convert #{input_path} #{output_path}")
+  converter = if command?('rsvg-convert') then ['rsvg-convert', '-o', output_path, input_path]
+              elsif command?('magick') then ['magick', input_path, output_path]
+              elsif command?('convert') then ['convert', input_path, output_path]
+              end
+  return warn('Skipping PNG: install librsvg (rsvg-convert) or ImageMagick') unless converter
+
+  system(*converter) || warn("PNG conversion failed: #{converter.first} exited with #{$CHILD_STATUS&.exitstatus}")
 end
 
 message = options[:message] || begin
   print 'What is your message? '
-  gets.chomp
+  $stdin.gets.to_s.chomp
 end
 
-sequence = generate_sequence(message)
-svg_path = options[:output] || 'tmp/inline.svg'
-build_svg(sequence, svg_path)
+begin
+  sequence = Cistergraphia.encode(message)
+rescue Cistergraphia::EmptyMessageError => e
+  abort e.message
+end
+
+svg_path = options[:output] || File.join(DEFAULT_DIR, 'inline.svg')
+png_path = options[:png] || File.join(DEFAULT_DIR, 'output.png')
+[svg_path, png_path].each { |path| FileUtils.mkdir_p(File.dirname(path)) }
+
+File.write(svg_path, Cistergraphia.to_svg(sequence))
 display_svg(svg_path)
-convert_to_png(svg_path, options[:png] || 'tmp/output.png')
+convert_to_png(svg_path, png_path)
