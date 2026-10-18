@@ -68,6 +68,7 @@
   --dur-dry: 1100ms;     /* wet rubric ink drying to iron-gall */
   --dur-lift: 260ms;     /* a stroke lifted away */
   --dur-mode: 700ms;     /* the page changing ink, red <-> blue */
+  --dur-turn: 900ms;     /* a rongorongo plate turned half round */
 }
 
 /* Registered so the page can change ink slowly instead of flipping */
@@ -421,6 +422,11 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .mode-title::first-letter { color: var(--mode-accent); }
 .mode-desc { grid-column: 2; font-size: 1rem; line-height: 1.4; color: var(--ink-soft); }
 
+/* Layout: the same cards, quieter (in the mode's colour, no initial) */
+.mode--path { --mode-accent: var(--accent); padding: var(--space-3) var(--space-4); }
+.mode--path .mode-title { font-size: 1.15rem; }
+.mode--path .mode-title::first-letter { color: inherit; }
+
 [hidden] { display: none !important; }
 
 /* ---------- Buttons ---------- */
@@ -532,6 +538,8 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .snail polyline { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
 .snail circle { fill: var(--ink-soft); }
 .snail .snail-start { fill: var(--accent); }
+.snail circle.turned { fill: var(--paper); stroke: var(--ink-soft); stroke-width: 1; }
+.order + .order { margin-top: var(--space-4); }
 
 /* ---------- The plate (result) ---------- */
 .specs {
@@ -582,6 +590,10 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .plate-frame svg > rect:first-child { fill: transparent; }
 .plate-frame svg g { stroke: currentColor; stroke-width: 3; stroke-linecap: square; }
 .plate-frame:focus-visible { outline-offset: 4px; }
+.plate-frame.is-turned svg { transform: rotate(180deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .plate-frame svg { transition: transform var(--dur-turn) var(--ease-ink); }
+}
 
 /* Walking the snail: a soft field glides from sign to sign */
 .plate-focus {
@@ -755,6 +767,27 @@ input[aria-invalid="true"] { border-color: var(--rubric); }
 .sources { margin-top: var(--space-5); }
 .sources .index-heading { margin-top: 0; }
 .sources ul { margin: 0; padding-left: 1.2rem; display: grid; gap: var(--space-2); font-size: 1.05rem; }
+
+/* ---------- Why a snail: three ways to turn a text ---------- */
+.why-snail { max-width: var(--measure); }
+.why-snail > p + p { margin-top: var(--space-4); }
+.turnings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-5);
+  margin: var(--space-5) 0;
+}
+.turnings figure { margin: 0; display: grid; gap: var(--space-3); align-content: start; }
+.turnings figcaption { font-size: 0.98rem; line-height: 1.4; color: var(--ink-soft); }
+.turnings figcaption b { display: block; color: var(--ink); font-weight: 600; }
+.turnings svg { width: 100%; max-width: 9rem; height: auto; }
+.turning rect, .turning > circle:first-child { fill: none; stroke: var(--rule); stroke-width: 1.2; }
+.turning polyline { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.turning-glyphs path { fill: none; stroke: var(--ink-soft); stroke-width: 1.2; }
+.turning .snail-start { fill: var(--accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .turning polyline { stroke-dashoffset: 1; animation: ink 3s var(--ease-ink) 0.3s forwards; }
+}
 
 /* ---------- Lectio: the reading game ---------- */
 .lectio { display: grid; gap: var(--space-3); margin-top: var(--space-2); }

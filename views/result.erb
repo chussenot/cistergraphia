@@ -11,6 +11,8 @@ Design Decisions:
 - Strokes are inked in reading order and dry from rubric to ink (JS), so the
   snail is visible; the plate can be walked sign by sign (pointer or arrow keys)
 - "Read it back" posts the same SVG to /decode: a one-click round trip
+- Rongorongo plates can be turned half round (JS, CSS only): the turned rows
+  then read upright, as the readers of Rapa Nui turned their tablets
 
 Constraints:
 - Copy/download need JS; the inline SVG can always be saved from the page
@@ -32,17 +34,22 @@ Constraints:
     <div><dt>Mode</dt><dd><%= @secret ? 'Secret' : 'Game' %></dd></div>
     <div><dt>Signs</dt><dd><%= @symbols %></dd></div>
     <div><dt>Grid</dt><dd><%= Integer.sqrt(@symbols) %> × <%= Integer.sqrt(@symbols) %></dd></div>
+    <div><dt>Layout</dt><dd><%= @layout == :rongorongo ? 'Rongorongo' : 'Phaistos' %></dd></div>
   </dl>
 
   <figure class="plate">
     <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
          aria-label="The plate. Use the arrow keys to walk its signs in reading order."
-         data-plate-cells="<%= plate_cells_json(@sequence) %>" data-plate-layout="<%= plate_layout_json(@sequence) %>">
+         data-plate-cells="<%= plate_cells_json(@sequence, @layout) %>" data-plate-layout="<%= plate_layout_json(@sequence) %>">
       <%== @svg_content %>
     </div>
     <figcaption>
-      <span data-plate-reading aria-live="polite">Read clockwise from the top-left corner, coiling inward.</span>
-      <span class="plate-hint" data-plate-hint hidden>Point at a sign, or focus the plate and use the arrow keys, to walk the snail.</span>
+      <% if @layout == :rongorongo %>
+        <span data-plate-reading aria-live="polite">Read from the bottom left, left to right; turn the plate half round for each next line.</span>
+      <% else %>
+        <span data-plate-reading aria-live="polite">Read clockwise from the top-left corner, coiling inward.</span>
+      <% end %>
+      <span class="plate-hint" data-plate-hint hidden>Point at a sign, or focus the plate and use the arrow keys, to walk it in reading order.</span>
     </figcaption>
   </figure>
 
@@ -50,6 +57,9 @@ Constraints:
     <button type="button" class="btn btn--primary" data-action="download-svg">Download SVG</button>
     <button type="button" class="btn" data-action="download-png">Download PNG</button>
     <button type="button" class="btn" data-action="copy-svg">Copy SVG code</button>
+    <% if @layout == :rongorongo %>
+      <button type="button" class="btn" data-action="turn-plate" aria-pressed="false" hidden>Turn the plate</button>
+    <% end %>
     <a class="btn btn--quiet" href="/">Inscribe another</a>
   </div>
 

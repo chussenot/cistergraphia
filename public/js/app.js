@@ -65,6 +65,25 @@
     apply();
   }
 
+  // ---------- Layout: the key's order of reading follows the choice ----------
+  function initLayouts() {
+    const form = $('[data-entry]');
+    const figures = $$('[data-layout-note]');
+    if (!form || !figures.length) return;
+
+    const apply = (redraw) => {
+      const layout = $('input[name="layout"]:checked', form)?.value || 'phaistos';
+      figures.forEach((figure) => {
+        figure.hidden = figure.dataset.layoutNote !== layout;
+        // Ink the path again: the new order is written, not swapped in
+        const path = $('polyline', figure);
+        if (redraw && !figure.hidden && path && !reducedMotion) path.replaceWith(path.cloneNode(true));
+      });
+    };
+    $$('input[name="layout"]', form).forEach((radio) => radio.addEventListener('change', () => apply(true)));
+    apply(false);
+  }
+
   // ---------- Character counter ----------
   function initCounter() {
     const field = $('[data-counted]');
@@ -350,6 +369,10 @@
     focus.setAttribute('rx', 6);
     svg.insertBefore(focus, $('g', svg));
 
+    // Rongorongo plates can be turned half round, as the tablets were
+    const turnButton = $('[data-action="turn-plate"]');
+    const isTurned = () => frame.classList.contains('is-turned');
+
     let current = -1;
     const show = (i) => {
       current = i;
@@ -358,18 +381,42 @@
         readingEl.textContent = resting;
         return;
       }
-      const [row, col, value] = cells[i];
+      const [row, col, value, turned] = cells[i];
       const x = layout.padding + (col * cellWidth) - (layout.space / 2);
       const y = layout.padding + (row * cellHeight) - (layout.space / 2);
+      // Appear in place, glide only from sign to sign
+      const appearing = !focus.classList.contains('is-visible');
+      if (appearing) focus.style.transition = 'none';
       focus.style.transform = `translate(${x}px, ${y}px)`;
+      if (appearing) {
+        focus.getBoundingClientRect();
+        focus.style.removeProperty('transition');
+      }
       focus.classList.add('is-visible');
-      readingEl.textContent = `Sign ${i + 1} of ${cells.length} · ${value}`;
+      const upsideDown = Boolean(turned) !== isTurned() ? ', upside down: turn the plate to read it' : '';
+      readingEl.textContent = `Sign ${i + 1} of ${cells.length} · ${value}${upsideDown}`;
     };
 
+    if (turnButton) {
+      turnButton.hidden = false;
+      turnButton.addEventListener('click', () => {
+        const turned = !isTurned();
+        frame.classList.toggle('is-turned', turned);
+        turnButton.setAttribute('aria-pressed', String(turned));
+        if (current >= 0) show(current);
+      });
+    }
+
+    // From the box and the viewBox, not getScreenCTM: Chrome gets the origin of
+    // the CSS half turn wrong there. A turned plate mirrors both ways.
     const cellAt = (event) => {
-      const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.getScreenCTM().inverse());
-      const col = Math.floor((point.x - layout.padding + (layout.space / 2)) / cellWidth);
-      const row = Math.floor((point.y - layout.padding + (layout.space / 2)) / cellHeight);
+      const rect = svg.getBoundingClientRect();
+      const view = svg.viewBox.baseVal;
+      let fx = (event.clientX - rect.left) / rect.width;
+      let fy = (event.clientY - rect.top) / rect.height;
+      if (isTurned()) [fx, fy] = [1 - fx, 1 - fy];
+      const col = Math.floor(((view.x + (fx * view.width)) - layout.padding + (layout.space / 2)) / cellWidth);
+      const row = Math.floor(((view.y + (fy * view.height)) - layout.padding + (layout.space / 2)) / cellHeight);
       const i = index.get(`${row},${col}`);
       return i === undefined ? -1 : i;
     };
@@ -528,6 +575,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initModes();
+    initLayouts();
     initCounter();
     initReveal();
     initActions();

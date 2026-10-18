@@ -21,9 +21,9 @@ Three ideas carry the design:
 2. **The page teaches the cipher.** The key beside the form (one sign's anatomy, the units
    tabula, the snail) is drawn from the real cipher geometry (`Cistergraphia::Glyphs`), so it
    can never drift from what the encoder produces.
-3. **Motion shows the snail.** On the result page each stroke is inked in reading order, so
-   the spiral path is visible the first time you see a plate. It is off under
-   `prefers-reduced-motion`.
+3. **Motion shows the reading order.** On the result page each stroke is inked in reading
+   order, so the path (the snail, or the turning rows) is visible the first time you see a
+   plate. It is off under `prefers-reduced-motion`.
 
 ## Tokens
 
@@ -59,6 +59,7 @@ and the passphrase.
 | Rubric (`.rubric`) | Page title in the mode colour |
 | Index heading (`.index-heading`) | Small capitals followed by a hairline rule |
 | Mode cards (`.mode`) | Native radios styled as two index cards; the first letter is a red or blue initial; the checked card gets an inset bar |
+| Layout cards (`.mode--path`) | The same cards, quieter: smaller, no initial, in the current mode's colour. Phaistos (the snail, default) or Rongorongo. The key's "Order of reading" shows the chosen path; hollow points mark signs written upside down |
 | Fields | Labels in small capitals; vellum-filled inputs; a focus ring in the mode colour |
 | Buttons | Primary uses the mode colour; secondary is outlined; quiet is link-like; all are at least 48 px tall |
 | Plate (`.plate-frame`) | The SVG in ink colours (CSS only) inside a double frame, scaled to fit the viewport |
@@ -95,6 +96,7 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | `--dur-dry` | 1100 ms | wet rubric ink drying to iron-gall |
 | `--dur-lift` | 260 ms | a stroke lifted away |
 | `--dur-mode` | 700 ms | the page changing ink, red ↔ blue (a registered `@property`) |
+| `--dur-turn` | 900 ms | a Rongorongo plate turned half round |
 | stroke gap | 70 ms | between two strokes of one sign, like a scribe's hand |
 | `--ease-ink` | `cubic-bezier(0.3, 0.6, 0.2, 1)` | quick to start, slow to settle |
 
@@ -107,17 +109,20 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | Whole page | Choosing a mode crossfades the page's ink red ↔ blue | The mode you are in |
 | Inscribe preview | Each new letter's sign is inked as you type; existing signs stay | One letter, one sign |
 | How to read a sign | The four corners are dials (click, or arrow keys up/down); only the changed strokes are rewritten; hovering a corner lights its strokes; some years name themselves (1098, 1115, 1153, this year) | How the places combine |
-| Plate | Inked sign by sign along the snail, the wet rubric front visibly coiling inward | The reading order |
-| Plate | Walk it: point at a sign, or focus the plate and use the arrow keys / Home / End; a soft field glides along the snail; "Sign 12 of 36 · 4127" | Reading the numerals, the first step of solving a game plate |
+| Inscribe key | Choosing a layout re-inks the "Order of reading" path | Where the plate starts and how it runs |
+| Plate | Inked sign by sign in reading order, the wet rubric front visibly coiling inward (or climbing the rows) | The reading order |
+| Plate | Walk it: point at a sign, or focus the plate and use the arrow keys / Home / End; a soft field glides along the path; "Sign 12 of 36 · 4127", with "upside down: turn the plate to read it" on turned signs | Reading the numerals, the first step of solving a game plate |
+| Plate (Rongorongo) | **Turn the plate**: the plate rotates half round, as the readers of Rapa Nui turned their tablets; the turned rows now read upright, and walking follows | Why every other row is upside down |
 | Transcription | The decoded message appears letter by letter after its initial | The payoff of decoding |
 | About · Lectio | Read the sign, type its number. Novice (units) → Monk (tens) → Prior (hundreds) → Abbot (thousands) every three in a row; a misread corner is lit (an empty corner is named as a zero) and you continue when ready; best run kept in the browser | Fluency in the signs |
 | Read | A received file's sign is inked | Your file arrived |
 
 Implementation: `public/js/ink.js` holds the vocabulary (`inkIn`, `dry`, `lift`, `morph`,
 `glyph`), `public/js/app.js` the interactions. The plate's cells and geometry come from
-`ViewHelpers#plate_cells_json` / `#plate_layout_json`, so walking the plate follows the real
-snail. Exports strip every class, style and the walking field: the downloaded SVG is
-unchanged.
+`ViewHelpers#plate_cells_json` / `#plate_layout_json` (built from `Cistergraphia::SVG.path`, with
+each sign's turned flag), so walking the plate follows the real path. Turning is a class on
+the frame, never on the SVG, and exports strip every class, style and the walking field: the
+downloaded SVG is unchanged.
 
 ## Engineering rules the design depends on
 
@@ -153,6 +158,6 @@ headless Chromium:
 
 ## Screens
 
-| Inscribe (secret selected) | Plate (game) | Plate (dark) | About |
-|---|---|---|---|
-| ![](web-ui-inscribe.png) | ![](web-ui-plate.png) | ![](web-ui-dark.png) | ![](web-ui-about.png) |
+| Inscribe (secret selected) | Plate (game) | Plate (Rongorongo) | Plate (dark) | About |
+|---|---|---|---|---|
+| ![](web-ui-inscribe.png) | ![](web-ui-plate.png) | ![](web-ui-rongorongo.png) | ![](web-ui-dark.png) | ![](web-ui-about.png) |

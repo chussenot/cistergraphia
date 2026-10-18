@@ -14,6 +14,9 @@ Design Decisions:
   anatomy's corners are dials (JS enables them; static without JS)
 - The live preview draws each letter's sign from the same geometry (JSON from
   ViewHelpers#glyph_table_json); the plate itself is only made on the server
+- Layout (reading path) is a second, quieter choice: Phaistos (the snail) by
+  default, or Rongorongo; the key's "Order of reading" follows it (JS; both
+  are shown without JS). The decoder detects the layout, so it is never asked
 
 Constraints:
 - Posts to /generate; message limited to 500 characters
@@ -22,7 +25,7 @@ Constraints:
   <section class="leaf" aria-labelledby="inscribe-title">
     <p class="folio-mark" aria-hidden="true">fol. 1<sup>r</sup></p>
     <h1 id="inscribe-title" class="rubric">Inscribe a message</h1>
-    <p class="lede">Each letter becomes a number, each number a monk’s sign, and the signs coil inward like a snail.</p>
+    <p class="lede">Each letter becomes a number, each number a monk’s sign, and the signs coil inward like a snail, or turn like a tablet.</p>
 
     <form class="entry" method="post" action="/generate" data-entry>
       <div class="field">
@@ -57,6 +60,22 @@ Constraints:
             <input type="radio" name="mode" value="secret">
             <span class="mode-title">Secret</span>
             <span class="mode-desc">Sealed with a passphrase (AES-256-GCM). The image shows only its length.</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="modes layouts">
+        <legend>Layout <span class="label-note">· the order of reading</span></legend>
+        <div class="mode-options">
+          <label class="mode mode--path">
+            <input type="radio" name="layout" value="phaistos" checked>
+            <span class="mode-title">Phaistos</span>
+            <span class="mode-desc">The snail: clockwise from the top-left corner, coiling to the centre.</span>
+          </label>
+          <label class="mode mode--path">
+            <input type="radio" name="layout" value="rongorongo">
+            <span class="mode-title">Rongorongo</span>
+            <span class="mode-desc">From the bottom up, turning the plate half round at every line.</span>
           </label>
         </div>
       </fieldset>
@@ -97,9 +116,15 @@ Constraints:
     <p class="note">Tens mirror the units to the left, hundreds below, thousands both ways.</p>
 
     <h3 class="index-heading">Order of reading</h3>
-    <figure class="order">
+    <figure class="order" data-layout-note="phaistos">
       <%== snail_svg(4) %>
-      <figcaption>Clockwise from the top-left corner, coiling to the centre.</figcaption>
+      <figcaption><b>Phaistos.</b> Clockwise from the top-left corner, coiling to the centre.</figcaption>
     </figure>
+    <figure class="order" data-layout-note="rongorongo">
+      <%== snail_svg(4, layout: :rongorongo) %>
+      <figcaption><b>Rongorongo.</b> From the bottom left, then turn the plate half round for each next line.
+        Hollow points are signs written upside down.</figcaption>
+    </figure>
+    <p class="note"><a href="/about#why-a-snail">Why these two?</a></p>
   </aside>
 </div>

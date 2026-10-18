@@ -79,7 +79,7 @@ module Cistergraphia
       decipher.auth_tag = tag
       (decipher.update(body) + decipher.final).force_encoding(Encoding::UTF_8)
     rescue OpenSSL::Cipher::CipherError
-      raise DecodeError, 'Wrong passphrase, or the image was not made in secret mode or was altered'
+      raise WrongPassphraseError, 'Wrong passphrase, or the image was not made in secret mode or was altered'
     end
 
     def split_payload(payload)

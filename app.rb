@@ -7,6 +7,8 @@
 # - Provides a web interface for the Cistergraphia cipher system
 # - Handles message encryption (SVG generation) and decryption (SVG upload)
 # - Game mode without a passphrase, secret mode (AES-256-GCM) with one
+# - Two layouts (reading paths): Phaistos (the snail, default) or Rongorongo;
+#   decoding detects the layout on its own
 #
 # Design Decisions:
 # - Modular Sinatra app (sinatra/base), no classic top-level DSL
@@ -86,8 +88,9 @@ class CistergraphiaApp < Sinatra::Base
     halt_with 413, "Message is limited to #{MAX_MESSAGE_LENGTH} characters" if @message.length > MAX_MESSAGE_LENGTH
 
     @secret = !passphrase.nil?
+    @layout = params[:layout] == 'rongorongo' ? :rongorongo : :phaistos # anything else: the snail
     sequence = Cistergraphia.encode(@message, passphrase: passphrase)
-    @svg_content = Cistergraphia.to_svg(sequence)
+    @svg_content = Cistergraphia.to_svg(sequence, layout: @layout)
     @sequence = sequence
     @symbols = sequence.size
     @normalized = Cistergraphia.normalize(@message)

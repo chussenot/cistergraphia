@@ -18,7 +18,10 @@
 #   different picture every time)
 # - 'Evil' pairs [noise, 9999] pad the sequence to a perfect square; 9999 can
 #   never come from a character, so the decoder can drop them reliably
-# - The sequence is laid out along a snail (clockwise spiral from the top-left)
+# - The sequence is laid out along one of two reading paths (layouts):
+#   Phaistos, a clockwise spiral from the top-left to the centre (default), or
+#   Rongorongo, reverse boustrophedon: rows from the bottom, every other row
+#   running back with its signs turned half round. The decoder tries both.
 #
 # Constraints:
 # - Limited to the characters defined in TABLET; anything else is a separator
@@ -35,6 +38,9 @@ module Cistergraphia
 
   # Raised when an SVG or a sequence cannot be deciphered
   class DecodeError < Error; end
+
+  # Raised when a secret plate does not open with the passphrase given
+  class WrongPassphraseError < DecodeError; end
 
   EVIL_MARKER = 9999 # Never produced by a character (max value is 9000)
 
@@ -65,15 +71,22 @@ module Cistergraphia
     sequence
   end
 
-  # Full pipeline: SVG rendered by #to_svg => message (normalized in game mode)
-  def decode(svg, passphrase: nil)
-    sequence = SVG.read(svg)
-    passphrase ? Secret.decrypt(sequence, passphrase) : decipher(sequence)
+  # Full pipeline: SVG rendered by #to_svg => message (normalized in game mode).
+  # Without a layout, both are tried: only the right one yields letters (game)
+  # or passes authentication (secret).
+  def decode(svg, passphrase: nil, layout: nil)
+    errors = (layout ? [layout] : SVG::LAYOUTS).map do |candidate|
+      sequence = SVG.read(svg, layout: candidate)
+      return passphrase ? Secret.decrypt(sequence, passphrase) : decipher(sequence)
+    rescue DecodeError => e
+      e
+    end
+    raise errors.find { |e| e.is_a?(WrongPassphraseError) } || errors.first
   end
 
-  # Renders a sequence as an SVG document, laid out as a snail
-  def to_svg(sequence)
-    SVG.render(sequence)
+  # Renders a sequence as an SVG document along a layout's reading path
+  def to_svg(sequence, layout: :phaistos)
+    SVG.render(sequence, layout: layout)
   end
 
   # Converts a message into a sequence of numbers using the TABLET mapping
@@ -112,6 +125,16 @@ module Cistergraphia
   # [row, col] of each grid cell, in snail order
   def spiral_coordinates(size)
     snail(Array.new(size) { |row| Array.new(size) { |col| [row, col] } })
+  end
+
+  # [row, col, turned] of each grid cell in reverse boustrophedon order, the
+  # rongorongo way: rows from the bottom, left to right, then the tablet turns
+  # half round, so every other row runs back with its signs upside down
+  def boustrophedon_coordinates(size)
+    (size - 1).downto(0).each_with_index.flat_map do |row, k|
+      cols = k.even? ? (0...size).to_a : (size - 1).downto(0).to_a
+      cols.map { |col| [row, col, k.odd?] }
+    end
   end
 
   # Inserts a pair of 'evil' symbols between two character pairs
