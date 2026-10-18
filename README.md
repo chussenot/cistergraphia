@@ -8,7 +8,13 @@ About
 an inventory of their library serves as a pretext for an encryption game. 
 Many ideas are behind it, such as the way the Easter Island natives used to write... snail-shaped.
 
-![monk](docs/monk.png)
+![Saint Bernard of Clairvaux](docs/saint-bernard.jpg)
+
+*Saint Bernard of Clairvaux, reformer of the Cistercian order. Engraving by
+Dominicus Custos, Augsburg, c. 1579–1615, from the series* Icones institutorum
+sex illustrium in Christiana religione ordinum. *[Rijksmuseum, Amsterdam,
+RP-P-OB-31.620](https://hdl.handle.net/10934/RM0001.COLLECT.100170), public
+domain ([Wikimedia Commons](https://commons.wikimedia.org/wiki/File:H._Bernardus_van_Clairevaux_Icones_Institutorum_sex_illustrium_in_Christiana_religione_ordinum_(serietitel),_RP-P-OB-31.620.jpg)).*
 
 How it works
 ------------
