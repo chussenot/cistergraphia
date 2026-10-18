@@ -139,6 +139,7 @@ const FLOWS = [
       { name: 'delete', act: async (p) => { await p.keyboard.press('Control+End'); for (let i = 0; i < 30; i += 1) await p.keyboard.press('Backspace'); } },
       { name: 'choose secret', anchor: '.entry-end', act: (p) => p.click('label.segment--secret') },
       { name: 'type a sealed message', act: async (p) => { await p.click('#message'); await p.keyboard.type(' and a seal'); } },
+      { name: 'seal with too short a passphrase', act: async (p) => { await p.fill('#passphrase', 'short'); await p.click('[data-submit]'); } },
       { name: 'show the passphrase', act: async (p) => { await p.fill('#passphrase', 'abbey of molesme'); await p.click('[data-reveal="passphrase"]'); } },
       { name: 'back to game', anchor: '.entry-end', act: (p) => p.click('label.segment--game') },
       { name: 'choose rongorongo', act: (p) => p.click('label.segment:has(input[value="rongorongo"])') },

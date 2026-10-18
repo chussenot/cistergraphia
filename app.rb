@@ -42,6 +42,10 @@ class CistergraphiaApp < Sinatra::Base
     set :root, __dir__
     set :erb, escape_html: true
     set :static_cache_control, [:public, { max_age: 3600 }]
+    # The app's error pages, in every environment: Sinatra would otherwise show
+    # its backtrace page in development for what is only a reader's mistake
+    # (Cistergraphia::Error). Backtraces of real bugs still go to the log.
+    set :show_exceptions, :after_handler
     enable :logging
   end
 
@@ -89,6 +93,9 @@ class CistergraphiaApp < Sinatra::Base
 
     @secret = !passphrase.nil?
     @layout = params[:layout] == 'rongorongo' ? :rongorongo : :phaistos # anything else: the snail
+    # A passphrase that cannot seal: back to the form, with what was written
+    @passphrase_error = Cistergraphia::Secret.passphrase_problem(passphrase) if @secret
+    halt 422, erb(:index) if @passphrase_error
     @sequence, @svg_content = Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout)
     @symbols = @sequence.size
     @normalized = Cistergraphia.normalize(@message)
@@ -121,15 +128,13 @@ class CistergraphiaApp < Sinatra::Base
 
   private
 
-  # The mode switch wins when present; otherwise a non-blank passphrase means secret mode
+  # The mode switch wins when present; otherwise a non-blank passphrase means
+  # secret mode. Secret mode with a blank one gives '' (for the form to explain).
   def passphrase
     return nil if params[:mode] == 'game'
 
     value = params[:passphrase].to_s
-    return value unless value.empty?
-    raise Cistergraphia::Error, 'Secret mode needs a passphrase' if params[:mode] == 'secret'
-
-    nil
+    value.empty? && params[:mode] != 'secret' ? nil : value
   end
 
   # SVG from the file upload when one was chosen, otherwise from the textarea

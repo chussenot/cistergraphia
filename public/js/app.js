@@ -58,7 +58,36 @@
         passphrase.required = secret;
       }
       if (submit) submit.textContent = secret ? 'Seal & inscribe' : 'Inscribe';
+      if (!secret) explain('');
     };
+
+    // A passphrase that cannot seal is explained in place (the hint's cell),
+    // with the server's own words, before anything is sent
+    const error = $('[data-passphrase-error]', form);
+    const min = Number(passphrase?.getAttribute('minlength')) || 8;
+    const explain = (text) => {
+      if (!error) return;
+      error.textContent = text;
+      if (text) passphrase.setAttribute('aria-invalid', 'true');
+      else passphrase.removeAttribute('aria-invalid');
+    };
+    const problem = () => {
+      const length = Array.from(passphrase.value).length; // characters, as the server counts them
+      if (length === 0) return error.dataset.missing;
+      return length < min ? error.dataset.tooShort : '';
+    };
+    if (passphrase && error) {
+      const refuse = (event) => {
+        if (passphrase.disabled || !problem()) return;
+        event.preventDefault();
+        explain(problem());
+        passphrase.focus();
+      };
+      passphrase.addEventListener('invalid', refuse); // instead of the browser's bubble
+      form.addEventListener('submit', refuse);
+      passphrase.addEventListener('input', () => { if (error.textContent && !problem()) explain(''); });
+    }
+
     $$('input[name="mode"]', form).forEach((radio) => radio.addEventListener('change', apply));
     apply();
   }

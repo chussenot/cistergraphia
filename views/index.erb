@@ -17,6 +17,9 @@ Design Decisions:
   anatomy's corners are dials (JS enables them; static without JS)
 - The live preview draws each letter's sign from the same geometry (JSON from
   ViewHelpers#glyph_table_json); the plate itself is only made on the server
+- A passphrase that cannot seal comes back here (422) with the message, mode
+  and layout kept, never the passphrase; its error takes the hint's place.
+  JS says the same before sending, with the library's own words
 - Layout: Phaistos (the snail) by default, or Rongorongo; the key's "Order of
   reading" follows it in the same reserved space. The decoder detects the
   layout, so it is never asked
@@ -36,11 +39,11 @@ Constraints:
           <legend>Mode</legend>
           <div class="segments">
             <label class="segment segment--game">
-              <input type="radio" name="mode" value="game" checked aria-describedby="note-game">
+              <input type="radio" name="mode" value="game"<%= ' checked' unless @secret %> aria-describedby="note-game">
               <span class="segment-title">Game</span>
             </label>
             <label class="segment segment--secret">
-              <input type="radio" name="mode" value="secret" aria-describedby="note-secret">
+              <input type="radio" name="mode" value="secret"<%= ' checked' if @secret %> aria-describedby="note-secret">
               <span class="segment-title">Secret</span>
             </label>
           </div>
@@ -54,11 +57,11 @@ Constraints:
           <legend>Layout</legend>
           <div class="segments">
             <label class="segment">
-              <input type="radio" name="layout" value="phaistos" checked aria-describedby="note-phaistos">
+              <input type="radio" name="layout" value="phaistos"<%= ' checked' unless @layout == :rongorongo %> aria-describedby="note-phaistos">
               <span class="segment-title">Phaistos</span>
             </label>
             <label class="segment">
-              <input type="radio" name="layout" value="rongorongo" aria-describedby="note-rongorongo">
+              <input type="radio" name="layout" value="rongorongo"<%= ' checked' if @layout == :rongorongo %> aria-describedby="note-rongorongo">
               <span class="segment-title">Rongorongo</span>
             </label>
           </div>
@@ -75,7 +78,7 @@ Constraints:
           <span class="counter" data-counter><span data-count>0</span> / 500</span>
         </div>
         <textarea id="message" name="message" maxlength="500" rows="4" required
-                  placeholder="Meet me at the old abbey after vespers" data-counted></textarea>
+                  placeholder="Meet me at the old abbey after vespers" data-counted><%= @message %></textarea>
         <div class="preview is-empty" data-preview data-glyph-table="<%= glyph_table_json %>">
           <p class="label">Preview</p>
           <div class="preview-stage">
@@ -92,11 +95,17 @@ Constraints:
             <div class="field">
               <label for="passphrase">Passphrase <span class="label-note">· secret mode only</span></label>
               <div class="passphrase">
-                <input type="password" id="passphrase" name="passphrase" minlength="8"
-                       autocomplete="new-password" autocapitalize="off" spellcheck="false">
+                <input type="password" id="passphrase" name="passphrase" minlength="<%= Cistergraphia::Secret::MIN_PASSPHRASE_LENGTH %>"
+                       autocomplete="new-password" autocapitalize="off" spellcheck="false"
+                       aria-describedby="passphrase-error passphrase-hint"<%== ' aria-invalid="true" autofocus' if @passphrase_error %>>
                 <button type="button" class="btn btn--small" data-reveal="passphrase" aria-pressed="false">Show</button>
               </div>
-              <p class="field-meta"><span>At least 8 characters; four or more random words is far better. Never stored.</span></p>
+              <div class="field-notes">
+                <p class="field-meta" id="passphrase-hint">At least <%= Cistergraphia::Secret::MIN_PASSPHRASE_LENGTH %> characters; four or more random words is far better. Never stored.</p>
+                <p class="field-error" id="passphrase-error" aria-live="polite" data-passphrase-error
+                   data-missing="<%= Cistergraphia::Secret.passphrase_problem('') %>"
+                   data-too-short="<%= Cistergraphia::Secret.passphrase_problem('-') %>"><%= @passphrase_error %></p>
+              </div>
             </div>
           </div>
         </div>
@@ -138,6 +147,6 @@ Constraints:
           Hollow points are signs written upside down.</figcaption>
       </figure>
     </div>
-    <p class="note"><a href="/about#why-a-snail">Why these two?</a></p>
+    <p class="note"><a href="/about#two-layouts">Where do they come from?</a></p>
   </aside>
 </div>

@@ -32,12 +32,25 @@ module Cistergraphia
     TAG_BYTES = 16
     HEADER_BYTES = 1 + SALT_BYTES + NONCE_BYTES
     MIN_PASSPHRASE_LENGTH = 8
+    WRONG_PASSPHRASE = 'Wrong passphrase, or the image was not made in secret mode or was altered'
     BASE = 10_000
 
     module_function
 
+    # Why a passphrase cannot seal a message, or nil when it can. The one copy of
+    # the rule: the encoder enforces it, the web form and the CLI explain it.
+    def passphrase_problem(passphrase)
+      passphrase = passphrase.to_s
+      return 'Secret mode needs a passphrase' if passphrase.empty?
+
+      "A passphrase needs at least #{MIN_PASSPHRASE_LENGTH} characters" if passphrase.length < MIN_PASSPHRASE_LENGTH
+    end
+
     # Message + passphrase => sequence of numbers (0..9999) padded to a perfect square
     def encrypt(message, passphrase)
+      problem = passphrase_problem(passphrase)
+      raise Error, problem if problem
+
       plaintext = message.to_s.strip
       raise EmptyMessageError, 'Message is empty' if plaintext.empty?
 
@@ -75,11 +88,14 @@ module Cistergraphia
 
     def unseal(payload, passphrase)
       header, body, tag = split_payload(payload)
+      # No plate was ever sealed with a passphrase this short: wrong, without the scrypt work
+      raise WrongPassphraseError, WRONG_PASSPHRASE if passphrase.to_s.length < MIN_PASSPHRASE_LENGTH
+
       decipher = aead(:decrypt, passphrase, header)
       decipher.auth_tag = tag
       (decipher.update(body) + decipher.final).force_encoding(Encoding::UTF_8)
     rescue OpenSSL::Cipher::CipherError
-      raise WrongPassphraseError, 'Wrong passphrase, or the image was not made in secret mode or was altered'
+      raise WrongPassphraseError, WRONG_PASSPHRASE
     end
 
     def split_payload(payload)
@@ -103,12 +119,7 @@ module Cistergraphia
     end
 
     def key(passphrase, salt)
-      passphrase = passphrase.to_s
-      if passphrase.length < MIN_PASSPHRASE_LENGTH
-        raise Error, "Passphrase must be at least #{MIN_PASSPHRASE_LENGTH} characters"
-      end
-
-      OpenSSL::KDF.scrypt(passphrase.encode(Encoding::UTF_8), salt: salt, length: 32, **SCRYPT)
+      OpenSSL::KDF.scrypt(passphrase.to_s.encode(Encoding::UTF_8), salt: salt, length: 32, **SCRYPT)
     end
 
     # Bytes => base-10000 digits. A leading 0x01 byte keeps leading zero bytes.
