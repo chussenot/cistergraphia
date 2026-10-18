@@ -107,7 +107,7 @@ Run `bundle exec rackup` and open http://localhost:9292. Encode messages on `/`
 (with a live preview of each letter's sign), decode downloaded SVGs (or their
 pasted code) on `/decode`, and read the history of the ciphers, with a number
 playground and *Lectio*, a game to learn to read the signs, on `/about`. Pick the
-layout (Phaistos or Rongorongo) under the mode. A
+mode and the layout (Phaistos or Rongorongo) first, then write. A
 generated plate can be walked sign by sign, in reading order, with the pointer or
 the arrow keys, and a Rongorongo plate can be turned half round. For secret mode,
 pick **Secret** and enter a passphrase. The server then sees the message and

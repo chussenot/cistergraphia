@@ -130,6 +130,18 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'tabindex="0"'
   end
 
+  def test_inscribe_puts_the_choices_first_and_reserves_its_dynamic_parts
+    get '/'
+    body = last_response.body
+    order = ['name="mode"', 'name="layout"', 'id="message"', 'data-preview', 'id="passphrase"', 'data-submit']
+
+    assert_equal(order, order.sort_by { |marker| body.index(marker) }) # choices above what you type
+    refute_match(/<div class="preview[^"]*" data-preview[^>]* hidden[ >]/, body) # laid out from the first paint
+    assert_includes body, 'preview-note--secret'                       # the sealed state shares the strip
+    assert_includes body, 'class="secret-slot"'                        # unfolded by CSS, not by JS
+    assert_match(/anatomy-hint awaits-script/, body)                   # space kept until JS
+  end
+
   def test_index_offers_both_layouts
     get '/'
 
@@ -151,6 +163,17 @@ class AppTest < Minitest::Test
     post '/decode', svg: svg
 
     assert_includes last_response.body, 'ora et labora'
+  end
+
+  def test_plate_keeps_its_caption_and_controls_in_place
+    post '/generate', message: 'abbey', layout: 'rongorongo'
+    body = last_response.body
+
+    assert_match(/plate-reading-rest/, body) # the resting caption keeps its place...
+    assert_match(%r{data-plate-reading aria-live="polite"></span>}, body) # ...while the live reading fills it
+    assert_match(/plate-hint awaits-script/, body)
+    assert_match(/btn awaits-script" data-action="turn-plate"/, body)
+    refute_match(/<(?:span|button)[^>]* hidden[ >]/, body)
   end
 
   def test_unknown_layouts_fall_back_to_the_snail
@@ -185,8 +208,11 @@ class AppTest < Minitest::Test
   def test_about_page_offers_lectio
     get '/about'
 
-    assert_match(/<section class="lectio" data-lectio hidden/, last_response.body) # revealed by JS only
-    assert_includes last_response.body, 'data-lectio-answer'
+    body = last_response.body
+    assert_match(/<section class="lectio" data-lectio aria-labelledby/, body) # laid out from the start
+    assert_match(/data-lectio-sign data-number="[1-9]"><svg class="glyph"/, body)
+    assert_match(/data-lectio-answer disabled>/, body) # enabled by JS
+    assert_match(/data-lectio-submit disabled>/, body)
   end
 
   def test_unknown_pages_render_the_erratum

@@ -14,7 +14,9 @@ Design Decisions:
 - Why a snail: the reading order's ancestry, sourced (rongorongo is reverse
   boustrophedon, not a spiral; the clockwise inward spiral is the Phaistos Disc's)
 - The playground and the tablet are drawn from the real cipher geometry
-- Lectio: a reading game (JS only), novice to abbot as the signs grow
+- Lectio: a reading game, novice to abbot as the signs grow. Its first sign
+  is drawn here and its controls are enabled by JS (like the dials), so it is
+  laid out from the first paint and nothing moves when the script arrives
 %>
 <div class="spread spread--about">
   <article class="leaf" aria-labelledby="about-title">
@@ -134,14 +136,15 @@ Design Decisions:
       </div>
     </div>
 
-    <section class="lectio" data-lectio hidden aria-labelledby="lectio-title">
+    <section class="lectio" data-lectio aria-labelledby="lectio-title">
       <h3 id="lectio-title" class="index-heading">Lectio · read the sign</h3>
-      <div class="lectio-sign" data-lectio-sign></div>
+      <% first = rand(1..9) %>
+      <div class="lectio-sign" data-lectio-sign data-number="<%= first %>"><%== glyph_svg(first, title: 'A Cistercian sign to read') %></div>
       <form class="lectio-form" data-lectio-form>
         <label for="lectio-answer" class="visually-hidden">The number this sign reads</label>
         <input type="number" id="lectio-answer" class="input" min="0" max="9999" inputmode="numeric"
-               autocomplete="off" placeholder="What does it read?" data-lectio-answer>
-        <button type="submit" class="btn btn--primary" data-lectio-submit>Read</button>
+               autocomplete="off" placeholder="What does it read?" data-lectio-answer disabled>
+        <button type="submit" class="btn btn--primary" data-lectio-submit disabled>Read</button>
       </form>
       <p class="lectio-feedback" data-lectio-feedback aria-live="polite">Signs start with the units. Read three in a row to take your vows.</p>
       <p class="lectio-standing"><span data-lectio-rank>Novice</span> · <span data-lectio-streak>0</span> in a row · best <span data-lectio-best>0</span></p>

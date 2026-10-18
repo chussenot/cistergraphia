@@ -13,6 +13,9 @@ Design Decisions:
 - "Read it back" posts the same SVG to /decode: a one-click round trip
 - Rongorongo plates can be turned half round (JS, CSS only): the turned rows
   then read upright, as the readers of Rapa Nui turned their tablets
+- Nothing moves while you walk or turn the plate: the live reading takes the
+  resting caption's place, and the script-only controls have their space from
+  the first paint
 
 Constraints:
 - Copy/download need JS; the inline SVG can always be saved from the page
@@ -44,12 +47,15 @@ Constraints:
       <%== @svg_content %>
     </div>
     <figcaption>
-      <% if @layout == :rongorongo %>
-        <span data-plate-reading aria-live="polite">Read from the bottom left, left to right; turn the plate half round for each next line.</span>
-      <% else %>
-        <span data-plate-reading aria-live="polite">Read clockwise from the top-left corner, coiling inward.</span>
-      <% end %>
-      <span class="plate-hint" data-plate-hint hidden>Point at a sign, or focus the plate and use the arrow keys, to walk it in reading order.</span>
+      <span class="plate-reading">
+        <% if @layout == :rongorongo %>
+          <span class="plate-reading-rest">Read from the bottom left, left to right; turn the plate half round for each next line.</span>
+        <% else %>
+          <span class="plate-reading-rest">Read clockwise from the top-left corner, coiling inward.</span>
+        <% end %>
+        <span class="plate-reading-live" data-plate-reading aria-live="polite"></span>
+      </span>
+      <span class="plate-hint awaits-script" data-plate-hint>Point at a sign, or focus the plate and use the arrow keys, to walk it in reading order.</span>
     </figcaption>
   </figure>
 
@@ -58,7 +64,7 @@ Constraints:
     <button type="button" class="btn" data-action="download-png">Download PNG</button>
     <button type="button" class="btn" data-action="copy-svg">Copy SVG code</button>
     <% if @layout == :rongorongo %>
-      <button type="button" class="btn" data-action="turn-plate" aria-pressed="false" hidden>Turn the plate</button>
+      <button type="button" class="btn awaits-script" data-action="turn-plate" aria-pressed="false">Turn the plate</button>
     <% end %>
     <a class="btn btn--quiet" href="/">Inscribe another</a>
   </div>
