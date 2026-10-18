@@ -120,7 +120,7 @@ end
 
 begin
   passphrase = ask_passphrase(confirm: true) if options[:secret]
-  sequence = Cistergraphia.encode(message, passphrase: passphrase)
+  _sequence, svg = Cistergraphia.inscribe(message, passphrase: passphrase, layout: options.fetch(:layout, :phaistos))
 rescue Cistergraphia::Error => e
   abort e.message
 end
@@ -129,6 +129,6 @@ svg_path = options[:output] || File.join(DEFAULT_DIR, 'inline.svg')
 png_path = options[:png] || File.join(DEFAULT_DIR, 'output.png')
 [svg_path, png_path].each { |path| FileUtils.mkdir_p(File.dirname(path)) }
 
-File.write(svg_path, Cistergraphia.to_svg(sequence, layout: options.fetch(:layout, :phaistos)))
+File.write(svg_path, svg)
 display_svg(svg_path)
 convert_to_png(svg_path, png_path)

@@ -89,10 +89,8 @@ class CistergraphiaApp < Sinatra::Base
 
     @secret = !passphrase.nil?
     @layout = params[:layout] == 'rongorongo' ? :rongorongo : :phaistos # anything else: the snail
-    sequence = Cistergraphia.encode(@message, passphrase: passphrase)
-    @svg_content = Cistergraphia.to_svg(sequence, layout: @layout)
-    @sequence = sequence
-    @symbols = sequence.size
+    @sequence, @svg_content = Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout)
+    @symbols = @sequence.size
     @normalized = Cistergraphia.normalize(@message)
     erb :result
   end

@@ -80,6 +80,8 @@ breakable (< 90%) or secret mode starts leaking (> 10%).
    to try, not a key: the decoder itself tells the two apart with the same pair test, so an
    attacker does too. Turned glyphs read as their mirror (units ⇄ thousands, tens ⇄ hundreds),
    which is a fixed, public transformation. Choose a layout for its look, not for security.
+   (On very short messages the pair test can pass along both routes, about 1 two-letter plate
+   in 100; the encoder redraws those, so the test always names one.)
 6. **Images instead of SVG would not help.** The glyphs are regular and documented: dCode
    converts them, and a vision model or a small classifier reads them.
 

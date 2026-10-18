@@ -132,6 +132,20 @@ class CistergraphiaTest < Minitest::Test
     assert_equal [4000, 3000, 2, 1], Cistergraphia::SVG.read(svg) # read as a snail, the top row is upside down
   end
 
+  def test_inscribe_never_draws_a_plate_that_reads_along_both_layouts
+    # "jj" as raw rongorongo plates also reads as letters along the snail about 1 time in 100
+    ambiguous = 2000.times.count do
+      !Cistergraphia.unambiguous?(Cistergraphia.to_svg(Cistergraphia.encode('jj'), layout: :rongorongo), :rongorongo)
+    end
+
+    assert_predicate ambiguous, :positive?, 'the hazard this test guards against' # ~20 expected
+    500.times do
+      _sequence, svg = Cistergraphia.inscribe('jj', layout: :rongorongo)
+
+      assert_equal 'jj', Cistergraphia.decode(svg)
+    end
+  end
+
   def test_unknown_layouts_are_refused
     assert_raises(Cistergraphia::Error) { Cistergraphia.to_svg([1], layout: :spiral) }
   end
@@ -141,7 +155,7 @@ class CistergraphiaTest < Minitest::Test
     Cistergraphia::SVG::LAYOUTS.each do |layout|
       50.times do
         message = [*'a'..'z'].sample + Array.new(rand(0..40)) { alphabet.sample }.join
-        svg = Cistergraphia.to_svg(Cistergraphia.encode(message), layout: layout)
+        _sequence, svg = Cistergraphia.inscribe(message, layout: layout)
 
         assert_equal Cistergraphia.normalize(message), Cistergraphia.decode(svg), layout
         assert_equal Cistergraphia.normalize(message), Cistergraphia.decode(svg, layout: layout)

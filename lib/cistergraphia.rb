@@ -21,7 +21,8 @@
 # - The sequence is laid out along one of two reading paths (layouts):
 #   Phaistos, a clockwise spiral from the top-left to the centre (default), or
 #   Rongorongo, reverse boustrophedon: rows from the bottom, every other row
-#   running back with its signs turned half round. The decoder tries both.
+#   running back with its signs turned half round. The decoder tries both;
+#   #inscribe redraws any game plate that would read along both
 #
 # Constraints:
 # - Limited to the characters defined in TABLET; anything else is a separator
@@ -82,6 +83,29 @@ module Cistergraphia
       e
     end
     raise errors.find { |e| e.is_a?(WrongPassphraseError) } || errors.first
+  end
+
+  # Message => [sequence, SVG plate] along a layout. In game mode, a plate that
+  # would also read as letters along another layout (short messages, about 1 in
+  # 100 two-letter ones) is drawn again with new random splits, so the
+  # decoder's layout detection is never wrong. Secret plates need no check: the
+  # wrong layout fails authentication instead of yielding a false message.
+  def inscribe(message, passphrase: nil, layout: :phaistos)
+    100.times do
+      sequence = encode(message, passphrase: passphrase)
+      svg = to_svg(sequence, layout: layout)
+      return [sequence, svg] if passphrase || unambiguous?(svg, layout)
+    end
+    raise Error, 'Could not draw an unambiguous plate for this message'
+  end
+
+  # True when the plate reads as letters along its own layout only
+  def unambiguous?(svg, layout)
+    (SVG::LAYOUTS - [layout]).none? do |other|
+      decipher(SVG.read(svg, layout: other))
+    rescue DecodeError
+      false
+    end
   end
 
   # Renders a sequence as an SVG document along a layout's reading path
