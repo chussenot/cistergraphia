@@ -12,7 +12,10 @@
 # - Modular Sinatra app (sinatra/base), no classic top-level DSL
 # - Cipher and SVG rendering live in lib/, shared with the CLI
 # - ERB output is HTML-escaped by default; raw output must use <%== %>
-# - Development mode with auto-reloading
+# - All CSS, JS and fonts are first-party static files (public/), so a strict
+#   Content-Security-Policy applies and no third party sees who uses the app
+# - Responses carrying a message or passphrase are never cached
+# - The UI design is documented in docs/design.md
 #
 # Constraints:
 # - Characters missing from the cipher table are treated as separators
@@ -21,14 +24,22 @@
 
 require 'sinatra/base'
 require_relative 'lib/cistergraphia'
+require_relative 'web/view_helpers'
 
 class CistergraphiaApp < Sinatra::Base
   MAX_MESSAGE_LENGTH = 500 # ~1000 symbols, a 32x32 grid
   MAX_SVG_BYTES = 1024 * 1024 # The SVG of a MAX_MESSAGE_LENGTH message is well below this
+  CONTENT_SECURITY_POLICY = [
+    "default-src 'self'", "img-src 'self' data: blob:", "object-src 'none'", "base-uri 'none'",
+    "form-action 'self'", "frame-ancestors 'none'"
+  ].join('; ')
+
+  helpers ViewHelpers
 
   configure do
     set :root, __dir__
     set :erb, escape_html: true
+    set :static_cache_control, [:public, { max_age: 3600 }]
     enable :logging
   end
 
@@ -36,6 +47,15 @@ class CistergraphiaApp < Sinatra::Base
     require 'sinatra/reloader'
     register Sinatra::Reloader
     also_reload File.join(__dir__, 'lib/**/*.rb')
+    also_reload File.join(__dir__, 'web/**/*.rb')
+  end
+
+  before do
+    headers 'Content-Security-Policy' => CONTENT_SECURITY_POLICY,
+            'Referrer-Policy' => 'no-referrer',
+            'X-Content-Type-Options' => 'nosniff',
+            'Permissions-Policy' => 'camera=(), microphone=(), geolocation=()'
+    cache_control :no_store if request.post?
   end
 
   error Cistergraphia::Error do
@@ -50,26 +70,38 @@ class CistergraphiaApp < Sinatra::Base
     erb :error
   end
 
+  not_found do
+    @error_message = 'This page is not in the index.'
+    erb :error
+  end
+
   get '/' do
+    @page = :inscribe
     erb :index
   end
 
   post '/generate' do
+    @page = :inscribe
     @message = params[:message].to_s
     halt_with 413, "Message is limited to #{MAX_MESSAGE_LENGTH} characters" if @message.length > MAX_MESSAGE_LENGTH
 
     @secret = !passphrase.nil?
-    @svg_content = Cistergraphia.to_svg(Cistergraphia.encode(@message, passphrase: passphrase))
+    sequence = Cistergraphia.encode(@message, passphrase: passphrase)
+    @svg_content = Cistergraphia.to_svg(sequence)
+    @symbols = sequence.size
     @normalized = Cistergraphia.normalize(@message)
     erb :result
   end
 
   get '/decode' do
+    @page = :read
     erb :decode
   end
 
   post '/decode' do
+    @page = :read
     @message = Cistergraphia.decode(submitted_svg, passphrase: passphrase)
+    @secret = !passphrase.nil?
     erb :decoded
   rescue Cistergraphia::DecodeError => e
     raise if passphrase
@@ -79,10 +111,15 @@ class CistergraphiaApp < Sinatra::Base
 
   private
 
-  # Blank means game mode
+  # The mode switch wins when present; otherwise a non-blank passphrase means secret mode
   def passphrase
+    return nil if params[:mode] == 'game'
+
     value = params[:passphrase].to_s
-    value.empty? ? nil : value
+    return value unless value.empty?
+    raise Cistergraphia::Error, 'Secret mode needs a passphrase' if params[:mode] == 'secret'
+
+    nil
   end
 
   # SVG from the file upload when one was chosen, otherwise from the textarea
