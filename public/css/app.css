@@ -61,6 +61,20 @@
   --radius: 3px;
   --measure: 62ch;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Motion: the pace of a scribe. Nothing loops; nothing moves without a reason */
+  --ease-ink: cubic-bezier(0.3, 0.6, 0.2, 1);
+  --dur-stroke: 260ms;   /* one stroke of the pen */
+  --dur-dry: 1100ms;     /* wet rubric ink drying to iron-gall */
+  --dur-lift: 260ms;     /* a stroke lifted away */
+  --dur-mode: 700ms;     /* the page changing ink, red <-> blue */
+}
+
+/* Registered so the page can change ink slowly instead of flipping */
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #a3301c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,6 +108,7 @@
 html { -webkit-text-size-adjust: 100%; }
 
 body {
+  transition: --accent var(--dur-mode) var(--ease);
   margin: 0;
   min-height: 100vh;
   display: flex;
@@ -172,6 +187,7 @@ code { font-family: var(--mono); font-size: 0.82em; background: var(--vellum); p
 
 .nav { display: flex; gap: var(--space-2); font-family: var(--sans); font-size: 0.82rem; }
 .nav a {
+  position: relative;
   text-decoration: none;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -182,7 +198,21 @@ code { font-family: var(--mono); font-size: 0.82em; background: var(--vellum); p
   border-bottom: 2px solid transparent;
 }
 .nav a:hover { color: var(--ink); }
-.nav a.is-current { color: var(--ink); border-bottom-color: var(--accent); border-radius: 0; }
+.nav a.is-current { color: var(--ink); border-radius: 0; }
+.nav a::after {
+  content: "";
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: -2px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s var(--ease-ink);
+}
+.nav a:hover::after { transform: scaleX(0.35); }
+.nav a.is-current::after { transform: scaleX(1); }
 
 /* ---------- Page structure ---------- */
 .folio {
@@ -341,9 +371,6 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 [data-mode="secret"] .preview-signs,
 [data-mode="secret"] .preview-empty { display: none; }
 [data-mode="secret"] .preview-label { margin-bottom: 0; }
-@media (prefers-reduced-motion: no-preference) {
-  .preview-signs li:last-child { animation: rise 0.25s var(--ease) both; }
-}
 
 /* Mode switch: two index cards, red and blue */
 .modes { border: 0; padding: 0; margin: 0; display: grid; gap: var(--space-3); }
@@ -442,6 +469,12 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 }
 .anatomy .glyph { grid-column: 2; grid-row: 1 / span 2; width: 5.5rem; color: var(--ink); }
 .quadrant {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: var(--space-1) var(--space-2);
+  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-2));
+  border-radius: var(--radius);
   font-family: var(--sans);
   font-size: 0.72rem;
   letter-spacing: 0.1em;
@@ -454,6 +487,12 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .quadrant--units, .quadrant--hundreds { grid-column: 3; }
 .quadrant--tens, .quadrant--units { grid-row: 1; align-self: start; }
 .quadrant--thousands, .quadrant--hundreds { grid-row: 2; align-self: end; }
+.quadrant:not(:disabled) { cursor: pointer; transition: background-color 0.2s var(--ease); }
+.quadrant:not(:disabled):hover { background: var(--vellum); }
+.quadrant:disabled { color: var(--ink-soft); opacity: 1; }
+.quadrant b { transition: transform 0.25s var(--ease-ink); }
+.quadrant:not(:disabled):active b { transform: translateY(1px); }
+.anatomy-hint { grid-column: 1 / -1; text-align: center; font-family: var(--sans); font-size: 0.78rem; color: var(--ink-soft); margin-top: calc(-1 * var(--space-4)); }
 .anatomy figcaption,
 .order figcaption,
 .plate figcaption {
@@ -539,20 +578,56 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
   display: grid;
   place-items: center;
 }
-.plate-frame svg { display: block; width: auto; height: auto; max-width: 100%; max-height: min(78vh, 60rem); }
-.plate-frame svg rect { fill: transparent; }
-.plate-frame svg g { stroke: var(--ink); stroke-width: 3; stroke-linecap: square; }
+.plate-frame svg { display: block; width: auto; height: auto; max-width: 100%; max-height: min(78vh, 60rem); color: var(--ink); }
+.plate-frame svg > rect:first-child { fill: transparent; }
+.plate-frame svg g { stroke: currentColor; stroke-width: 3; stroke-linecap: square; }
+.plate-frame:focus-visible { outline-offset: 4px; }
+
+/* Walking the snail: a soft field glides from sign to sign */
+.plate-focus {
+  fill: var(--accent);
+  fill-opacity: 0.08;
+  stroke: var(--accent);
+  stroke-opacity: 0.35;
+  stroke-width: 1.5;
+  opacity: 0;
+  transition: opacity 0.25s var(--ease), transform 0.3s var(--ease-ink);
+  pointer-events: none;
+}
+.plate-focus.is-visible { opacity: 1; }
+.plate-hint { display: block; font-family: var(--sans); font-style: normal; font-size: 0.78rem; margin-top: var(--space-1); }
+[data-plate-reading] { font-variant-numeric: lining-nums; }
 /* Each stroke is inked in reading order; hidden until its turn (no stray caps) */
-.plate-frame svg.is-drawing line {
+@keyframes ink { to { stroke-dashoffset: 0; } }
+
+/* ---------- Ink: the one motion vocabulary (see public/js/ink.js) ---------- */
+/* A stroke is drawn end to end, wet in the mode's colour, then dries to ink */
+line.ink-in {
   stroke-dasharray: var(--len);
-  animation: ink-stroke 0.35s var(--ease) var(--delay) both;
+  animation-name: ink-stroke, ink-dry;
+  animation-duration: var(--dur-stroke), var(--dur-dry);
+  animation-timing-function: var(--ease-ink), ease-out;
+  animation-delay: var(--delay), calc(var(--delay) + var(--dur-stroke));
+  animation-fill-mode: both;
 }
 @keyframes ink-stroke {
   0% { stroke-dashoffset: var(--len); opacity: 0; }
   1% { opacity: 1; }
   100% { stroke-dashoffset: 0; opacity: 1; }
 }
-@keyframes ink { to { stroke-dashoffset: 0; } }
+@keyframes ink-dry {
+  from { stroke: var(--accent); }
+  to { stroke: currentColor; }
+}
+line.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
+@keyframes ink-lift { to { opacity: 0; } }
+/* A highlighted corner: the strokes of one place, in the mode's colour */
+.glyph line { transition: stroke 0.3s var(--ease); }
+.glyph line.is-lit { stroke: var(--accent); }
+
+/* ---------- Transcription reveal ---------- */
+.reveal { animation: reveal 0.6s var(--ease) var(--d) both; }
+@keyframes reveal { from { opacity: 0; filter: blur(3px); } }
 
 .readback {
   margin-top: var(--space-6);
@@ -681,6 +756,25 @@ input[aria-invalid="true"] { border-color: var(--rubric); }
 .sources .index-heading { margin-top: 0; }
 .sources ul { margin: 0; padding-left: 1.2rem; display: grid; gap: var(--space-2); font-size: 1.05rem; }
 
+/* ---------- Lectio: the reading game ---------- */
+.lectio { display: grid; gap: var(--space-3); margin-top: var(--space-2); }
+.lectio .index-heading { margin-bottom: 0; }
+.lectio-sign {
+  display: grid;
+  place-items: center;
+  min-height: 9.5rem;
+  padding: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.lectio-sign .glyph { width: 4.6rem; color: var(--ink); }
+.lectio-form { display: flex; gap: var(--space-2); }
+.lectio-form input { flex: 1; min-width: 0; }
+.lectio-feedback { font-style: italic; color: var(--ink-soft); min-height: 1.6em; }
+.lectio-standing { font-family: var(--sans); font-size: 0.78rem; letter-spacing: 0.06em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.lectio-standing [data-lectio-rank] { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; }
+
 /* ---------- Erratum ---------- */
 .erratum-text { font-size: 1.35rem; max-width: var(--measure); margin-bottom: var(--space-6); }
 
@@ -724,10 +818,15 @@ input[aria-invalid="true"] { border-color: var(--rubric); }
 /* ---------- Motion ---------- */
 @media (prefers-reduced-motion: no-preference) {
   .snail polyline { stroke-dashoffset: 1; animation: ink 2.6s var(--ease) 0.4s forwards; }
-  .leaf { animation: rise 0.5s var(--ease) both; }
+  .leaf { animation: rise 0.6s var(--ease) both; }
   .spread > .leaf:nth-child(2) { animation-delay: 0.08s; }
 }
-@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes rise { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
+  .nav a::after, .plate-focus, .glyph line, .quadrant b { transition: none; }
+}
 
 /* ---------- Small screens ---------- */
 @media (max-width: 34rem) {

@@ -8,7 +8,8 @@ Purpose:
 Design Decisions:
 - The SVG is shown on the leaf in ink colours (CSS only); exports stay the
   plain black-on-white file that the decoder reads
-- Strokes are drawn in reading order (JS), so the snail is visible
+- Strokes are inked in reading order and dry from rubric to ink (JS), so the
+  snail is visible; the plate can be walked sign by sign (pointer or arrow keys)
 - "Read it back" posts the same SVG to /decode: a one-click round trip
 
 Constraints:
@@ -34,10 +35,15 @@ Constraints:
   </dl>
 
   <figure class="plate">
-    <div class="plate-frame" id="svg-display" data-plate>
+    <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
+         aria-label="The plate. Use the arrow keys to walk its signs in reading order."
+         data-plate-cells="<%= plate_cells_json(@sequence) %>" data-plate-layout="<%= plate_layout_json(@sequence) %>">
       <%== @svg_content %>
     </div>
-    <figcaption>Read clockwise from the top-left corner, coiling inward.</figcaption>
+    <figcaption>
+      <span data-plate-reading aria-live="polite">Read clockwise from the top-left corner, coiling inward.</span>
+      <span class="plate-hint" data-plate-hint hidden>Point at a sign, or focus the plate and use the arrow keys, to walk the snail.</span>
+    </figcaption>
   </figure>
 
   <div class="actions">
