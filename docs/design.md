@@ -70,6 +70,55 @@ and the passphrase.
 | Index of dates (About) | A timeline whose exact years are written as signs; centuries get an em dash |
 | Tablet (About) | The 27 letters as index cards: sign, letter in the mode colour, value |
 
+## Interaction: "the silence of the monks"
+
+Motion and interaction follow four rules. Anything that breaks one does not ship.
+
+1. **Motion only when it carries meaning.** Nothing loops, nothing moves for show; every
+   animation either teaches how the cipher works or answers something you did.
+2. **One vocabulary: ink.** A stroke is *inked* (drawn end to end, wet in the mode's colour,
+   then drying to iron-gall ink) or *lifted* (it fades). A sign changes by *morphing*:
+   shared strokes stay, only the difference is written. Never a pop, a bounce or a shake.
+3. **The game is reading.** The page invites you to read the signs yourself, at your own
+   pace: no timers, no sound, no confetti. Mistakes are shown, not punished.
+4. **Silence by default.** Under `prefers-reduced-motion`, everything is instant and the
+   same information is still there.
+
+**Red means one thing at a time.** Wet ink and "look here" share the mode colour, so lighting
+a corner first dries any wet ink: the only red left is what you should look at.
+
+### Motion tokens
+
+| Token | Value | What it is |
+|---|---|---|
+| `--dur-stroke` | 260 ms | one stroke of the pen |
+| `--dur-dry` | 1100 ms | wet rubric ink drying to iron-gall |
+| `--dur-lift` | 260 ms | a stroke lifted away |
+| `--dur-mode` | 700 ms | the page changing ink, red ↔ blue (a registered `@property`) |
+| stroke gap | 70 ms | between two strokes of one sign, like a scribe's hand |
+| `--ease-ink` | `cubic-bezier(0.3, 0.6, 0.2, 1)` | quick to start, slow to settle |
+
+![The plate being inked: dry strokes in ink, the wet rubric front coiling up the left side](web-ui-ink.png)
+
+### Catalogue
+
+| Where | Interaction | What it teaches |
+|---|---|---|
+| Whole page | Choosing a mode crossfades the page's ink red ↔ blue | The mode you are in |
+| Inscribe preview | Each new letter's sign is inked as you type; existing signs stay | One letter, one sign |
+| How to read a sign | The four corners are dials (click, or arrow keys up/down); only the changed strokes are rewritten; hovering a corner lights its strokes; some years name themselves (1098, 1115, 1153, this year) | How the places combine |
+| Plate | Inked sign by sign along the snail, the wet rubric front visibly coiling inward | The reading order |
+| Plate | Walk it: point at a sign, or focus the plate and use the arrow keys / Home / End; a soft field glides along the snail; "Sign 12 of 36 · 4127" | Reading the numerals, the first step of solving a game plate |
+| Transcription | The decoded message appears letter by letter after its initial | The payoff of decoding |
+| About · Lectio | Read the sign, type its number. Novice (units) → Monk (tens) → Prior (hundreds) → Abbot (thousands) every three in a row; a misread corner is lit (an empty corner is named as a zero) and you continue when ready; best run kept in the browser | Fluency in the signs |
+| Read | A received file's sign is inked | Your file arrived |
+
+Implementation: `public/js/ink.js` holds the vocabulary (`inkIn`, `dry`, `lift`, `morph`,
+`glyph`), `public/js/app.js` the interactions. The plate's cells and geometry come from
+`ViewHelpers#plate_cells_json` / `#plate_layout_json`, so walking the plate follows the real
+snail. Exports strip every class, style and the walking field: the downloaded SVG is
+unchanged.
+
 ## Engineering rules the design depends on
 
 - **No inline script or style.** CSS, JS, fonts and the favicon are first-party files, so
