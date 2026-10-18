@@ -1,127 +1,63 @@
-<%# 
-Cistergraphia Layout Template
-============================
+<%#
+Cistergraphia Layout: "The Abbey Index"
+=======================================
 
 Purpose:
-- Provides consistent styling and structure
-- Implements responsive design
-- Includes common UI elements
+- Shared frame of every page: masthead, the leaf (main), colophon
 
 Design Decisions:
-- Comic Sans for playful aesthetic
-- Gradient background for visual interest
-- Card-based container layout
-- Animated logo for engagement
-- Mobile-friendly design
+- Each page is a leaf of a Cistercian library index (see docs/design.md)
+- Only first-party CSS, JS and fonts: a strict Content-Security-Policy applies
+  (no inline script or style anywhere in the templates)
+- The body carries the mode: red for the game, blue for the secret
 
 Constraints:
-- Must work across modern browsers
-- Responsive down to 320px width
-- Maintains consistent spacing
-- Handles dynamic content
+- Works without JavaScript (forms post normally; JS only enhances)
 %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cistergraphia</title>
-  <style>
-    .logo {
-      display: block;
-      margin: 0 auto;
-      width: 120px;
-      height: 120px;
-      animation: spin 4s linear infinite;
-    }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-  </style>
-  <style>
-    body {
-      font-family: 'Comic Sans MS', cursive, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
-    }
-    .container {
-      background: #fff8e1;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    form {
-      margin: 20px 0;
-    }
-    input[type="text"], input[type="password"], textarea {
-      box-sizing: border-box;
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 2px solid #ff9800;
-      border-radius: 8px;
-      background: #fff3e0;
-    }
-    input[type="submit"] {
-      background: #ff5722;
-      color: white;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    input[type="submit"]:hover {
-      background: #e64a19;
-    }
-    .svg-container {
-      overflow-x: auto;
-      margin: 20px 0;
-      padding: 10px;
-      background: #fff3e0;
-      border: 2px solid #ff9800;
-      border-radius: 8px;
-    }
-    textarea {
-      font-family: monospace;
-    }
-    .hint {
-      font-size: 0.9em;
-      color: #555;
-    }
-    button {
-      margin: 4px 4px 4px 0;
-    }
-    .decoded {
-      font-size: 1.5em;
-      padding: 10px;
-      background: #fff3e0;
-      border: 2px solid #ff9800;
-      border-radius: 8px;
-    }
-    .error {
-      color: #d32f2f;
-      background-color: #ffcdd2;
-      border: 2px solid #e57373;
-      padding: 15px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-  </style>
+  <title><%= @title ? "#{@title} · " : '' %>Cistergraphia</title>
+  <meta name="description" content="Write a message as Cistercian numerals coiled like a snail: a cipher game, or a passphrase-sealed secret.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f3ede1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#191714" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/eb-garamond-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="/js/app.js" defer></script>
 </head>
-<body>
-  <div class="container">
-  <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="48" stroke="black" stroke-width="2" fill="white"/><!-- Face -->
-    <circle cx="35" cy="40" r="5" fill="black"/><!-- Eyes -->
-    <circle cx="65" cy="40" r="5" fill="black"/><!-- Eyes -->
-    <path d="M 35 65 Q 50 80, 65 65" stroke="black" stroke-width="2" fill="transparent"/><!-- Mouth -->
-  </svg>
-  <h1 style="text-align: center; color: #ff5722;">Cistergraphia</h1>
+<body data-mode="<%= @secret ? 'secret' : 'game' %>">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="masthead">
+    <a class="brand" href="/">
+      <%== glyph_svg(1098, css: 'glyph brand-mark', title: '1098, the founding of Cîteaux') %>
+      <span>
+        <span class="brand-name">Cistergraphia</span>
+        <span class="brand-tag">The ciphers of the monks</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="/" class="<%= nav_class(:inscribe) %>"<%== ' aria-current="page"' if @page == :inscribe %>>Inscribe</a>
+      <a href="/decode" class="<%= nav_class(:read) %>"<%== ' aria-current="page"' if @page == :read %>>Read</a>
+    </nav>
+  </header>
+
+  <main id="main" class="folio">
     <%== yield %>
-  </div>
+  </main>
+
+  <footer class="colophon">
+    <p>After the ciphers of the Cistercian monks, Cîteaux, 1098.</p>
+    <nav aria-label="About">
+      <a href="https://github.com/chussenot/cistergraphia">Source</a>
+      <a href="https://github.com/chussenot/cistergraphia/blob/master/docs/security-study.md">Security study</a>
+    </nav>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
-</html> 
+</html>

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require 'cgi'
 require 'rack/test'
 require_relative '../app'
 
@@ -15,8 +16,69 @@ class AppTest < Minitest::Test
     get '/'
 
     assert_predicate last_response, :ok?
-    assert_includes last_response.body, '<form method="post" action="/generate">'
+    assert_match(%r{<form [^>]*method="post" action="/generate"}, last_response.body)
     assert_includes last_response.body, 'href="/decode"'
+  end
+
+  def test_pages_send_a_strict_content_security_policy
+    get '/'
+
+    csp = last_response.headers['Content-Security-Policy']
+    assert_includes csp, "default-src 'self'"
+    assert_includes csp, "frame-ancestors 'none'"
+    assert_equal 'no-referrer', last_response.headers['Referrer-Policy']
+    refute_match(/<script>|<style>| style="| on[a-z]+="/, last_response.body) # nothing inline for the CSP to block
+  end
+
+  def test_results_carrying_messages_are_never_cached
+    post '/generate', message: 'hello', mode: 'secret', passphrase: 'abbey of molesme'
+
+    assert_includes last_response.headers['Cache-Control'], 'no-store'
+  end
+
+  def test_static_assets_are_served
+    %w[/css/app.css /js/app.js /favicon.svg /fonts/eb-garamond-latin-400-normal.woff2].each do |path|
+      get path
+
+      assert_predicate last_response, :ok?, path
+    end
+  end
+
+  def test_key_illustrations_use_the_real_glyph_geometry
+    get '/'
+
+    Cistergraphia::Glyphs.strokes(1098).each do |x1, y1, x2, y2|
+      assert_includes last_response.body, %(<line x1="#{x1}" y1="#{y1}" x2="#{x2}" y2="#{y2}"/>)
+    end
+  end
+
+  def test_game_mode_ignores_a_stray_passphrase
+    post '/generate', message: 'Agent 007', mode: 'game', passphrase: 'abbey of molesme'
+
+    assert_includes last_response.body, 'Enciphered as: <code>agent</code>'
+  end
+
+  def test_secret_mode_requires_a_passphrase
+    post '/generate', message: 'hello', mode: 'secret', passphrase: ''
+
+    assert_equal 400, last_response.status
+    assert_includes last_response.body, 'Secret mode needs a passphrase'
+  end
+
+  def test_result_page_can_read_its_plate_back
+    post '/generate', message: 'Ora et labora'
+    svg = CGI.unescapeHTML(last_response.body[/<input type="hidden" name="svg" value="([^"]*)"/, 1])
+
+    post '/decode', svg: svg
+
+    assert_includes last_response.body, 'ora et labora'
+  end
+
+  def test_unknown_pages_render_the_erratum
+    get '/nowhere'
+
+    assert_equal 404, last_response.status
+    assert_includes last_response.body, 'not in the index'
   end
 
   def test_generate_renders_an_inline_svg

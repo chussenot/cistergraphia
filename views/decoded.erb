@@ -1,6 +1,20 @@
-<div class="result-container">
-  <h2>Decoded message</h2>
-  <p class="decoded"><%= @message %></p>
-  <a href="/decode">Decode another</a>
-  <a href="/">Encode a message</a>
-</div>
+<%#
+Cistergraphia: Transcription (fol. 2v)
+======================================
+
+Purpose:
+- Show the decoded message as a transcription, with a plain Cistercian initial
+%>
+<section class="leaf leaf--narrow" aria-labelledby="transcription-title">
+  <p class="folio-mark" aria-hidden="true">fol. 2<sup>v</sup></p>
+  <h1 id="transcription-title" class="rubric">Decoded message</h1>
+  <p class="lede"><%= @secret ? 'Unsealed with its passphrase: authentic and unaltered.' : 'Read back from the game: letters and spaces, as enciphered.' %></p>
+
+  <p class="transcription" data-transcription><%= @message %></p>
+
+  <div class="actions">
+    <button type="button" class="btn" data-action="copy-text">Copy text</button>
+    <a class="btn btn--primary" href="/decode">Read another</a>
+    <a class="btn btn--quiet" href="/">Inscribe a message</a>
+  </div>
+</section>

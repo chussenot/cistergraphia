@@ -1,32 +1,92 @@
-<%# 
-Cistergraphia Input Form
-=======================
+<%#
+Cistergraphia: Inscribe (fol. 1r)
+=================================
 
 Purpose:
-- Provides user interface for message input
-- Simple, focused single-purpose form
+- Write a message as a Cistergraphia, in game or secret mode
+- Teach how a sign is read, beside the form
 
 Design Decisions:
-- Minimal form fields
-- Clear labeling
-- Required field validation
-- Consistent styling with layout
+- Mode is an explicit choice (two index cards, red and blue) rather than an
+  optional field; the passphrase only appears for the secret (JS), and is
+  always present, labelled, without JS
+- The key (anatomy, tabula, order) is drawn from the real cipher geometry
 
 Constraints:
-- Message field plus an optional passphrase (secret mode)
-- Must validate non-empty input
-- Posts to /generate endpoint
-- Links to the /decode form
+- Posts to /generate; message limited to 500 characters
 %>
-<form method="post" action="/generate">
-  <label for="message">Enter your message:</label><br>
-  <input type="text" id="message" name="message" maxlength="500" required><br>
-  <label for="passphrase">Passphrase (optional, at least 8 characters):</label><br>
-  <input type="password" id="passphrase" name="passphrase" minlength="8" autocomplete="new-password"><br>
-  <p class="hint">
-    Without a passphrase you get the <strong>game</strong>: a classic cipher anyone can crack with a bit of work.
-    With one you get <strong>secret mode</strong>: the message is encrypted (AES-256-GCM) and only that passphrase can reveal it.
-  </p>
-  <input type="submit" value="Generate">
-</form>
-<p>Received a Cistergraphia? <a href="/decode">Decode it</a>.</p> 
+<div class="spread">
+  <section class="leaf" aria-labelledby="inscribe-title">
+    <p class="folio-mark" aria-hidden="true">fol. 1<sup>r</sup></p>
+    <h1 id="inscribe-title" class="rubric">Inscribe a message</h1>
+    <p class="lede">Each letter becomes a number, each number a monk’s sign, and the signs coil inward like a snail.</p>
+
+    <form class="entry" method="post" action="/generate" data-entry>
+      <div class="field">
+        <label for="message">Message</label>
+        <textarea id="message" name="message" maxlength="500" rows="4" required
+                  placeholder="Meet me at the old abbey after vespers" data-counted></textarea>
+        <p class="field-meta">
+          <span data-mode-note="game">Letters and spaces only; anything else becomes a space.</span>
+          <span data-mode-note="secret" hidden>Any text: capitals, digits, accents, emoji.</span>
+          <span class="counter" data-counter aria-live="polite"><span data-count>0</span> / 500</span>
+        </p>
+      </div>
+
+      <fieldset class="modes">
+        <legend>Mode</legend>
+        <div class="mode-options">
+          <label class="mode mode--game">
+            <input type="radio" name="mode" value="game" checked>
+            <span class="mode-title">Game</span>
+            <span class="mode-desc">A puzzle in the old manner. Patient readers, and machines, can solve it.</span>
+          </label>
+          <label class="mode mode--secret">
+            <input type="radio" name="mode" value="secret">
+            <span class="mode-title">Secret</span>
+            <span class="mode-desc">Sealed with a passphrase (AES-256-GCM). The image shows only its length.</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="field" data-secret-only>
+        <label for="passphrase">Passphrase <span class="label-note">· secret mode only</span></label>
+        <div class="passphrase">
+          <input type="password" id="passphrase" name="passphrase" minlength="8"
+                 autocomplete="new-password" autocapitalize="off" spellcheck="false">
+          <button type="button" class="btn btn--small" data-reveal="passphrase" aria-pressed="false">Show</button>
+        </div>
+        <p class="field-meta"><span>At least 8 characters; four or more random words is far better. Never stored.</span></p>
+      </div>
+
+      <button class="btn btn--primary" type="submit" data-submit>Inscribe</button>
+    </form>
+  </section>
+
+  <aside class="leaf" aria-labelledby="key-title">
+    <h2 id="key-title" class="rubric rubric--small">How to read a sign</h2>
+
+    <figure class="anatomy">
+      <p class="quadrant quadrant--tens"><b>9</b>tens</p>
+      <%== glyph_svg(1098, title: '1098: one thousand, no hundreds, nine tens, eight units') %>
+      <p class="quadrant quadrant--units"><b>8</b>units</p>
+      <p class="quadrant quadrant--thousands"><b>1</b>thousands</p>
+      <p class="quadrant quadrant--hundreds"><b>0</b>hundreds</p>
+      <figcaption>One stem, four corners: 1098, the founding of Cîteaux.</figcaption>
+    </figure>
+
+    <h3 class="index-heading">Tabula of units</h3>
+    <ol class="tabula">
+      <% (1..9).each do |digit| %>
+        <li><%== glyph_svg(digit) %><span aria-hidden="true"><%= digit %></span></li>
+      <% end %>
+    </ol>
+    <p class="note">Tens mirror the units to the left, hundreds below, thousands both ways.</p>
+
+    <h3 class="index-heading">Order of reading</h3>
+    <figure class="order">
+      <%== snail_svg(4) %>
+      <figcaption>Clockwise from the top-left corner, coiling to the centre.</figcaption>
+    </figure>
+  </aside>
+</div>

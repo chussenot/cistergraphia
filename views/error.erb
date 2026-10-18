@@ -1,5 +1,15 @@
-<div class="error">
-  <h2>Oops! Something went wrong</h2>
-  <p><%= @error_message %></p>
-  <a href="/">Try again</a>
-</div>
+<%#
+Cistergraphia: Erratum
+======================
+
+Purpose:
+- Explain what went wrong, in the page's voice, and offer a way back
+%>
+<section class="leaf leaf--narrow" aria-labelledby="erratum-title">
+  <h1 id="erratum-title" class="rubric">Erratum</h1>
+  <p class="erratum-text"><%= @error_message %></p>
+  <div class="actions">
+    <a class="btn btn--primary" href="/">Inscribe a message</a>
+    <a class="btn" href="/decode">Read a Cistergraphia</a>
+  </div>
+</section>

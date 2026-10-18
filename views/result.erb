@@ -1,37 +1,66 @@
-<div class="result-container">
-  <h2>Generated Cistergraphia for: <%= @message %></h2>
+<%#
+Cistergraphia: the plate (fol. 2r)
+==================================
+
+Purpose:
+- Show the generated Cistergraphia and let the user keep it
+
+Design Decisions:
+- The SVG is shown on the leaf in ink colours (CSS only); exports stay the
+  plain black-on-white file that the decoder reads
+- Strokes are drawn in reading order (JS), so the snail is visible
+- "Read it back" posts the same SVG to /decode: a one-click round trip
+
+Constraints:
+- Copy/download need JS; the inline SVG can always be saved from the page
+%>
+<section class="leaf" aria-labelledby="plate-title">
+  <p class="folio-mark" aria-hidden="true">fol. 2<sup>r</sup></p>
+  <h1 id="plate-title" class="rubric"><%= @secret ? 'Your sealed Cistergraphia' : 'Your Cistergraphia' %></h1>
+
+  <p class="message-echo"><span class="visually-hidden">Message: </span><q><%= @message %></q></p>
   <% if @secret %>
-    <p class="note">Secret mode: encrypted with your passphrase. Without it, this image reveals nothing but its approximate length.</p>
+    <p class="lede">Secret mode: sealed with your passphrase. Without it, this plate reveals nothing but its length.</p>
   <% elsif @normalized != @message %>
-    <p class="note">Enciphered as: <code><%= @normalized %></code></p>
+    <p class="lede">Enciphered as: <code><%= @normalized %></code></p>
+  <% else %>
+    <p class="lede">A game: anyone patient enough can read it back.</p>
   <% end %>
-  <div class="svg-container" id="svg-display">
-    <%== @svg_content %>
+
+  <dl class="specs">
+    <div><dt>Mode</dt><dd><%= @secret ? 'Secret' : 'Game' %></dd></div>
+    <div><dt>Signs</dt><dd><%= @symbols %></dd></div>
+    <div><dt>Grid</dt><dd><%= Integer.sqrt(@symbols) %> × <%= Integer.sqrt(@symbols) %></dd></div>
+  </dl>
+
+  <figure class="plate">
+    <div class="plate-frame" id="svg-display" data-plate>
+      <%== @svg_content %>
+    </div>
+    <figcaption>Read clockwise from the top-left corner, coiling inward.</figcaption>
+  </figure>
+
+  <div class="actions">
+    <button type="button" class="btn btn--primary" data-action="download-svg">Download SVG</button>
+    <button type="button" class="btn" data-action="download-png">Download PNG</button>
+    <button type="button" class="btn" data-action="copy-svg">Copy SVG code</button>
+    <a class="btn btn--quiet" href="/">Inscribe another</a>
   </div>
-  <button type="button" onclick="copySvg()">Copy SVG Code</button>
-  <button type="button" onclick="downloadSvg()">Download SVG</button>
-  <a href="/" class="generate-link">Generate another</a>
-  <a href="/decode">Decode one</a>
-</div>
 
-<script>
-  function svgSource() {
-    return document.querySelector('#svg-display svg').outerHTML;
-  }
-
-  async function copySvg() {
-    try {
-      await navigator.clipboard.writeText(svgSource());
-      alert('SVG code copied to clipboard!');
-    } catch (e) {
-      alert('Could not copy to clipboard: ' + e.message);
-    }
-  }
-
-  function downloadSvg() {
-    const url = URL.createObjectURL(new Blob([svgSource()], { type: 'image/svg+xml' }));
-    const link = Object.assign(document.createElement('a'), { href: url, download: 'cistergraphia.svg' });
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-</script>
+  <form class="readback" method="post" action="/decode">
+    <h2 class="index-heading">Read it back</h2>
+    <input type="hidden" name="svg" value="<%= @svg_content %>">
+    <div class="readback-row">
+      <% if @secret %>
+        <div class="field">
+          <label for="readback-passphrase">Passphrase</label>
+          <div class="passphrase">
+            <input type="password" id="readback-passphrase" name="passphrase" autocomplete="current-password"
+                   autocapitalize="off" spellcheck="false" required>
+          </div>
+        </div>
+      <% end %>
+      <button type="submit" class="btn">Decode this plate</button>
+    </div>
+  </form>
+</section>
