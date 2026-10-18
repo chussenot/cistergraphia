@@ -86,7 +86,9 @@ Web UI
 ------
 
 Run `bundle exec rackup` and open http://localhost:9292. Encode messages on `/`
-and decode downloaded SVGs (or their pasted code) on `/decode`. For secret mode,
+(with a live preview of each letter's sign), decode downloaded SVGs (or their
+pasted code) on `/decode`, and read the history of the ciphers, with a number
+playground, on `/about`. For secret mode,
 pick **Secret** and enter a passphrase. The server then sees the message and
 passphrase, so serve it over HTTPS, or use the CLI to keep everything local.
 
@@ -103,7 +105,12 @@ Development
 bundle exec rake test                  # unit + HTTP tests
 bundle exec rubocop                    # lint
 experiments/cryptanalysis/run.sh       # attack both modes (needs python3, wamerican, wfrench)
+bundle exec rake og:image              # social preview images (needs Chromium)
 ```
+
+In Claude Code cloud sessions, `.claude/hooks/session-start.sh` installs all of
+this (gems, librsvg2-bin, word lists, PNG tools) and puts the gem executables on
+`PATH`. On your own machine, install them as listed under Dependencies.
 
 Code map:
 

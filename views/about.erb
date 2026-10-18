@@ -1,0 +1,111 @@
+<%#
+Cistergraphia: About the ciphers (fol. 3r)
+==========================================
+
+Purpose:
+- The history of the Cistercian numerals, sourced
+- A playground to write any number 0-9999 as a sign
+- The tablet Cistergraphia uses, and its two modes
+
+Design Decisions:
+- Exact years in the timeline are written as Cistercian signs
+- History follows the Wikipedia article and David A. King (2001); vague or
+  unverifiable claims are left out
+- The playground and the tablet are drawn from the real cipher geometry
+%>
+<div class="spread spread--about">
+  <article class="leaf" aria-labelledby="about-title">
+    <p class="folio-mark" aria-hidden="true">fol. 3<sup>r</sup></p>
+    <h1 id="about-title" class="rubric">About the ciphers</h1>
+    <p class="lede">A forgotten number notation of the Middle Ages, and the game built on it.</p>
+
+    <section class="prose" aria-labelledby="monks-title">
+      <h2 id="monks-title" class="index-heading">The ciphers of the monks</h2>
+      <p>In the early thirteenth century, about when Arabic numerals reached northwestern Europe, the
+        Cistercian order began writing numbers with a single stroke and four corners. The idea apparently came from
+        a two-place notation (1 to 99) introduced by John of Basingstoke, archdeacon of Leicester. Its
+        earliest known form, in the monasteries of Hainaut, stopped at 99; it soon grew to four places:
+        any number up to 9,999 in one sign.</p>
+      <p>The monks used the signs to <em>number</em>, never to <em>count</em>: for years, the leaves
+        of a book, text divisions, indexes and concordances, Easter tables, even the lines of musical
+        staves, but not for arithmetic or accounts. About two dozen manuscripts survive, from the 13th to
+        the 15th century, from England to Italy and from Normandy to Sweden.</p>
+      <p>Beyond the cloister, a 14th-century astrolabe from Picardy carries them, and the wine-gaugers
+        of Bruges still used them in the 18th century. Later the signs were taken up by an occultist
+        (Agrippa), by a Parisian Rosicrucian order, and Nazi ideologues considered them as supposed "Aryan"
+        symbolism. Their modern rediscovery is largely the work of David A. King.</p>
+      <p class="note">The Cistercians most often drew the stave horizontally. The upright stave used here
+        is attested in northern France in the 14th and 15th centuries, and in the later revivals.</p>
+    </section>
+
+    <section aria-labelledby="timeline-title">
+      <h2 id="timeline-title" class="index-heading">Index of dates</h2>
+      <ol class="timeline">
+        <li><%== glyph_svg(1098, title: '1098') %><p><b>1098</b> Robert of Molesme founds the abbey of Cîteaux, the cradle of the Cistercian order.</p></li>
+        <li><span class="timeline-mark" aria-hidden="true">—</span><p><b>13th century</b> The ciphers spread through Cistercian houses, first up to 99, then up to 9,999.</p></li>
+        <li><span class="timeline-mark" aria-hidden="true">—</span><p><b>14th century</b> The Berselius astrolabe, made in Picardy, bears the signs.</p></li>
+        <li><%== glyph_svg(1533, title: '1533') %><p><b>1533</b> Agrippa describes them in his <em>Three Books of Occult Philosophy</em>.</p></li>
+        <li><span class="timeline-mark" aria-hidden="true">—</span><p><b>18th century</b> Wine-gaugers around Bruges still use them, at least into the early 1700s.</p></li>
+        <li><%== glyph_svg(2001, title: '2001') %><p><b>2001</b> David A. King publishes <em>The Ciphers of the Monks</em>, the major study of the signs.</p></li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="modes-title">
+      <h2 id="modes-title" class="index-heading">Cistergraphia, in two modes</h2>
+      <div class="mode-options">
+        <div class="mode mode--game mode--static">
+          <span class="mode-title">Game</span>
+          <span class="mode-desc">Letters become numbers from the tablet, each split into two random signs, padded and
+            coiled into a snail. A puzzle: a model given only the images read ten messages out of ten in minutes.</span>
+        </div>
+        <div class="mode mode--secret mode--static">
+          <span class="mode-title">Secret</span>
+          <span class="mode-desc">The message is encrypted (scrypt + AES-256-GCM) and the bytes are written as the same
+            signs. Without the passphrase, the image reveals only its length.</span>
+        </div>
+      </div>
+      <p class="note">The experiments, the reasoning and the limits are in the
+        <a href="https://github.com/chussenot/cistergraphia/blob/master/docs/security-study.md">security study</a>.</p>
+    </section>
+  </article>
+
+  <aside class="leaf" aria-labelledby="playground-title">
+    <h2 id="playground-title" class="rubric rubric--small">Write a number</h2>
+    <div class="playground">
+      <div class="playground-glyph" data-playground-glyph><%== glyph_svg(1098, title: 'The Cistercian sign for 1098') %></div>
+      <div class="field">
+        <label for="number">Any number from 0 to 9,999</label>
+        <input type="number" id="number" class="input" min="0" max="9999" step="1" value="1098" inputmode="numeric" data-playground>
+      </div>
+      <p class="playground-reading" data-playground-reading aria-live="polite">1 thousand · 0 hundreds · 9 tens · 8 units</p>
+      <div class="playground-presets" aria-label="Examples">
+        <% [1098, 1533, 2001, 2026, 9999].each do |year| %>
+          <button type="button" class="btn btn--small" data-playground-set="<%= year %>"><%= year %></button>
+        <% end %>
+      </div>
+    </div>
+
+    <h3 class="index-heading">The tablet</h3>
+    <p class="note">Each letter's number (times ten) in the game. The original tablet skips 17.</p>
+    <ol class="tablet">
+      <% Cistergraphia::TABLET.each do |char, value| %>
+        <li>
+          <%== glyph_svg(value * 10, title: "#{char == :' ' ? 'space' : char}: #{value * 10}") %>
+          <b><%= char == :' ' ? '␣' : char %></b>
+          <span><%= value * 10 %></span>
+        </li>
+      <% end %>
+    </ol>
+    <div data-glyph-table="<%= glyph_table_json %>" hidden></div>
+  </aside>
+</div>
+
+<section class="leaf sources" aria-labelledby="sources-title">
+  <h2 id="sources-title" class="index-heading">Sources</h2>
+  <ul>
+    <li>David A. King, <em>The Ciphers of the Monks: A Forgotten Number-notation of the Middle Ages</em>, Stuttgart: Franz Steiner, 2001.</li>
+    <li><a href="https://en.wikipedia.org/wiki/Cistercian_numerals">Cistercian numerals</a>, Wikipedia, and the sources it cites.</li>
+    <li><a href="https://www.dcode.fr/cistercian-numbers">dCode: Cistercian numbers</a>, a converter for the signs.</li>
+    <li><a href="https://glossographia.wordpress.com/2013/07/09/cistercian-number-magic-of-the-boy-scouts/">Glossographia: Cistercian number magic of the boy scouts</a>.</li>
+  </ul>
+</section>

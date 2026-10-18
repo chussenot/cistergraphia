@@ -2,6 +2,7 @@
 
 require 'test_helper'
 require 'cgi'
+require 'json'
 require 'rack/test'
 require_relative '../app'
 
@@ -72,6 +73,43 @@ class AppTest < Minitest::Test
     post '/decode', svg: svg
 
     assert_includes last_response.body, 'ora et labora'
+  end
+
+  def test_live_preview_embeds_the_library_glyph_table
+    get '/'
+
+    json = CGI.unescapeHTML(last_response.body[/data-glyph-table="([^"]*)"/, 1])
+    table = JSON.parse(json)
+    assert_equal Cistergraphia::Glyphs::STEM, table['stem']
+    assert_equal(Cistergraphia::Glyphs::LINES.transform_keys(&:to_s), table['lines'])
+    assert_equal 9000, table['tablet'][' ']
+    assert_equal 10, table['tablet']['a']
+  end
+
+  def test_about_page
+    get '/about'
+
+    assert_predicate last_response, :ok?
+    body = last_response.body
+    assert_includes body, '<title>About the ciphers · Cistergraphia</title>'
+    assert_includes body, 'href="/about" class="is-current" aria-current="page"'
+    assert_includes body, 'data-playground'
+    tablet = body[%r{<ol class="tablet">(.*?)</ol>}m, 1]
+    assert_equal Cistergraphia::TABLET.size, tablet.scan('<li>').size
+    assert_includes body, 'John of Basingstoke'
+  end
+
+  def test_pages_carry_social_preview_metadata
+    get '/about'
+
+    assert_includes last_response.body, '<meta property="og:image" content="http://example.org/og.png">'
+    assert_includes last_response.body, '<meta property="og:title" content="About the ciphers">'
+    assert_includes last_response.body, '<meta name="twitter:card" content="summary_large_image">'
+
+    get '/og.png'
+
+    assert_predicate last_response, :ok?
+    assert_equal 'image/png', last_response.content_type
   end
 
   def test_unknown_pages_render_the_erratum

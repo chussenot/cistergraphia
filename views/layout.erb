@@ -20,7 +20,17 @@ Constraints:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= @title ? "#{@title} · " : '' %>Cistergraphia</title>
-  <meta name="description" content="Write a message as Cistercian numerals coiled like a snail: a cipher game, or a passphrase-sealed secret.">
+  <meta name="description" content="<%= page_description %>">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Cistergraphia">
+  <meta property="og:title" content="<%= @title || 'Cistergraphia' %>">
+  <meta property="og:description" content="<%= page_description %>">
+  <meta property="og:url" content="<%= request.base_url %><%= request.path %>">
+  <meta property="og:image" content="<%= request.base_url %>/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Cistergraphia: a message written as Cistercian numerals, coiled like a snail">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#f3ede1" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#191714" media="(prefers-color-scheme: dark)">
@@ -43,6 +53,7 @@ Constraints:
     <nav class="nav" aria-label="Main">
       <a href="/" class="<%= nav_class(:inscribe) %>"<%== ' aria-current="page"' if @page == :inscribe %>>Inscribe</a>
       <a href="/decode" class="<%= nav_class(:read) %>"<%== ' aria-current="page"' if @page == :read %>>Read</a>
+      <a href="/about" class="<%= nav_class(:about) %>"<%== ' aria-current="page"' if @page == :about %>>About</a>
     </nav>
   </header>
 

@@ -9,3 +9,10 @@ Rake::TestTask.new(:test) do |t|
 end
 
 task default: :test
+
+namespace :og do
+  desc 'Render the social preview images (public/og.png, docs/social-preview.png); needs Chromium'
+  task :image do
+    ruby 'web/og/render.rb'
+  end
+end

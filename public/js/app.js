@@ -19,6 +19,121 @@
     toastTimer = setTimeout(() => el.classList.remove('is-visible'), 2200);
   }
 
+  // ---------- Glyphs, drawn from the table the server embeds ----------
+  // The geometry comes from Cistergraphia::Glyphs (data-glyph-table), so the
+  // browser never holds its own copy of the cipher.
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  let glyphTable;
+  function table() {
+    if (glyphTable === undefined) {
+      const el = $('[data-glyph-table]');
+      glyphTable = el ? JSON.parse(el.dataset.glyphTable) : null;
+    }
+    return glyphTable;
+  }
+
+  // 1098 -> [1000, 90, 8]: each digit times its place value
+  function placeValues(num) {
+    return String(num).split('').reverse().map((d, i) => Number(d) * 10 ** i).filter((v) => v > 0);
+  }
+
+  function glyphSvg(num, label) {
+    const t = table();
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('class', 'glyph');
+    svg.setAttribute('viewBox', t.viewBox);
+    if (label) {
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', label);
+    } else {
+      svg.setAttribute('aria-hidden', 'true');
+    }
+    const g = document.createElementNS(SVG_NS, 'g');
+    [t.stem, ...placeValues(num).flatMap((v) => t.lines[v] || [])].forEach(([x1, y1, x2, y2]) => {
+      const line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      g.appendChild(line);
+    });
+    svg.appendChild(g);
+    return svg;
+  }
+
+  // Same rule as Cistergraphia.normalize: only a-z and single spaces survive
+  function normalize(text) {
+    return text.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/ +/g, ' ').trim();
+  }
+
+  // ---------- Live preview: each letter's sign while typing ----------
+  const PREVIEW_LIMIT = 60;
+  function initPreview() {
+    const preview = $('[data-preview]');
+    const field = $('[data-counted]');
+    if (!preview || !field || !table()) return;
+    const list = $('[data-preview-signs]', preview);
+    const empty = $('[data-preview-empty]', preview);
+    let frame;
+
+    const render = () => {
+      const chars = Array.from(normalize(field.value));
+      const shown = chars.slice(0, PREVIEW_LIMIT);
+      const items = shown.map((char) => {
+        const li = document.createElement('li');
+        li.appendChild(glyphSvg(table().tablet[char]));
+        const caption = document.createElement('span');
+        caption.textContent = char === ' ' ? '·' : char;
+        if (char === ' ') li.classList.add('is-space');
+        li.appendChild(caption);
+        return li;
+      });
+      if (chars.length > shown.length) {
+        const more = document.createElement('li');
+        more.className = 'preview-more';
+        more.textContent = `+${chars.length - shown.length}`;
+        items.push(more);
+      }
+      list.replaceChildren(...items);
+      empty.hidden = chars.length > 0;
+    };
+    field.addEventListener('input', () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(render);
+    });
+    preview.hidden = false;
+    render();
+  }
+
+  // ---------- Playground: any number, its sign (About page) ----------
+  const PLACE_NAMES = [[1000, 'thousand', 'thousands'], [100, 'hundred', 'hundreds'], [10, 'ten', 'tens'], [1, 'unit', 'units']];
+  function reading(num) {
+    return PLACE_NAMES.map(([place, one, many]) => {
+      const digit = Math.floor(num / place) % 10;
+      return `${digit} ${digit === 1 ? one : many}`;
+    }).join(' · ');
+  }
+
+  function initPlayground() {
+    const input = $('[data-playground]');
+    if (!input || !table()) return;
+    const holder = $('[data-playground-glyph]');
+    const text = $('[data-playground-reading]');
+    const update = () => {
+      const value = Math.trunc(Number(input.value));
+      if (!Number.isFinite(value) || value < 0 || value > 9999) {
+        input.setAttribute('aria-invalid', 'true');
+        return;
+      }
+      input.removeAttribute('aria-invalid');
+      holder.replaceChildren(glyphSvg(value, `The Cistercian sign for ${value}`));
+      text.textContent = reading(value);
+    };
+    input.addEventListener('input', update);
+    $$('[data-playground-set]').forEach((button) => button.addEventListener('click', () => {
+      input.value = button.dataset.playgroundSet;
+      update();
+    }));
+  }
+
   // ---------- Mode switch (game = red, secret = blue) ----------
   function initModes() {
     const form = $('[data-entry]');
@@ -202,6 +317,8 @@
     initReveal();
     initActions();
     initDropzone();
+    initPreview();
+    initPlayground();
     animatePlate();
   });
 })();
