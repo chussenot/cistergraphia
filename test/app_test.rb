@@ -62,8 +62,13 @@ class AppTest < Minitest::Test
   def test_secret_mode_requires_a_passphrase
     post '/generate', message: 'hello', mode: 'secret', passphrase: ''
 
-    assert_equal 400, last_response.status
-    assert_includes last_response.body, 'Secret mode needs a passphrase'
+    assert_equal 422, last_response.status # back to the form, not an error page
+    assert_match(%r{id="passphrase-error"[^>]*>Secret mode needs a passphrase</p>}m, last_response.body)
+  end
+
+  def test_domain_errors_never_show_the_backtrace_page
+    # Development shows Sinatra's backtrace page for 500s unless handlers run first
+    assert_equal :after_handler, CistergraphiaApp.settings.show_exceptions
   end
 
   def test_result_page_can_read_its_plate_back
@@ -192,17 +197,18 @@ class AppTest < Minitest::Test
     assert_equal [%w[tens 10], %w[units 1], %w[thousands 1000], %w[hundreds 100]], dials
   end
 
-  def test_about_page_sources_the_snail
+  def test_about_page_explains_the_two_layouts_and_their_origins
     get '/about'
 
     body = last_response.body
-    assert_includes body, 'Why a snail?'
+    assert_includes body, 'Two ways to read a plate'
     assert_includes body, 'reverse boustrophedon'
     assert_includes body, 'https://en.wikipedia.org/wiki/Phaistos_Disc'
     assert_includes body, 'https://en.wikipedia.org/wiki/Rongorongo'
-    assert_equal 2, body.scan('<svg class="turning"').size # rongorongo and the Phaistos Disc
-    assert_equal 2, body.scan('<svg class="snail"').size   # and Cistergraphia's two layouts
-    assert_includes body, 'id="why-a-snail"'               # linked from the inscribe key
+    assert_equal 2, body.scan('<svg class="turning"').size # the disc and the tablet
+    assert_equal 2, body.scan('<svg class="snail"').size   # and each layout drawn from it
+    assert_includes body, 'id="two-layouts"'               # linked from the inscribe key
+    refute_match(/why a snail|began with|the default/i, body) # neither layout comes first
   end
 
   def test_about_page_offers_lectio
@@ -325,11 +331,26 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'Enciphered as: <code>agent</code>'
   end
 
-  def test_secret_mode_rejects_short_passphrase
-    post '/generate', message: 'hello', passphrase: 'short'
+  def test_short_passphrase_comes_back_to_the_form_with_what_was_written
+    post '/generate', message: 'Rendez-vous at dawn', mode: 'secret', passphrase: 'short', layout: 'rongorongo'
+    body = last_response.body
+
+    assert_equal 422, last_response.status
+    assert_match(%r{id="passphrase-error"[^>]*>A passphrase needs at least 8 characters</p>}m, body)
+    assert_match(/aria-invalid="true" autofocus/, body)
+    assert_includes body, '>Rendez-vous at dawn</textarea>'
+    assert_match(/value="secret" checked/, body)
+    assert_match(/value="rongorongo" checked/, body)
+    assert_includes body, '<body data-mode="secret">'
+    refute_includes body, 'value="short"' # the passphrase is never sent back
+  end
+
+  def test_decode_with_a_short_passphrase_is_a_wrong_passphrase
+    svg = Cistergraphia.to_svg(Cistergraphia.encode('hidden', passphrase: 'right passphrase'))
+    post '/decode', svg: svg, passphrase: 'short'
 
     assert_equal 400, last_response.status
-    assert_includes last_response.body, 'at least 8 characters'
+    assert_includes last_response.body, 'Wrong passphrase'
   end
 
   def test_decode_secret_image_with_wrong_passphrase

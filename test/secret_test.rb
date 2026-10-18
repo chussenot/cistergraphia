@@ -66,6 +66,19 @@ class SecretTest < Minitest::Test
     assert_match(/at least 8/, error.message)
   end
 
+  def test_passphrase_problem_explains_the_rule
+    assert_equal 'Secret mode needs a passphrase', Cistergraphia::Secret.passphrase_problem('')
+    assert_equal 'A passphrase needs at least 8 characters', Cistergraphia::Secret.passphrase_problem('1234567')
+    assert_nil Cistergraphia::Secret.passphrase_problem('12345678')
+    assert_nil Cistergraphia::Secret.passphrase_problem('🙏' * 8) # characters, not bytes
+  end
+
+  def test_a_short_passphrase_never_opens_a_plate
+    sequence = Cistergraphia.encode('top secret', passphrase: PASSPHRASE)
+
+    assert_raises(Cistergraphia::WrongPassphraseError) { Cistergraphia::Secret.decrypt(sequence, 'short') }
+  end
+
   def test_empty_message_is_refused
     assert_raises(Cistergraphia::EmptyMessageError) { Cistergraphia.encode("  \n ", passphrase: PASSPHRASE) }
   end

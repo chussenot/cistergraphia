@@ -11,8 +11,9 @@ Design Decisions:
 - Exact years in the timeline are written as Cistercian signs
 - History follows the Wikipedia article and David A. King (2001); vague or
   unverifiable claims are left out
-- Why a snail: the reading order's ancestry, sourced (rongorongo is reverse
-  boustrophedon, not a spiral; the clockwise inward spiral is the Phaistos Disc's)
+- Two ways to read a plate: each layout with the script it comes from, sourced
+  (Phaistos: the disc's clockwise inward spiral; Rongorongo: reverse
+  boustrophedon, the tablet turned at every line)
 - The playground and the tablet are drawn from the real cipher geometry
 - Lectio: a reading game, novice to abbot as the signs grow. Its first sign
   is drawn here and its controls are enabled by JS (like the dials), so it is
@@ -55,50 +56,51 @@ Design Decisions:
       </ol>
     </section>
 
-    <section class="why-snail" id="why-a-snail" aria-labelledby="snail-title">
-      <h2 id="snail-title" class="index-heading">Why a snail?</h2>
-      <p>Cistergraphia began with an idea of Rapa Nui, Easter Island: that its people wrote in a spiral,
-        like a snail. The sources tell a different and better story. The snail does have an ancestor,
-        but on Crete, not on Rapa Nui.</p>
+    <section class="layouts-origin" id="two-layouts" aria-labelledby="layouts-title">
+      <h2 id="layouts-title" class="index-heading">Two ways to read a plate</h2>
+      <p>A plate is laid out along one of two reading paths. Each takes its movement from an
+        undeciphered script that turns as it is read: a clay disc from Crete, and the wooden tablets of
+        Rapa Nui.</p>
 
+      <h3 class="layout-title">Phaistos: the spiral</h3>
+      <div class="turnings">
+        <figure>
+          <%== disc_spiral_svg %>
+          <figcaption><b>The Phaistos Disc, Crete.</b> A spiral on each face, conventionally read clockwise
+            from the rim to the centre.</figcaption>
+        </figure>
+        <figure>
+          <%== snail_svg(4) %>
+          <figcaption><b>The Phaistos layout.</b> The same movement, clockwise and inward, set on the square
+            grid of an index: from the top-left corner, coiling to the centre.</figcaption>
+        </figure>
+      </div>
+      <p>The Phaistos Disc is a clay disc of the Minoan Bronze Age, found by Luigi Pernier on 3 July 1908,
+        while excavating the Minoan palace site of Phaistos. Its signs were stamped, one by one, in a
+        spiral on both faces. Arthur Evans first thought it should be read from the centre outward, then
+        from the rim inward, clockwise, which is the convention now used to number its signs. It has not
+        been deciphered. An Etruscan lead disc from Magliano also writes its text in a spiral, from the
+        edge toward the centre.</p>
+
+      <h3 class="layout-title">Rongorongo: the turning tablet</h3>
       <div class="turnings">
         <figure>
           <%== boustrophedon_svg %>
-          <figcaption><b>Rapa Nui, rongorongo.</b> Read from the bottom left, line by line, left to right.
+          <figcaption><b>Rongorongo, Rapa Nui.</b> Read from the bottom left, line by line, left to right.
             Between lines the reader turns the tablet half round, so every other line stands upside down:
-            <em>reverse boustrophedon</em>. No spiral.</figcaption>
-        </figure>
-        <figure>
-          <%== disc_spiral_svg %>
-          <figcaption><b>Crete, the Phaistos Disc.</b> A spiral on each face, conventionally read clockwise
-            from the rim to the centre.</figcaption>
-        </figure>
-      </div>
-
-      <p>So Cistergraphia offers both, as its two layouts. You choose one when you inscribe; the decoder
-        recognises it on its own.</p>
-
-      <div class="turnings">
-        <figure>
-          <%== snail_svg(4) %>
-          <figcaption><b>Phaistos layout.</b> The disc's movement, clockwise and inward, set on the square grid
-            of an index. The default.</figcaption>
+            <em>reverse boustrophedon</em>.</figcaption>
         </figure>
         <figure>
           <%== snail_svg(4, layout: :rongorongo) %>
-          <figcaption><b>Rongorongo layout.</b> Rows from the bottom left; every other row is written upside
-            down (the hollow points), so you turn the plate half round to read it, like a tablet.</figcaption>
+          <figcaption><b>The Rongorongo layout.</b> Rows from the bottom left; every other row is written
+            upside down (the hollow points), so you turn the plate half round to read it, like a tablet.</figcaption>
         </figure>
       </div>
-
       <p>About two dozen wooden objects carry rongorongo, first reported by Eugène Eyraud in 1864. The
         script is undeciphered, and many scholars think it is proto-writing rather than true writing. Its
         reader turns the text at every line, and so does the reader of a Rongorongo plate.</p>
-      <p>The Phaistos Disc is a clay disc of the Minoan Bronze Age, found by Luigi Pernier on 3 July 1908,
-        while excavating the Minoan palace site of Phaistos. Its signs were stamped, one by one, in a spiral on both faces. Arthur Evans
-        first thought it should be read from the centre outward, then from the rim inward, clockwise, which
-        is the convention now used to number its signs. It has not been deciphered either. An Etruscan lead
-        disc from Magliano also writes its text in a spiral, from the edge toward the centre.</p>
+
+      <p>You choose the layout when you inscribe; the decoder recognises it on its own.</p>
     </section>
 
     <section aria-labelledby="modes-title">

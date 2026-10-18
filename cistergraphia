@@ -96,7 +96,11 @@ def ask_passphrase(confirm:)
   abort 'Secret mode needs a terminal to prompt for the passphrase, or CISTERGRAPHIA_PASSPHRASE' unless $stdin.tty?
 
   passphrase = $stdin.getpass('Passphrase: ')
-  abort 'Passphrases do not match' if confirm && $stdin.getpass('Repeat passphrase: ') != passphrase
+  if confirm
+    problem = Cistergraphia::Secret.passphrase_problem(passphrase)
+    abort problem if problem # before asking for it twice
+    abort 'Passphrases do not match' if $stdin.getpass('Repeat passphrase: ') != passphrase
+  end
   passphrase
 end
 
