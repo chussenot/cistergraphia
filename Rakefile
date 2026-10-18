@@ -16,3 +16,10 @@ namespace :og do
     ruby 'web/og/render.rb'
   end
 end
+
+namespace :ui do
+  desc 'Check that nothing on a page moves under the reader (needs Node, Playwright and Chromium)'
+  task :stability do
+    ruby 'test/ui/stability.rb'
+  end
+end

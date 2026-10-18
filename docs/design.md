@@ -133,8 +133,10 @@ downloaded SVG is unchanged.
   its space from the first paint (stacked cells for swapped text, `visibility` for controls
   JS enables, server-drawn first states, reserved lines for the longest text). The one
   deliberate movement is the passphrase unfolding in secret mode, which moves only the
-  button below it, animated. Checked with a layout-shift harness (Playwright, 390 and
-  1280 px): every interaction, and each page with JS on vs off.
+  button below it, animated. `bundle exec rake ui:stability` checks it, and CI runs it on
+  every push: each reader action on every page, at 320, 390, 1024 and 1280 px, and each
+  page with JS on vs off. A new interaction gets a step in `test/ui/stability.js`; a new
+  deliberate movement names its anchor there, above which nothing may move.
 
 - **No inline script or style.** CSS, JS, fonts and the favicon are first-party files, so
   `Content-Security-Policy: default-src 'self'` applies. The page talks to no third party, which

@@ -127,7 +127,13 @@ bundle exec rake test                  # unit + HTTP tests
 bundle exec rubocop                    # lint
 experiments/cryptanalysis/run.sh       # attack both modes (needs python3, wamerican, wfrench)
 bundle exec rake og:image              # social preview images (needs Chromium)
+bundle exec rake ui:stability          # nothing on a page moves under the reader (needs Playwright)
 ```
+
+`ui:stability` boots the app and walks every page in Chromium: typing, choosing, walking
+and turning a plate, Lectio, and each page with and without JavaScript. It fails if
+anything moves that should not (see the rule in [docs/design.md](docs/design.md)). It needs
+Node and Playwright: `npm install --no-save playwright && npx playwright install chromium`.
 
 In Claude Code cloud sessions, `.claude/hooks/session-start.sh` installs all of
 this (gems, librsvg2-bin, word lists, PNG tools) and puts the gem executables on
@@ -141,6 +147,7 @@ Code map:
 * `lib/cistergraphia/secret.rb` — secret mode: scrypt + AES-256-GCM, bytes ⇄ glyph values
 * `app.rb` / `views/` / `web/` / `public/` — Sinatra web UI (design notes: `docs/design.md`)
 * `cistergraphia` — command-line interface
+* `test/` — unit and HTTP tests; `test/ui/` — the layout stability check
 
 References
 ==========
