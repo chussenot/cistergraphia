@@ -1,3 +1,4 @@
 tmp
 .gitconfig
 .bundle/
+node_modules/
