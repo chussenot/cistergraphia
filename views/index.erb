@@ -10,7 +10,8 @@ Design Decisions:
 - Mode is an explicit choice (two index cards, red and blue) rather than an
   optional field; the passphrase only appears for the secret (JS), and is
   always present, labelled, without JS
-- The key (anatomy, tabula, order) is drawn from the real cipher geometry
+- The key (anatomy, tabula, order) is drawn from the real cipher geometry; the
+  anatomy's corners are dials (JS enables them; static without JS)
 - The live preview draws each letter's sign from the same geometry (JSON from
   ViewHelpers#glyph_table_json); the plate itself is only made on the server
 
@@ -77,13 +78,14 @@ Constraints:
   <aside class="leaf" aria-labelledby="key-title">
     <h2 id="key-title" class="rubric rubric--small">How to read a sign</h2>
 
-    <figure class="anatomy">
-      <p class="quadrant quadrant--tens"><b>9</b>tens</p>
+    <figure class="anatomy" data-anatomy data-number="1098">
+      <button type="button" class="quadrant quadrant--tens" data-place="10" disabled><b data-digit>9</b>tens</button>
       <%== glyph_svg(1098, title: '1098: one thousand, no hundreds, nine tens, eight units') %>
-      <p class="quadrant quadrant--units"><b>8</b>units</p>
-      <p class="quadrant quadrant--thousands"><b>1</b>thousands</p>
-      <p class="quadrant quadrant--hundreds"><b>0</b>hundreds</p>
-      <figcaption>One stem, four corners: 1098, the founding of Cîteaux.</figcaption>
+      <button type="button" class="quadrant quadrant--units" data-place="1" disabled><b data-digit>8</b>units</button>
+      <button type="button" class="quadrant quadrant--thousands" data-place="1000" disabled><b data-digit>1</b>thousands</button>
+      <button type="button" class="quadrant quadrant--hundreds" data-place="100" disabled><b data-digit>0</b>hundreds</button>
+      <figcaption>One stem, four corners: <span data-anatomy-caption>1098, the founding of Cîteaux</span>.</figcaption>
+      <p class="anatomy-hint" data-anatomy-hint hidden>Touch a corner to turn its digit.</p>
     </figure>
 
     <h3 class="index-heading">Tabula of units</h3>

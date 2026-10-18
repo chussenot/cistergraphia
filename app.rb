@@ -88,6 +88,7 @@ class CistergraphiaApp < Sinatra::Base
     @secret = !passphrase.nil?
     sequence = Cistergraphia.encode(@message, passphrase: passphrase)
     @svg_content = Cistergraphia.to_svg(sequence)
+    @sequence = sequence
     @symbols = sequence.size
     @normalized = Cistergraphia.normalize(@message)
     erb :result

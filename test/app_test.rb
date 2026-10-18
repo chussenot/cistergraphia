@@ -112,6 +112,34 @@ class AppTest < Minitest::Test
     assert_equal 'image/png', last_response.content_type
   end
 
+  def test_plate_can_be_walked_in_reading_order
+    post '/generate', message: 'Ora et labora'
+    body = last_response.body
+    cells = JSON.parse(CGI.unescapeHTML(body[/data-plate-cells="([^"]*)"/, 1]))
+    layout = JSON.parse(CGI.unescapeHTML(body[/data-plate-layout="([^"]*)"/, 1]))
+    svg = CGI.unescapeHTML(body[/<input type="hidden" name="svg" value="([^"]*)"/, 1])
+
+    assert_equal Cistergraphia::SVG.read(svg), cells.map(&:last) # values, in reading order
+    assert_equal(Cistergraphia.spiral_coordinates(layout['size']), cells.map { |row, col, _| [row, col] })
+    assert_equal({ 'padding' => 50, 'cell' => [120, 170], 'space' => 20 }, layout.except('size'))
+    assert_includes body, 'tabindex="0"'
+  end
+
+  def test_anatomy_corners_are_dials_enabled_by_script
+    get '/'
+
+    dial = /<button type="button" class="quadrant quadrant--(\w+)" data-place="(\d+)" disabled>/
+    dials = last_response.body.scan(dial)
+    assert_equal [%w[tens 10], %w[units 1], %w[thousands 1000], %w[hundreds 100]], dials
+  end
+
+  def test_about_page_offers_lectio
+    get '/about'
+
+    assert_match(/<section class="lectio" data-lectio hidden/, last_response.body) # revealed by JS only
+    assert_includes last_response.body, 'data-lectio-answer'
+  end
+
   def test_unknown_pages_render_the_erratum
     get '/nowhere'
 

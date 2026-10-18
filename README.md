@@ -94,7 +94,9 @@ Web UI
 Run `bundle exec rackup` and open http://localhost:9292. Encode messages on `/`
 (with a live preview of each letter's sign), decode downloaded SVGs (or their
 pasted code) on `/decode`, and read the history of the ciphers, with a number
-playground, on `/about`. For secret mode,
+playground and *Lectio*, a game to learn to read the signs, on `/about`. A
+generated plate can be walked sign by sign, along the snail, with the pointer or
+the arrow keys. For secret mode,
 pick **Secret** and enter a passphrase. The server then sees the message and
 passphrase, so serve it over HTTPS, or use the CLI to keep everything local.
 

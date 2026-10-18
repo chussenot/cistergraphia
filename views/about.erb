@@ -12,6 +12,7 @@ Design Decisions:
 - History follows the Wikipedia article and David A. King (2001); vague or
   unverifiable claims are left out
 - The playground and the tablet are drawn from the real cipher geometry
+- Lectio: a reading game (JS only), novice to abbot as the signs grow
 %>
 <div class="spread spread--about">
   <article class="leaf" aria-labelledby="about-title">
@@ -84,6 +85,19 @@ Design Decisions:
         <% end %>
       </div>
     </div>
+
+    <section class="lectio" data-lectio hidden aria-labelledby="lectio-title">
+      <h3 id="lectio-title" class="index-heading">Lectio · read the sign</h3>
+      <div class="lectio-sign" data-lectio-sign></div>
+      <form class="lectio-form" data-lectio-form>
+        <label for="lectio-answer" class="visually-hidden">The number this sign reads</label>
+        <input type="number" id="lectio-answer" class="input" min="0" max="9999" inputmode="numeric"
+               autocomplete="off" placeholder="What does it read?" data-lectio-answer>
+        <button type="submit" class="btn btn--primary" data-lectio-submit>Read</button>
+      </form>
+      <p class="lectio-feedback" data-lectio-feedback aria-live="polite">Signs start with the units. Read three in a row to take your vows.</p>
+      <p class="lectio-standing"><span data-lectio-rank>Novice</span> · <span data-lectio-streak>0</span> in a row · best <span data-lectio-best>0</span></p>
+    </section>
 
     <h3 class="index-heading">The tablet</h3>
     <p class="note">Each letter's number (times ten) in the game. The original tablet skips 17.</p>

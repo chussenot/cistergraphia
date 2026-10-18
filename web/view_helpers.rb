@@ -44,6 +44,19 @@ module ViewHelpers
     %(<line x1="#{x1}" y1="#{y1}" x2="#{x2}" y2="#{y2}"/>)
   end
 
+  # Where each sign of a plate sits, in reading (snail) order, for walking the
+  # plate in app.js: [[row, col, value], ...] plus the grid geometry
+  def plate_cells_json(sequence)
+    size = Integer.sqrt(sequence.size)
+    cells = Cistergraphia.spiral_coordinates(size).zip(sequence).map { |(row, col), value| [row, col, value] }
+    JSON.generate(cells)
+  end
+
+  def plate_layout_json(sequence)
+    JSON.generate(padding: Cistergraphia::SVG::PADDING, cell: [Cistergraphia::SVG::CELL_WIDTH, Cistergraphia::SVG::CELL_HEIGHT],
+                  space: Cistergraphia::SVG::SPACE, size: Integer.sqrt(sequence.size))
+  end
+
   DESCRIPTION = 'Write a message as Cistercian numerals coiled like a snail: a cipher game, ' \
                 'or a passphrase-sealed secret.'
 
