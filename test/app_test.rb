@@ -112,17 +112,76 @@ class AppTest < Minitest::Test
     assert_equal 'image/png', last_response.content_type
   end
 
-  def test_plate_can_be_walked_in_reading_order
-    post '/generate', message: 'Ora et labora'
-    body = last_response.body
+  def plate_of(body)
     cells = JSON.parse(CGI.unescapeHTML(body[/data-plate-cells="([^"]*)"/, 1]))
     layout = JSON.parse(CGI.unescapeHTML(body[/data-plate-layout="([^"]*)"/, 1]))
     svg = CGI.unescapeHTML(body[/<input type="hidden" name="svg" value="([^"]*)"/, 1])
+    [cells, layout, svg]
+  end
 
-    assert_equal Cistergraphia::SVG.read(svg), cells.map(&:last) # values, in reading order
+  def test_plate_can_be_walked_in_reading_order
+    post '/generate', message: 'Ora et labora'
+    cells, layout, svg = plate_of(last_response.body)
+
+    assert_equal(Cistergraphia::SVG.read(svg), cells.map { |_, _, value, _| value }) # values, in reading order
     assert_equal(Cistergraphia.spiral_coordinates(layout['size']), cells.map { |row, col, _| [row, col] })
+    assert(cells.none? { |*, turned| turned })
     assert_equal({ 'padding' => 50, 'cell' => [120, 170], 'space' => 20 }, layout.except('size'))
-    assert_includes body, 'tabindex="0"'
+    assert_includes last_response.body, 'tabindex="0"'
+  end
+
+  def test_inscribe_puts_the_choices_first_and_reserves_its_dynamic_parts
+    get '/'
+    body = last_response.body
+    order = ['name="mode"', 'name="layout"', 'id="message"', 'data-preview', 'id="passphrase"', 'data-submit']
+
+    assert_equal(order, order.sort_by { |marker| body.index(marker) }) # choices above what you type
+    refute_match(/<div class="preview[^"]*" data-preview[^>]* hidden[ >]/, body) # laid out from the first paint
+    assert_includes body, 'preview-note--secret'                       # the sealed state shares the strip
+    assert_includes body, 'class="secret-slot"'                        # unfolded by CSS, not by JS
+    assert_match(/anatomy-hint awaits-script/, body)                   # space kept until JS
+  end
+
+  def test_index_offers_both_layouts
+    get '/'
+
+    assert_match(/name="layout" value="phaistos" checked/, last_response.body)
+    assert_match(/name="layout" value="rongorongo"/, last_response.body)
+    assert_equal 2, last_response.body.scan('data-layout-note=').size # the key follows the choice
+  end
+
+  def test_rongorongo_plate_is_walked_with_its_turned_rows
+    post '/generate', message: 'Ora et labora', layout: 'rongorongo'
+    cells, layout, svg = plate_of(last_response.body)
+
+    assert_includes last_response.body, '<dd>Rongorongo</dd>'
+    assert_includes last_response.body, 'data-action="turn-plate"'
+    assert_equal(Cistergraphia::SVG.read(svg, layout: :rongorongo), cells.map { |_, _, value, _| value })
+    assert_equal(Cistergraphia.boustrophedon_coordinates(layout['size']),
+                 cells.map { |row, col, _, turned| [row, col, turned] })
+
+    post '/decode', svg: svg
+
+    assert_includes last_response.body, 'ora et labora'
+  end
+
+  def test_plate_keeps_its_caption_and_controls_in_place
+    post '/generate', message: 'abbey', layout: 'rongorongo'
+    body = last_response.body
+
+    assert_match(/plate-reading-rest/, body) # the resting caption keeps its place...
+    assert_match(%r{data-plate-reading aria-live="polite"></span>}, body) # ...while the live reading fills it
+    assert_match(/plate-hint awaits-script/, body)
+    assert_match(/btn awaits-script" data-action="turn-plate"/, body)
+    refute_match(/<(?:span|button)[^>]* hidden[ >]/, body)
+  end
+
+  def test_unknown_layouts_fall_back_to_the_snail
+    post '/generate', message: 'abbey', layout: '<script>'
+
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, '<dd>Phaistos</dd>'
+    refute_includes last_response.body, 'turn-plate'
   end
 
   def test_anatomy_corners_are_dials_enabled_by_script
@@ -133,11 +192,27 @@ class AppTest < Minitest::Test
     assert_equal [%w[tens 10], %w[units 1], %w[thousands 1000], %w[hundreds 100]], dials
   end
 
+  def test_about_page_sources_the_snail
+    get '/about'
+
+    body = last_response.body
+    assert_includes body, 'Why a snail?'
+    assert_includes body, 'reverse boustrophedon'
+    assert_includes body, 'https://en.wikipedia.org/wiki/Phaistos_Disc'
+    assert_includes body, 'https://en.wikipedia.org/wiki/Rongorongo'
+    assert_equal 2, body.scan('<svg class="turning"').size # rongorongo and the Phaistos Disc
+    assert_equal 2, body.scan('<svg class="snail"').size   # and Cistergraphia's two layouts
+    assert_includes body, 'id="why-a-snail"'               # linked from the inscribe key
+  end
+
   def test_about_page_offers_lectio
     get '/about'
 
-    assert_match(/<section class="lectio" data-lectio hidden/, last_response.body) # revealed by JS only
-    assert_includes last_response.body, 'data-lectio-answer'
+    body = last_response.body
+    assert_match(/<section class="lectio" data-lectio aria-labelledby/, body) # laid out from the start
+    assert_match(/data-lectio-sign data-number="[1-9]"><svg class="glyph"/, body)
+    assert_match(/data-lectio-answer disabled>/, body) # enabled by JS
+    assert_match(/data-lectio-submit disabled>/, body)
   end
 
   def test_unknown_pages_render_the_erratum
@@ -263,6 +338,15 @@ class AppTest < Minitest::Test
 
     assert_equal 400, last_response.status
     assert_includes last_response.body, 'Wrong passphrase'
+  end
+
+  def test_secret_rongorongo_round_trip_through_the_web
+    post '/generate', message: 'Hanga Roa', passphrase: 'orongo village', layout: 'rongorongo'
+    svg = last_response.body[%r{<svg xmlns.*?</svg>}m]
+
+    post '/decode', svg: svg, passphrase: 'orongo village'
+
+    assert_includes last_response.body, 'Hanga Roa'
   end
 
   def test_decode_secret_image_without_passphrase_hints_at_secret_mode

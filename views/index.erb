@@ -7,13 +7,19 @@ Purpose:
 - Teach how a sign is read, beside the form
 
 Design Decisions:
-- Mode is an explicit choice (two index cards, red and blue) rather than an
-  optional field; the passphrase only appears for the secret (JS), and is
-  always present, labelled, without JS
+- The choices come first (mode, then layout), as two segmented controls whose
+  descriptions share one reserved line each: what you type never moves them
+- Nothing on this leaf changes height while you type or choose. The preview is
+  a fixed strip (it scrolls sideways); notes swap in place; the passphrase
+  unfolds below the message, moving only the button. Showing and hiding is CSS
+  (:has), so the page is laid out once, with or without JS
 - The key (anatomy, tabula, order) is drawn from the real cipher geometry; the
   anatomy's corners are dials (JS enables them; static without JS)
 - The live preview draws each letter's sign from the same geometry (JSON from
   ViewHelpers#glyph_table_json); the plate itself is only made on the server
+- Layout: Phaistos (the snail) by default, or Rongorongo; the key's "Order of
+  reading" follows it in the same reserved space. The decoder detects the
+  layout, so it is never asked
 
 Constraints:
 - Posts to /generate; message limited to 500 characters
@@ -22,56 +28,80 @@ Constraints:
   <section class="leaf" aria-labelledby="inscribe-title">
     <p class="folio-mark" aria-hidden="true">fol. 1<sup>r</sup></p>
     <h1 id="inscribe-title" class="rubric">Inscribe a message</h1>
-    <p class="lede">Each letter becomes a number, each number a monk’s sign, and the signs coil inward like a snail.</p>
+    <p class="lede">Each letter becomes a number, each number a monk’s sign, and the signs coil inward like a snail, or turn like a tablet.</p>
 
     <form class="entry" method="post" action="/generate" data-entry>
+      <div class="choices">
+        <fieldset class="choice">
+          <legend>Mode</legend>
+          <div class="segments">
+            <label class="segment segment--game">
+              <input type="radio" name="mode" value="game" checked aria-describedby="note-game">
+              <span class="segment-title">Game</span>
+            </label>
+            <label class="segment segment--secret">
+              <input type="radio" name="mode" value="secret" aria-describedby="note-secret">
+              <span class="segment-title">Secret</span>
+            </label>
+          </div>
+          <div class="choice-notes">
+            <p class="choice-note" id="note-game" data-note="game">A puzzle in the old manner: patient readers, and machines, can solve it.</p>
+            <p class="choice-note" id="note-secret" data-note="secret">Sealed with a passphrase (AES-256-GCM): the image shows only its length.</p>
+          </div>
+        </fieldset>
+
+        <fieldset class="choice">
+          <legend>Layout</legend>
+          <div class="segments">
+            <label class="segment">
+              <input type="radio" name="layout" value="phaistos" checked aria-describedby="note-phaistos">
+              <span class="segment-title">Phaistos</span>
+            </label>
+            <label class="segment">
+              <input type="radio" name="layout" value="rongorongo" aria-describedby="note-rongorongo">
+              <span class="segment-title">Rongorongo</span>
+            </label>
+          </div>
+          <div class="choice-notes">
+            <p class="choice-note" id="note-phaistos" data-note="phaistos">The snail: clockwise from the top-left corner, coiling to the centre.</p>
+            <p class="choice-note" id="note-rongorongo" data-note="rongorongo">From the bottom up, turning the plate half round at every line.</p>
+          </div>
+        </fieldset>
+      </div>
+
       <div class="field">
-        <label for="message">Message</label>
+        <div class="field-head">
+          <label for="message">Message</label>
+          <span class="counter" data-counter><span data-count>0</span> / 500</span>
+        </div>
         <textarea id="message" name="message" maxlength="500" rows="4" required
                   placeholder="Meet me at the old abbey after vespers" data-counted></textarea>
-        <p class="field-meta">
-          <span data-mode-note="game">Letters and spaces only; anything else becomes a space.</span>
-          <span data-mode-note="secret" hidden>Any text: capitals, digits, accents, emoji.</span>
-          <span class="counter" data-counter aria-live="polite"><span data-count>0</span> / 500</span>
-        </p>
-        <div class="preview" data-preview data-glyph-table="<%= glyph_table_json %>" hidden>
-          <p class="preview-label">
-            <span class="label">Preview</span>
-            <span class="preview-hint" data-mode-note="game">each letter as one sign, before it is split in two and coiled</span>
-            <span class="preview-hint" data-mode-note="secret" hidden>sealed messages have no preview: their signs come from the encryption</span>
-          </p>
-          <ol class="preview-signs" data-preview-signs aria-hidden="true"></ol>
-          <p class="preview-empty" data-preview-empty>Start typing to see your letters as signs.</p>
+        <div class="preview is-empty" data-preview data-glyph-table="<%= glyph_table_json %>">
+          <p class="label">Preview</p>
+          <div class="preview-stage">
+            <ol class="preview-signs" data-preview-signs aria-hidden="true"></ol>
+            <p class="preview-note preview-note--empty">Each letter becomes one sign. Anything else becomes a space.</p>
+            <p class="preview-note preview-note--secret">No preview when sealed: the signs come from the encryption. Any text works.</p>
+          </div>
         </div>
       </div>
 
-      <fieldset class="modes">
-        <legend>Mode</legend>
-        <div class="mode-options">
-          <label class="mode mode--game">
-            <input type="radio" name="mode" value="game" checked>
-            <span class="mode-title">Game</span>
-            <span class="mode-desc">A puzzle in the old manner. Patient readers, and machines, can solve it.</span>
-          </label>
-          <label class="mode mode--secret">
-            <input type="radio" name="mode" value="secret">
-            <span class="mode-title">Secret</span>
-            <span class="mode-desc">Sealed with a passphrase (AES-256-GCM). The image shows only its length.</span>
-          </label>
+      <div class="entry-end">
+        <div class="secret-slot">
+          <div class="secret-slot-inner">
+            <div class="field">
+              <label for="passphrase">Passphrase <span class="label-note">· secret mode only</span></label>
+              <div class="passphrase">
+                <input type="password" id="passphrase" name="passphrase" minlength="8"
+                       autocomplete="new-password" autocapitalize="off" spellcheck="false">
+                <button type="button" class="btn btn--small" data-reveal="passphrase" aria-pressed="false">Show</button>
+              </div>
+              <p class="field-meta"><span>At least 8 characters; four or more random words is far better. Never stored.</span></p>
+            </div>
+          </div>
         </div>
-      </fieldset>
-
-      <div class="field" data-secret-only>
-        <label for="passphrase">Passphrase <span class="label-note">· secret mode only</span></label>
-        <div class="passphrase">
-          <input type="password" id="passphrase" name="passphrase" minlength="8"
-                 autocomplete="new-password" autocapitalize="off" spellcheck="false">
-          <button type="button" class="btn btn--small" data-reveal="passphrase" aria-pressed="false">Show</button>
-        </div>
-        <p class="field-meta"><span>At least 8 characters; four or more random words is far better. Never stored.</span></p>
+        <button class="btn btn--primary" type="submit" data-submit>Inscribe</button>
       </div>
-
-      <button class="btn btn--primary" type="submit" data-submit>Inscribe</button>
     </form>
   </section>
 
@@ -85,7 +115,7 @@ Constraints:
       <button type="button" class="quadrant quadrant--thousands" data-place="1000" disabled><b data-digit>1</b>thousands</button>
       <button type="button" class="quadrant quadrant--hundreds" data-place="100" disabled><b data-digit>0</b>hundreds</button>
       <figcaption>One stem, four corners: <span data-anatomy-caption>1098, the founding of Cîteaux</span>.</figcaption>
-      <p class="anatomy-hint" data-anatomy-hint hidden>Touch a corner to turn its digit.</p>
+      <p class="anatomy-hint awaits-script" data-anatomy-hint>Touch a corner to turn its digit.</p>
     </figure>
 
     <h3 class="index-heading">Tabula of units</h3>
@@ -97,9 +127,17 @@ Constraints:
     <p class="note">Tens mirror the units to the left, hundreds below, thousands both ways.</p>
 
     <h3 class="index-heading">Order of reading</h3>
-    <figure class="order">
-      <%== snail_svg(4) %>
-      <figcaption>Clockwise from the top-left corner, coiling to the centre.</figcaption>
-    </figure>
+    <div class="orders">
+      <figure class="order" data-layout-note="phaistos">
+        <%== snail_svg(4) %>
+        <figcaption><b>Phaistos.</b> Clockwise from the top-left corner, coiling to the centre.</figcaption>
+      </figure>
+      <figure class="order" data-layout-note="rongorongo">
+        <%== snail_svg(4, layout: :rongorongo) %>
+        <figcaption><b>Rongorongo.</b> From the bottom left, then turn the plate half round for each next line.
+          Hollow points are signs written upside down.</figcaption>
+      </figure>
+    </div>
+    <p class="note"><a href="/about#why-a-snail">Why these two?</a></p>
   </aside>
 </div>

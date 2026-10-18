@@ -41,11 +41,11 @@
   }
 
   // ---------- Mode switch (game = red, secret = blue; the ink crossfades in CSS) ----------
+  // What shows and hides with the mode is CSS (:has), laid out from the first
+  // paint; this only sets the page's ink, the button and the passphrase's rules.
   function initModes() {
     const form = $('[data-entry]');
     if (!form) return;
-    const secretOnly = $$('[data-secret-only]', form);
-    const notes = $$('[data-mode-note]', form);
     const submit = $('[data-submit]', form);
     const passphrase = $('#passphrase', form);
 
@@ -53,8 +53,6 @@
       const mode = $('input[name="mode"]:checked', form)?.value || 'game';
       document.body.dataset.mode = mode;
       const secret = mode === 'secret';
-      secretOnly.forEach((el) => { el.hidden = !secret; });
-      notes.forEach((el) => { el.hidden = el.dataset.modeNote !== mode; });
       if (passphrase) {
         passphrase.disabled = !secret;
         passphrase.required = secret;
@@ -63,6 +61,18 @@
     };
     $$('input[name="mode"]', form).forEach((radio) => radio.addEventListener('change', apply));
     apply();
+  }
+
+  // ---------- Layout: the key's order of reading follows the choice ----------
+  // CSS shows the chosen figure in the space both share; this inks its path
+  // again, so the new order is written, not swapped in.
+  function initLayouts() {
+    const form = $('[data-entry]');
+    if (!form || reducedMotion) return;
+    $$('input[name="layout"]', form).forEach((radio) => radio.addEventListener('change', () => {
+      const path = $(`[data-layout-note="${radio.value}"] polyline`);
+      if (path) path.replaceWith(path.cloneNode(true));
+    }));
   }
 
   // ---------- Character counter ----------
@@ -96,13 +106,13 @@
   }
 
   // ---------- Live preview: each new letter is inked as you type ----------
-  const PREVIEW_LIMIT = 60;
+  // The strip has a fixed height and scrolls sideways, keeping the letter at
+  // the caret in view: typing never moves anything else on the page.
   function initPreview() {
     const preview = $('[data-preview]');
     const field = $('[data-counted]');
     if (!preview || !field || !Ink.glyphTable()) return;
     const list = $('[data-preview-signs]', preview);
-    const empty = $('[data-preview-empty]', preview);
     const tablet = Ink.glyphTable().tablet;
     let shown = [];
     let frame;
@@ -117,27 +127,33 @@
       return li;
     };
 
+    // Scroll the strip (never the page) so the sign at the caret is visible
+    const follow = () => {
+      const at = Math.min(Ink.normalize(field.value.slice(0, field.selectionEnd)).length, shown.length) - 1;
+      const li = list.children[Math.max(at, 0)];
+      if (!li) return;
+      const left = li.offsetLeft - list.offsetLeft;
+      const right = left + li.offsetWidth;
+      let target = list.scrollLeft;
+      if (right > list.scrollLeft + list.clientWidth) target = right - list.clientWidth + 8;
+      else if (left < list.scrollLeft) target = Math.max(left - 8, 0);
+      if (target !== list.scrollLeft) list.scrollTo({ left: target, behavior: reducedMotion ? 'auto' : 'smooth' });
+    };
+
     const render = () => {
-      const all = Array.from(Ink.normalize(field.value));
-      const chars = all.slice(0, PREVIEW_LIMIT);
+      const chars = Array.from(Ink.normalize(field.value));
       let same = 0;
       while (same < shown.length && same < chars.length && shown[same] === chars[same]) same += 1;
-      $$('li', list).slice(same).forEach((li) => li.remove()); // also drops the "+N"
+      $$('li', list).slice(same).forEach((li) => li.remove());
       chars.slice(same).forEach((char, i) => list.appendChild(item(char, i * 40)));
-      if (all.length > chars.length) {
-        const more = document.createElement('li');
-        more.className = 'preview-more';
-        more.textContent = `+${all.length - chars.length}`;
-        list.appendChild(more);
-      }
       shown = chars;
-      empty.hidden = chars.length > 0;
+      preview.classList.toggle('is-empty', chars.length === 0);
+      follow();
     };
     field.addEventListener('input', () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(render);
     });
-    preview.hidden = false;
     render();
   }
 
@@ -190,7 +206,7 @@
       ['pointerenter', 'focus'].forEach((type) => dial.addEventListener(type, () => light(svg, [place])));
       ['pointerleave', 'blur'].forEach((type) => dial.addEventListener(type, () => light(svg, [], false)));
     });
-    $('[data-anatomy-hint]', figure).hidden = false;
+    $('[data-anatomy-hint]', figure).classList.remove('awaits-script');
     update();
   }
 
@@ -290,10 +306,15 @@
       } else {
         const misread = Ink.PLACES.filter((place, i) => Ink.digitsOf(value)[i] !== Ink.digitsOf(target)[i]);
         light(svg, misread);
-        // An empty corner is a zero: easy to miss, so say it
-        const corners = misread.map((place) => (Math.floor(target / place) % 10 === 0
-          ? `the empty ${PLACE_NAMES[place]} corner (0)` : `the ${PLACE_NAMES[place]}`));
-        feedback.textContent = `It reads ${target}. Look again at ${corners.join(' and ')}.`;
+        // An empty corner is a zero: easy to miss, so say it (grouped, to stay short)
+        const isEmpty = (place) => Math.floor(target / place) % 10 === 0;
+        const names = (places) => places.map((place) => PLACE_NAMES[place]).join(', ').replace(/, ([^,]*)$/, ' and $1');
+        const filled = misread.filter((place) => !isEmpty(place));
+        const empty = misread.filter(isEmpty);
+        const parts = [];
+        if (filled.length) parts.push(`the ${names(filled)}`);
+        if (empty.length) parts.push(`the empty ${names(empty)} ${empty.length > 1 ? 'corners' : 'corner'} (0)`);
+        feedback.textContent = `It reads ${target}. Look again at ${parts.join(', and ')}.`;
         streak = 0;
         reviewing = true;
         submit.textContent = 'Next sign';
@@ -301,9 +322,12 @@
       }
     });
 
-    game.hidden = false;
+    // The first sign is the one the server drew: take it over, don't redraw it
+    target = Number(holder.dataset.number);
+    Ink.adopt($('svg', holder), target);
+    answer.disabled = false;
+    submit.disabled = false;
     standing();
-    next();
   }
 
   // ---------- The plate: inked along the snail, walkable sign by sign ----------
@@ -338,8 +362,10 @@
     if (!frame || !svg || !frame.dataset.plateCells) return;
     const cells = JSON.parse(frame.dataset.plateCells);
     const layout = JSON.parse(frame.dataset.plateLayout);
+    // The live reading and the resting caption share one cell (CSS): walking
+    // swaps them in place, so nothing below the plate moves
     const readingEl = $('[data-plate-reading]');
-    const resting = readingEl.textContent;
+    const caption = readingEl.closest('.plate-reading');
     const index = new Map(cells.map(([row, col], i) => [`${row},${col}`, i]));
     const [cellWidth, cellHeight] = layout.cell;
 
@@ -350,26 +376,56 @@
     focus.setAttribute('rx', 6);
     svg.insertBefore(focus, $('g', svg));
 
+    // Rongorongo plates can be turned half round, as the tablets were
+    const turnButton = $('[data-action="turn-plate"]');
+    const isTurned = () => frame.classList.contains('is-turned');
+
     let current = -1;
     const show = (i) => {
       current = i;
       if (i < 0) {
         focus.classList.remove('is-visible');
-        readingEl.textContent = resting;
+        readingEl.textContent = '';
+        caption.classList.remove('is-walking');
         return;
       }
-      const [row, col, value] = cells[i];
+      const [row, col, value, turned] = cells[i];
       const x = layout.padding + (col * cellWidth) - (layout.space / 2);
       const y = layout.padding + (row * cellHeight) - (layout.space / 2);
+      // Appear in place, glide only from sign to sign
+      const appearing = !focus.classList.contains('is-visible');
+      if (appearing) focus.style.transition = 'none';
       focus.style.transform = `translate(${x}px, ${y}px)`;
+      if (appearing) {
+        focus.getBoundingClientRect();
+        focus.style.removeProperty('transition');
+      }
       focus.classList.add('is-visible');
-      readingEl.textContent = `Sign ${i + 1} of ${cells.length} · ${value}`;
+      const upsideDown = Boolean(turned) !== isTurned() ? ' · upside down: turn the plate' : '';
+      readingEl.textContent = `Sign ${i + 1} of ${cells.length} · ${value}${upsideDown}`;
+      caption.classList.add('is-walking');
     };
 
+    if (turnButton) {
+      turnButton.classList.remove('awaits-script');
+      turnButton.addEventListener('click', () => {
+        const turned = !isTurned();
+        frame.classList.toggle('is-turned', turned);
+        turnButton.setAttribute('aria-pressed', String(turned));
+        if (current >= 0) show(current);
+      });
+    }
+
+    // From the box and the viewBox, not getScreenCTM: Chrome gets the origin of
+    // the CSS half turn wrong there. A turned plate mirrors both ways.
     const cellAt = (event) => {
-      const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.getScreenCTM().inverse());
-      const col = Math.floor((point.x - layout.padding + (layout.space / 2)) / cellWidth);
-      const row = Math.floor((point.y - layout.padding + (layout.space / 2)) / cellHeight);
+      const rect = svg.getBoundingClientRect();
+      const view = svg.viewBox.baseVal;
+      let fx = (event.clientX - rect.left) / rect.width;
+      let fy = (event.clientY - rect.top) / rect.height;
+      if (isTurned()) [fx, fy] = [1 - fx, 1 - fy];
+      const col = Math.floor(((view.x + (fx * view.width)) - layout.padding + (layout.space / 2)) / cellWidth);
+      const row = Math.floor(((view.y + (fy * view.height)) - layout.padding + (layout.space / 2)) / cellHeight);
       const i = index.get(`${row},${col}`);
       return i === undefined ? -1 : i;
     };
@@ -394,7 +450,7 @@
       event.preventDefault();
       show(Math.min(Math.max(moves[event.key], 0), cells.length - 1));
     });
-    $('[data-plate-hint]').hidden = false;
+    $('[data-plate-hint]').classList.remove('awaits-script');
   }
 
   // The exported file must be the plain SVG the decoder reads: drop
@@ -528,6 +584,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initModes();
+    initLayouts();
     initCounter();
     initReveal();
     initActions();

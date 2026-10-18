@@ -106,6 +106,63 @@ class CistergraphiaTest < Minitest::Test
     assert_equal sequence, Cistergraphia::SVG.read(Cistergraphia.to_svg(sequence))
   end
 
+  def test_boustrophedon_coordinates_turn_every_other_row
+    coords = Cistergraphia.boustrophedon_coordinates(3)
+
+    assert_equal [[2, 0, false], [2, 1, false], [2, 2, false]], coords.first(3) # bottom row, left to right
+    assert_equal [[1, 2, true], [1, 1, true], [1, 0, true]], coords[3, 3] # back, upside down
+    assert_equal [[0, 0, false], [0, 1, false], [0, 2, false]], coords.last(3)
+    assert_equal(16, Cistergraphia.boustrophedon_coordinates(4).map { |row, col, _| [row, col] }.uniq.size)
+  end
+
+  def test_turning_a_sign_swaps_its_places
+    # Half a turn mirrors both ways: units <-> thousands, tens <-> hundreds
+    turned = Cistergraphia::Glyphs.strokes(4127).map { |stroke| Cistergraphia::Glyphs.turn(stroke) }
+    undirected = ->(strokes) { strokes.map { |x1, y1, x2, y2| [[x1, y1], [x2, y2]].sort }.sort }
+
+    assert_equal undirected.call(Cistergraphia::Glyphs.strokes(7214)), undirected.call(turned)
+    assert_equal 7214, Cistergraphia::Glyphs.read(turned)
+  end
+
+  def test_rongorongo_plates_draw_turned_rows_upside_down
+    # 2 x 2: bottom row upright, left to right; top row turned, right to left
+    svg = Cistergraphia.to_svg([1, 2, 3, 4], layout: :rongorongo)
+
+    assert_equal [1, 2, 3, 4], Cistergraphia::SVG.read(svg, layout: :rongorongo)
+    assert_equal [4000, 3000, 2, 1], Cistergraphia::SVG.read(svg) # read as a snail, the top row is upside down
+  end
+
+  def test_inscribe_never_draws_a_plate_that_reads_along_both_layouts
+    # "jj" as raw rongorongo plates also reads as letters along the snail about 1 time in 100
+    ambiguous = 2000.times.count do
+      !Cistergraphia.unambiguous?(Cistergraphia.to_svg(Cistergraphia.encode('jj'), layout: :rongorongo), :rongorongo)
+    end
+
+    assert_predicate ambiguous, :positive?, 'the hazard this test guards against' # ~20 expected
+    500.times do
+      _sequence, svg = Cistergraphia.inscribe('jj', layout: :rongorongo)
+
+      assert_equal 'jj', Cistergraphia.decode(svg)
+    end
+  end
+
+  def test_unknown_layouts_are_refused
+    assert_raises(Cistergraphia::Error) { Cistergraphia.to_svg([1], layout: :spiral) }
+  end
+
+  def test_decode_detects_the_layout
+    alphabet = [*'a'..'z', ' ']
+    Cistergraphia::SVG::LAYOUTS.each do |layout|
+      50.times do
+        message = [*'a'..'z'].sample + Array.new(rand(0..40)) { alphabet.sample }.join
+        _sequence, svg = Cistergraphia.inscribe(message, layout: layout)
+
+        assert_equal Cistergraphia.normalize(message), Cistergraphia.decode(svg), layout
+        assert_equal Cistergraphia.normalize(message), Cistergraphia.decode(svg, layout: layout)
+      end
+    end
+  end
+
   def test_round_trip_for_random_messages
     alphabet = [*'a'..'z', ' ', ' ', ' ']
     100.times do

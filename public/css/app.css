@@ -68,6 +68,7 @@
   --dur-dry: 1100ms;     /* wet rubric ink drying to iron-gall */
   --dur-lift: 260ms;     /* a stroke lifted away */
   --dur-mode: 700ms;     /* the page changing ink, red <-> blue */
+  --dur-turn: 900ms;     /* a rongorongo plate turned half round */
 }
 
 /* Registered so the page can change ink slowly instead of flipping */
@@ -296,7 +297,8 @@ code { font-family: var(--mono); font-size: 0.82em; background: var(--vellum); p
 
 .label,
 .field > label,
-.modes legend {
+.field-head label,
+.choice legend {
   font-family: var(--sans);
   font-size: 0.75rem;
   font-weight: 600;
@@ -341,40 +343,122 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .passphrase { display: flex; gap: var(--space-2); }
 .passphrase input { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.04em; }
 
-/* Live preview: each letter as one sign */
+/* Live preview: a fixed strip, so typing never changes the page's height.
+   Its three states (empty, signs, sealed) share one cell of the same size. */
 .preview {
   margin-top: var(--space-2);
-  padding: var(--space-3) var(--space-4) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   background: var(--paper);
+  display: grid;
+  gap: var(--space-2);
 }
-.preview-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); margin-bottom: var(--space-3); }
-.preview-hint { font-style: italic; color: var(--ink-soft); font-size: 0.95rem; }
+.preview .label { margin: 0; }
+.preview-stage { display: grid; height: 3.6rem; }
+.preview-stage > * { grid-area: 1 / 1; min-width: 0; transition: opacity 0.2s var(--ease), visibility 0.2s; }
 .preview-signs {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 var(--space-1);
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-1);
-  min-height: 0;
+  gap: var(--space-1);
+  align-items: end;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
 }
-.preview-signs li { display: grid; justify-items: center; gap: 0.15rem; width: 1.6rem; }
+.preview-signs li { flex: none; display: grid; justify-items: center; gap: 0.15rem; width: 1.6rem; }
 .preview-signs .glyph { width: 1.25rem; color: var(--ink); }
 .preview-signs .glyph g { stroke-width: 8; }
 .preview-signs span { font-size: 0.85rem; line-height: 1; color: var(--accent); }
 .preview-signs .is-space { width: 1.1rem; }
 .preview-signs .is-space .glyph { color: var(--ink-soft); opacity: 0.55; }
-.preview-signs .preview-more { align-self: center; width: auto; font-family: var(--sans); font-size: 0.8rem; color: var(--ink-soft); }
-.preview-empty { font-style: italic; color: var(--ink-soft); font-size: 1rem; }
-[data-mode="secret"] .preview-signs,
-[data-mode="secret"] .preview-empty { display: none; }
-[data-mode="secret"] .preview-label { margin-bottom: 0; }
+.preview-note {
+  align-self: center;
+  font-style: italic;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+.preview-note--secret,
+.preview.is-empty .preview-signs,
+.preview:not(.is-empty) .preview-note--empty { opacity: 0; visibility: hidden; }
+.entry:has(input[name="mode"][value="secret"]:checked) .preview-signs,
+.entry:has(input[name="mode"][value="secret"]:checked) .preview-note--empty { opacity: 0; visibility: hidden; }
+.entry:has(input[name="mode"][value="secret"]:checked) .preview-note--secret { opacity: 1; visibility: visible; }
 
-/* Mode switch: two index cards, red and blue */
-.modes { border: 0; padding: 0; margin: 0; display: grid; gap: var(--space-3); }
-.modes legend { margin-bottom: var(--space-2); padding: 0; }
+/* Mode and layout: segmented controls (native radios) over one reserved
+   line of description each; the notes swap in place, never resize */
+.entry { container-type: inline-size; }
+.choices { display: grid; gap: var(--space-5); }
+@container (min-width: 32rem) { .choices { grid-template-columns: 1fr 1fr; } }
+.choice { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: var(--space-2); }
+.choice legend { padding: 0; margin-bottom: var(--space-2); }
+.segments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--vellum);
+}
+.segment {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 2.75rem;
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease), color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.segment input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.segment-title { display: inline-block; font-size: 1.15rem; font-weight: 600; line-height: 1.2; }
+.segment:hover { color: var(--ink); }
+.segment:has(input:checked) { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), inset 0 -2px 0 var(--accent); }
+.segment:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.segment--game .segment-title::first-letter { color: var(--rubric); }
+.segment--secret .segment-title::first-letter { color: var(--woad); }
+.choice-notes { display: grid; }
+.choice-note { grid-area: 1 / 1; font-size: 1rem; line-height: 1.4; color: var(--ink-soft); }
+@supports selector(:has(*)) {
+  .choice-note { visibility: hidden; }
+  .choice:has(input[value="game"]:checked) [data-note="game"],
+  .choice:has(input[value="secret"]:checked) [data-note="secret"],
+  .choice:has(input[value="phaistos"]:checked) [data-note="phaistos"],
+  .choice:has(input[value="rongorongo"]:checked) [data-note="rongorongo"] { visibility: visible; }
+}
+
+.field-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
+.field-head .counter { font-family: var(--sans); font-size: 0.78rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+/* The passphrase unfolds in secret mode (CSS only: no reflow when JS
+   arrives). It sits below the message, so only the button moves. The slot
+   and the button share a gapless wrapper; the space above the button lives
+   inside the part that folds away. */
+.entry-end { display: grid; }
+.secret-slot { display: grid; grid-template-rows: 1fr; }
+.secret-slot-inner { min-height: 0; overflow: hidden; padding: 4px; margin: -4px; } /* room for focus rings */
+.secret-slot .field { margin-bottom: var(--space-5); }
+@supports selector(:has(*)) {
+  .secret-slot {
+    transition: grid-template-rows var(--dur-mode) var(--ease-ink), opacity var(--dur-mode) var(--ease), visibility 0s linear 0s;
+  }
+  .entry:has(input[name="mode"][value="game"]:checked) .secret-slot {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    transition-delay: 0s, 0s, var(--dur-mode);
+  }
+}
+
+/* Shown only once the script runs, in space kept for them from the start */
+.awaits-script { visibility: hidden; }
+
+/* Mode cards (About): two index cards, red and blue */
 .mode-options { display: grid; gap: var(--space-3); }
 @media (min-width: 34rem) { .mode-options { grid-template-columns: 1fr 1fr; } }
 
@@ -421,6 +505,7 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .mode-title::first-letter { color: var(--mode-accent); }
 .mode-desc { grid-column: 2; font-size: 1rem; line-height: 1.4; color: var(--ink-soft); }
 
+
 [hidden] { display: none !important; }
 
 /* ---------- Buttons ---------- */
@@ -453,7 +538,8 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .btn--quiet { border-color: transparent; padding-inline: var(--space-3); color: var(--ink-soft); }
 .btn--quiet:hover { background: transparent; border-color: transparent; text-decoration: underline; }
 .btn--small { padding: 0 var(--space-4); }
-.entry > .btn--primary { justify-self: start; min-width: 12rem; font-size: 0.9rem; }
+.entry > .btn--primary,
+.entry-end > .btn--primary { justify-self: start; min-width: 12rem; font-size: 0.9rem; }
 
 /* ---------- The key (how to read a sign) ---------- */
 .glyph g { fill: none; stroke: currentColor; stroke-width: 5; stroke-linecap: square; }
@@ -492,6 +578,7 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .quadrant:disabled { color: var(--ink-soft); opacity: 1; }
 .quadrant b { transition: transform 0.25s var(--ease-ink); }
 .quadrant:not(:disabled):active b { transform: translateY(1px); }
+.anatomy figcaption { min-height: 3.1em; min-height: 2lh; } /* the longest date names wrap to two lines: keep them */
 .anatomy-hint { grid-column: 1 / -1; text-align: center; font-family: var(--sans); font-size: 0.78rem; color: var(--ink-soft); margin-top: calc(-1 * var(--space-4)); }
 .anatomy figcaption,
 .order figcaption,
@@ -532,6 +619,14 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .snail polyline { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
 .snail circle { fill: var(--ink-soft); }
 .snail .snail-start { fill: var(--accent); }
+.snail circle.turned { fill: var(--paper); stroke: var(--ink-soft); stroke-width: 1; }
+.orders { display: grid; }
+.orders > .order { grid-area: 1 / 1; align-self: start; }
+@supports selector(:has(*)) {
+  body:has(input[name="layout"][value="rongorongo"]:checked) [data-layout-note="phaistos"],
+  body:not(:has(input[name="layout"][value="rongorongo"]:checked)) [data-layout-note="rongorongo"] { visibility: hidden; }
+}
+@supports not selector(:has(*)) { .orders > .order + .order { grid-area: auto; margin-top: var(--space-4); } }
 
 /* ---------- The plate (result) ---------- */
 .specs {
@@ -582,6 +677,10 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
 .plate-frame svg > rect:first-child { fill: transparent; }
 .plate-frame svg g { stroke: currentColor; stroke-width: 3; stroke-linecap: square; }
 .plate-frame:focus-visible { outline-offset: 4px; }
+.plate-frame.is-turned svg { transform: rotate(180deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .plate-frame svg { transition: transform var(--dur-turn) var(--ease-ink); }
+}
 
 /* Walking the snail: a soft field glides from sign to sign */
 .plate-focus {
@@ -595,6 +694,9 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ri
   pointer-events: none;
 }
 .plate-focus.is-visible { opacity: 1; }
+.plate-reading { display: grid; }
+.plate-reading > * { grid-area: 1 / 1; }
+.plate-reading.is-walking .plate-reading-rest { visibility: hidden; }
 .plate-hint { display: block; font-family: var(--sans); font-style: normal; font-size: 0.78rem; margin-top: var(--space-1); }
 [data-plate-reading] { font-variant-numeric: lining-nums; }
 /* Each stroke is inked in reading order; hidden until its turn (no stray caps) */
@@ -658,7 +760,19 @@ line.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .dropzone .glyph { width: 2.6rem; color: var(--ink-soft); }
 .dropzone-title { font-size: 1.35rem; font-weight: 600; }
 .dropzone-sub { font-family: var(--sans); font-size: 0.82rem; color: var(--ink-soft); }
-.dropzone-file { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); min-height: 1.2em; }
+.dropzone-file {
+  /* One reserved line: a long name is cut, never wrapped, so nothing moves */
+  display: block;
+  max-width: 100%;
+  height: 1.5em;
+  line-height: 1.5;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--accent);
+}
 .dropzone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
 .paste summary {
@@ -756,8 +870,29 @@ input[aria-invalid="true"] { border-color: var(--rubric); }
 .sources .index-heading { margin-top: 0; }
 .sources ul { margin: 0; padding-left: 1.2rem; display: grid; gap: var(--space-2); font-size: 1.05rem; }
 
+/* ---------- Why a snail: three ways to turn a text ---------- */
+.why-snail { max-width: var(--measure); }
+.why-snail > p + p { margin-top: var(--space-4); }
+.turnings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-5);
+  margin: var(--space-5) 0;
+}
+.turnings figure { margin: 0; display: grid; gap: var(--space-3); align-content: start; }
+.turnings figcaption { font-size: 0.98rem; line-height: 1.4; color: var(--ink-soft); }
+.turnings figcaption b { display: block; color: var(--ink); font-weight: 600; }
+.turnings svg { width: 100%; max-width: 9rem; height: auto; }
+.turning rect, .turning > circle:first-child { fill: none; stroke: var(--rule); stroke-width: 1.2; }
+.turning polyline { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.turning-glyphs path { fill: none; stroke: var(--ink-soft); stroke-width: 1.2; }
+.turning .snail-start { fill: var(--accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .turning polyline { stroke-dashoffset: 1; animation: ink 3s var(--ease-ink) 0.3s forwards; }
+}
+
 /* ---------- Lectio: the reading game ---------- */
-.lectio { display: grid; gap: var(--space-3); margin-top: var(--space-2); }
+.lectio { display: grid; gap: var(--space-3); margin-top: var(--space-2); container-type: inline-size; }
 .lectio .index-heading { margin-bottom: 0; }
 .lectio-sign {
   display: grid;
@@ -771,7 +906,8 @@ input[aria-invalid="true"] { border-color: var(--rubric); }
 .lectio-sign .glyph { width: 4.6rem; color: var(--ink); }
 .lectio-form { display: flex; gap: var(--space-2); }
 .lectio-form input { flex: 1; min-width: 0; }
-.lectio-feedback { font-style: italic; color: var(--ink-soft); min-height: 1.6em; }
+.lectio-feedback { font-style: italic; color: var(--ink-soft); min-height: 4.8em; min-height: 3lh; } /* the longest answer, reserved */
+@container (min-width: 22rem) { .lectio-feedback { min-height: 3.2em; min-height: 2lh; } }
 .lectio-standing { font-family: var(--sans); font-size: 0.78rem; letter-spacing: 0.06em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .lectio-standing [data-lectio-rank] { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; }
 
@@ -825,7 +961,7 @@ input[aria-invalid="true"] { border-color: var(--rubric); }
 
 @media (prefers-reduced-motion: reduce) {
   body { transition: none; }
-  .nav a::after, .plate-focus, .glyph line, .quadrant b { transition: none; }
+  .nav a::after, .plate-focus, .glyph line, .quadrant b, .secret-slot, .preview-stage > *, .segment { transition: none; }
 }
 
 /* ---------- Small screens ---------- */
@@ -835,7 +971,8 @@ input[aria-invalid="true"] { border-color: var(--rubric); }
   .brand-tag { display: none; }
   .folio { margin-top: var(--space-4); }
   .folio-mark { display: none; }
-  .entry > .btn--primary { width: 100%; }
+  .entry > .btn--primary,
+  .entry-end > .btn--primary { width: 100%; }
   .tabula { grid-template-columns: repeat(5, minmax(0, 1fr)); row-gap: var(--space-3); }
   .actions .btn { flex: 1 1 auto; }
 }

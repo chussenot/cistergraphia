@@ -71,6 +71,13 @@ module Cistergraphia
       end
     end
 
+    # A stroke (relative to the symbol origin) turned half round in its cell, as a
+    # rongorongo reader sees the line above once the tablet is turned: units
+    # trade places with thousands, tens with hundreds
+    def turn((x1, y1, x2, y2))
+      [WIDTH - x1, HEIGHT - y1, WIDTH - x2, HEIGHT - y2]
+    end
+
     # Turns the strokes of one symbol (relative to its origin) back into a number
     def read(strokes)
       strokes = strokes.map(&CANONICAL)

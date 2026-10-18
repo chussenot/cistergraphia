@@ -76,6 +76,12 @@ breakable (< 90%) or secret mode starts leaking (> 10%).
    value, and that sum always ends in 0, which also reveals where each pair starts.
 4. **The filler is labelled** by the constant 9999.
 5. **The spiral is one of a handful of obvious routes,** and the pair test confirms which one.
+   The Rongorongo layout (reverse boustrophedon, every other row upside down) adds one more route
+   to try, not a key: the decoder itself tells the two apart with the same pair test, so an
+   attacker does too. Turned glyphs read as their mirror (units ⇄ thousands, tens ⇄ hundreds),
+   which is a fixed, public transformation. Choose a layout for its look, not for security.
+   (On very short messages the pair test can pass along both routes, about 1 two-letter plate
+   in 100; the encoder redraws those, so the test always names one.)
 6. **Images instead of SVG would not help.** The glyphs are regular and documented: dCode
    converts them, and a vision model or a small classifier reads them.
 
@@ -91,7 +97,7 @@ encryption with a vetted primitive, which is what secret mode does.
 passphrase ──scrypt(N=2^14, r=8, p=5, random 16-byte salt)──▶ 256-bit key
 message (UTF-8) ──AES-256-GCM(key, random 12-byte nonce, AAD = header)──▶ ciphertext + 16-byte tag
 payload = version | salt | nonce | ciphertext | tag
-payload bytes ──base 10,000──▶ glyph values ──▶ [length, length, values…, random padding] ──snail──▶ SVG
+payload bytes ──base 10,000──▶ glyph values ──▶ [length, length, values…, random padding] ──layout──▶ SVG
 ```
 
 - **Primitives:** AES-256-GCM ([NIST SP 800-38D](https://csrc.nist.gov/pubs/sp/800/38/d/final))
@@ -109,6 +115,10 @@ payload bytes ──base 10,000──▶ glyph values ──▶ [length, length,
 - **Agility:** the version byte selects the KDF and cipher parameters, so they can be raised
   later and old images still decode.
 - **Exact text:** no normalisation, so capitals, digits, accents and emoji survive.
+- **Layout:** the decoder tries both layouts. The wrong one fails the length frame before any
+  scrypt work (in 200 of 200 random plates), or else the GCM tag, so it never yields a false
+  message. It is not
+  secret and adds no security.
 
 ### What secret mode does not protect
 

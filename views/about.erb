@@ -11,8 +11,12 @@ Design Decisions:
 - Exact years in the timeline are written as Cistercian signs
 - History follows the Wikipedia article and David A. King (2001); vague or
   unverifiable claims are left out
+- Why a snail: the reading order's ancestry, sourced (rongorongo is reverse
+  boustrophedon, not a spiral; the clockwise inward spiral is the Phaistos Disc's)
 - The playground and the tablet are drawn from the real cipher geometry
-- Lectio: a reading game (JS only), novice to abbot as the signs grow
+- Lectio: a reading game, novice to abbot as the signs grow. Its first sign
+  is drawn here and its controls are enabled by JS (like the dials), so it is
+  laid out from the first paint and nothing moves when the script arrives
 %>
 <div class="spread spread--about">
   <article class="leaf" aria-labelledby="about-title">
@@ -51,6 +55,52 @@ Design Decisions:
       </ol>
     </section>
 
+    <section class="why-snail" id="why-a-snail" aria-labelledby="snail-title">
+      <h2 id="snail-title" class="index-heading">Why a snail?</h2>
+      <p>Cistergraphia began with an idea of Rapa Nui, Easter Island: that its people wrote in a spiral,
+        like a snail. The sources tell a different and better story. The snail does have an ancestor,
+        but on Crete, not on Rapa Nui.</p>
+
+      <div class="turnings">
+        <figure>
+          <%== boustrophedon_svg %>
+          <figcaption><b>Rapa Nui, rongorongo.</b> Read from the bottom left, line by line, left to right.
+            Between lines the reader turns the tablet half round, so every other line stands upside down:
+            <em>reverse boustrophedon</em>. No spiral.</figcaption>
+        </figure>
+        <figure>
+          <%== disc_spiral_svg %>
+          <figcaption><b>Crete, the Phaistos Disc.</b> A spiral on each face, conventionally read clockwise
+            from the rim to the centre.</figcaption>
+        </figure>
+      </div>
+
+      <p>So Cistergraphia offers both, as its two layouts. You choose one when you inscribe; the decoder
+        recognises it on its own.</p>
+
+      <div class="turnings">
+        <figure>
+          <%== snail_svg(4) %>
+          <figcaption><b>Phaistos layout.</b> The disc's movement, clockwise and inward, set on the square grid
+            of an index. The default.</figcaption>
+        </figure>
+        <figure>
+          <%== snail_svg(4, layout: :rongorongo) %>
+          <figcaption><b>Rongorongo layout.</b> Rows from the bottom left; every other row is written upside
+            down (the hollow points), so you turn the plate half round to read it, like a tablet.</figcaption>
+        </figure>
+      </div>
+
+      <p>About two dozen wooden objects carry rongorongo, first reported by Eugène Eyraud in 1864. The
+        script is undeciphered, and many scholars think it is proto-writing rather than true writing. Its
+        reader turns the text at every line, and so does the reader of a Rongorongo plate.</p>
+      <p>The Phaistos Disc is a clay disc of the Minoan Bronze Age, found by Luigi Pernier on 3 July 1908,
+        while excavating the Minoan palace site of Phaistos. Its signs were stamped, one by one, in a spiral on both faces. Arthur Evans
+        first thought it should be read from the centre outward, then from the rim inward, clockwise, which
+        is the convention now used to number its signs. It has not been deciphered either. An Etruscan lead
+        disc from Magliano also writes its text in a spiral, from the edge toward the centre.</p>
+    </section>
+
     <section aria-labelledby="modes-title">
       <h2 id="modes-title" class="index-heading">Cistergraphia, in two modes</h2>
       <div class="mode-options">
@@ -86,14 +136,15 @@ Design Decisions:
       </div>
     </div>
 
-    <section class="lectio" data-lectio hidden aria-labelledby="lectio-title">
+    <section class="lectio" data-lectio aria-labelledby="lectio-title">
       <h3 id="lectio-title" class="index-heading">Lectio · read the sign</h3>
-      <div class="lectio-sign" data-lectio-sign></div>
+      <% first = rand(1..9) %>
+      <div class="lectio-sign" data-lectio-sign data-number="<%= first %>"><%== glyph_svg(first, title: 'A Cistercian sign to read') %></div>
       <form class="lectio-form" data-lectio-form>
         <label for="lectio-answer" class="visually-hidden">The number this sign reads</label>
         <input type="number" id="lectio-answer" class="input" min="0" max="9999" inputmode="numeric"
-               autocomplete="off" placeholder="What does it read?" data-lectio-answer>
-        <button type="submit" class="btn btn--primary" data-lectio-submit>Read</button>
+               autocomplete="off" placeholder="What does it read?" data-lectio-answer disabled>
+        <button type="submit" class="btn btn--primary" data-lectio-submit disabled>Read</button>
       </form>
       <p class="lectio-feedback" data-lectio-feedback aria-live="polite">Signs start with the units. Read three in a row to take your vows.</p>
       <p class="lectio-standing"><span data-lectio-rank>Novice</span> · <span data-lectio-streak>0</span> in a row · best <span data-lectio-best>0</span></p>
@@ -121,5 +172,7 @@ Design Decisions:
     <li><a href="https://en.wikipedia.org/wiki/Cistercian_numerals">Cistercian numerals</a>, Wikipedia, and the sources it cites.</li>
     <li><a href="https://www.dcode.fr/cistercian-numbers">dCode: Cistercian numbers</a>, a converter for the signs.</li>
     <li><a href="https://glossographia.wordpress.com/2013/07/09/cistercian-number-magic-of-the-boy-scouts/">Glossographia: Cistercian number magic of the boy scouts</a>.</li>
+    <li><a href="https://en.wikipedia.org/wiki/Rongorongo">Rongorongo</a> and <a href="https://en.wikipedia.org/wiki/Boustrophedon">Boustrophedon</a>, Wikipedia, and the sources they cite.</li>
+    <li><a href="https://en.wikipedia.org/wiki/Phaistos_Disc">Phaistos Disc</a> and <a href="https://en.wikipedia.org/wiki/Lead_Plaque_of_Magliano">Lead Plaque of Magliano</a>, Wikipedia, and the sources they cite.</li>
   </ul>
 </section>
