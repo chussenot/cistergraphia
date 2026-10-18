@@ -1,9 +1,22 @@
 # frozen_string_literal: true
 
+require 'json'
+
 # View helpers for the web UI: small inline SVGs drawn from the real cipher
 # geometry, so the illustrations on the page are always truthful.
 module ViewHelpers
   GLYPH_VIEWBOX = '-8 -8 116 166'
+
+  # The glyph geometry and tablet as JSON, for the live previews in app.js.
+  # Generated from the library so the browser never holds a second copy of the cipher.
+  def glyph_table_json
+    @glyph_table_json ||= JSON.generate(
+      viewBox: GLYPH_VIEWBOX,
+      stem: Cistergraphia::Glyphs::STEM,
+      lines: Cistergraphia::Glyphs::LINES,
+      tablet: Cistergraphia::TABLET.to_h { |char, value| [char.to_s, value * 10] }
+    )
+  end
 
   # One Cistercian numeral as an inline SVG
   def glyph_svg(num, css: 'glyph', title: nil)
@@ -29,6 +42,13 @@ module ViewHelpers
 
   def line_tag(x1, y1, x2, y2)
     %(<line x1="#{x1}" y1="#{y1}" x2="#{x2}" y2="#{y2}"/>)
+  end
+
+  DESCRIPTION = 'Write a message as Cistercian numerals coiled like a snail: a cipher game, ' \
+                'or a passphrase-sealed secret.'
+
+  def page_description
+    @description || DESCRIPTION
   end
 
   def nav_class(page)

@@ -11,6 +11,8 @@ Design Decisions:
   optional field; the passphrase only appears for the secret (JS), and is
   always present, labelled, without JS
 - The key (anatomy, tabula, order) is drawn from the real cipher geometry
+- The live preview draws each letter's sign from the same geometry (JSON from
+  ViewHelpers#glyph_table_json); the plate itself is only made on the server
 
 Constraints:
 - Posts to /generate; message limited to 500 characters
@@ -31,6 +33,15 @@ Constraints:
           <span data-mode-note="secret" hidden>Any text: capitals, digits, accents, emoji.</span>
           <span class="counter" data-counter aria-live="polite"><span data-count>0</span> / 500</span>
         </p>
+        <div class="preview" data-preview data-glyph-table="<%= glyph_table_json %>" hidden>
+          <p class="preview-label">
+            <span class="label">Preview</span>
+            <span class="preview-hint" data-mode-note="game">each letter as one sign, before it is split in two and coiled</span>
+            <span class="preview-hint" data-mode-note="secret" hidden>sealed messages have no preview: their signs come from the encryption</span>
+          </p>
+          <ol class="preview-signs" data-preview-signs aria-hidden="true"></ol>
+          <p class="preview-empty" data-preview-empty>Start typing to see your letters as signs.</p>
+        </div>
       </div>
 
       <fieldset class="modes">

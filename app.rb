@@ -98,6 +98,14 @@ class CistergraphiaApp < Sinatra::Base
     erb :decode
   end
 
+  get '/about' do
+    @page = :about
+    @title = 'About the ciphers'
+    @description = 'The ciphers of the Cistercian monks: their history, how to read a sign, ' \
+                   'and the tablet behind Cistergraphia.'
+    erb :about
+  end
+
   post '/decode' do
     @page = :read
     @message = Cistergraphia.decode(submitted_svg, passphrase: passphrase)
