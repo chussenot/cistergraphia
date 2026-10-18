@@ -65,6 +65,10 @@ and the passphrase.
 | Drop zone | Large dashed target; works by drag, click or keyboard |
 | Transcription | The decoded text with a plain two-line initial (`initial-letter`, with a float fallback) |
 | Toast | A polite live region, instead of `alert()` |
+| Live preview (`.preview`) | Under the message: each letter as one sign while typing, before the split and the snail; up to 60 signs, then "+N". In secret mode it explains why there is none (the signs come from the encryption) |
+| Playground (About) | Any number from 0 to 9,999 drawn as a sign, with its reading ("1 thousand · 0 hundreds · …") and preset years |
+| Index of dates (About) | A timeline whose exact years are written as signs; centuries get an em dash |
+| Tablet (About) | The 27 letters as index cards: sign, letter in the mode colour, value |
 
 ## Engineering rules the design depends on
 
@@ -81,9 +85,25 @@ and the passphrase.
   focus, a skip link, `aria-live` feedback, reduced motion respected, and no horizontal scroll at
   390 px. axe-core reports no WCAG 2.1 AA violations on any page, in either theme.
 - **No caching of secrets.** `POST` responses are sent with `Cache-Control: no-store`.
+- **One copy of the cipher.** The live preview and the playground draw from a JSON glyph
+  table the server embeds (`ViewHelpers#glyph_table_json`, built from `Cistergraphia::Glyphs`).
+  A test checks that it equals the library's table, so the browser can never drift from the
+  encoder.
+
+## Social preview
+
+![Social preview](../public/og.png)
+
+`bundle exec rake og:image` renders `web/og/card.html.erb` with the app's fonts and a real
+plate ("ora et labora", fixed seed, so the image is reproducible and decodable), through
+headless Chromium:
+
+- `public/og.png` (1200×630): `og:image` and `twitter:card` on every page
+- `docs/social-preview.png` (1280×640): to upload in the repository's GitHub settings
+  (Settings → General → Social preview)
 
 ## Screens
 
-| Inscribe (secret selected) | Plate (game) | Plate (dark) |
-|---|---|---|
-| ![](web-ui-inscribe.png) | ![](web-ui-plate.png) | ![](web-ui-dark.png) |
+| Inscribe (secret selected) | Plate (game) | Plate (dark) | About |
+|---|---|---|---|
+| ![](web-ui-inscribe.png) | ![](web-ui-plate.png) | ![](web-ui-dark.png) | ![](web-ui-about.png) |
