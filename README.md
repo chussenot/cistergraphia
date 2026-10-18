@@ -85,13 +85,16 @@ Dependencies
 Web UI
 ------
 
-To run the web UI, use `bundle exec rackup` and open http://localhost:9292.
-Messages can be encoded on `/`, and downloaded SVGs (or their pasted code) can
-be decoded on `/decode`. Fill in the optional passphrase for secret mode. The
-server then sees the message and passphrase, so serve it over HTTPS, or use the
-CLI to keep everything local.
+Run `bundle exec rackup` and open http://localhost:9292. Encode messages on `/`
+and decode downloaded SVGs (or their pasted code) on `/decode`. For secret mode,
+pick **Secret** and enter a passphrase. The server then sees the message and
+passphrase, so serve it over HTTPS, or use the CLI to keep everything local.
 
-![web ui](docs/web-ui.png)
+The design ("The Abbey Index") takes its cue from Cistercian manuscripts:
+vellum, iron-gall ink, ruled lines, and only two colours, red for the game
+and blue for the secret. See [docs/design.md](docs/design.md).
+
+![web ui](docs/web-ui-inscribe.png)
 
 Development
 -----------
@@ -108,7 +111,7 @@ Code map:
 * `lib/cistergraphia/glyphs.rb` — Cistercian numeral geometry, number ⇄ strokes
 * `lib/cistergraphia/svg.rb` — snail layout, SVG writing and reading
 * `lib/cistergraphia/secret.rb` — secret mode: scrypt + AES-256-GCM, bytes ⇄ glyph values
-* `app.rb` / `views/` — Sinatra web UI
+* `app.rb` / `views/` / `web/` / `public/` — Sinatra web UI (design notes: `docs/design.md`)
 * `cistergraphia` — command-line interface
 
 References
