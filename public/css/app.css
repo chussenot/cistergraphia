@@ -905,6 +905,22 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .plate-frame svg .bench-target:hover { stroke: var(--parchment-edge); }
 .plate-frame svg .bench-target.is-current { stroke: var(--rubric); }
 .plate-frame svg path.restored { color: var(--rubric); }
+/* A broken plate: the board, the fragments in their tray, and the rejoining */
+.plate--broken .plate-frame svg { max-height: none; width: 100%; }
+.plate-frame svg .board { stroke: var(--parchment-edge); }
+.plate-frame svg #board rect { fill: var(--paper); stroke: var(--rule); } /* the empty board: the leaf, ruled */
+.plate-frame svg .sherd { fill: var(--parchment); stroke: var(--parchment-edge); } /* the clay of a fragment */
+.plate-frame.is-rejoining svg .fragment { cursor: grab; touch-action: none; outline: none; }
+.plate-frame.is-rejoining svg .fragment:active { cursor: grabbing; }
+.plate-frame svg .fragment.is-picked .sherd { stroke: var(--rubric); stroke-width: 5; }
+.plate-frame svg .fragment:focus-visible .sherd { stroke: var(--accent); stroke-width: 5; }
+.plate-frame.is-whole svg .sherd { stroke: var(--rubric); }
+.rejoin { display: grid; gap: var(--space-3); margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--rule); }
+.rejoin-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.rejoin-head .index-heading { margin: 0; }
+.rejoin-tools { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.rejoin-status { margin: 0; font-family: var(--sans); font-size: 0.9rem; color: var(--ink-soft); min-height: calc(2 * 1.5em); line-height: 1.5; }
+.rejoin-reading { margin: 0; font-family: var(--mono); font-size: 0.95rem; overflow-wrap: anywhere; min-height: 1.5em; line-height: 1.5; }
 /* Tally signs, past their cords: the higher cord, in rubric */
 .plate-frame svg .tally path { color: var(--rubric); }
 .plate-frame svg .tally .cord { fill: var(--rubric); }
