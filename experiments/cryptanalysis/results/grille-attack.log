@@ -1,0 +1,75 @@
+# Grille attacks quoted in docs/security-study.md (Experiment 3), 2026-10-19
+# crack_grille.py as committed; 4-core container; times are wall clock, other runs in parallel.
+# Corpora are regenerated each time, so plates, keys and random splits differ between runs.
+
+########## 1. run.sh --check (messages.txt, a key per plate) ##########
+##### GAME MODE UNDER A GRILLE (each plate its own key; the attacker knows the scheme) #####
+  OK  c01.svg 14x14: grille found after 914,026 nodes, 1.5 s  the harvest will be stored in the western granary until the feast of saint martin
+  OK  c02.svg 12x12: grille found after 1,543 nodes, 0.0 s  lock the scriptorium every night and give the key only to the librarian
+  OK  c03.svg 12x12: grille found after 4,440 nodes, 0.0 s  a traveller from citeaux brought letters for the abbot this morning
+  OK  c04.svg 14x14: grille found after 2,702,995 nodes, 3.8 s  we need more ink and parchment before the copying of the psalter can begin
+  OK  c05.svg 12x12: grille found after 352,243 nodes, 0.6 s  la cloche sonnera trois fois quand le danger approche
+  OK  c06.svg 14x14: grille found after 37,496 nodes, 0.1 s  the bridge over the river collapsed so the pilgrims must wait at the hospice
+  OK  c07.svg 12x12: grille found after 44,668 nodes, 0.1 s  count the silver coins twice and record the total in the ledger
+  OK  c08.svg 12x12: grille found after 2,289 nodes, 0.0 s  brother thomas has fallen ill and cannot sing the evening office
+  OK  c09.svg 12x12: grille found after 120,855 nodes, 0.2 s  hide the relics in the cellar if soldiers come to the gate
+  OK  c10.svg 12x12: grille found after 1,428 nodes, 0.0 s  tomorrow we begin the long journey to the mother house
+  character accuracy: 100.0%; messages fully recovered: 10/10
+
+##### SECRET MODE UNDER A GRILLE #####
+      c01.svg 10x10: no grille found after 523 nodes, 0.0 s  
+      c02.svg 10x10: no grille found after 883 nodes, 0.0 s  
+      c03.svg 10x10: no grille found after 523 nodes, 0.0 s  
+      c04.svg 10x10: no grille found after 523 nodes, 0.0 s  
+      c05.svg 8x8: no grille found after 65 nodes, 0.0 s  
+      c06.svg 10x10: no grille found after 523 nodes, 0.0 s  
+      c07.svg 10x10: no grille found after 523 nodes, 0.0 s  
+      c08.svg 10x10: no grille found after 523 nodes, 0.0 s  
+      c09.svg 10x10: no grille found after 523 nodes, 0.0 s  
+      c10.svg 8x8: no grille found after 185 nodes, 0.0 s  
+  character accuracy: 0.0%; messages fully recovered: 0/10
+
+real	0m55.055s
+user	0m52.334s
+sys	0m0.420s
+
+# Six more corpora of messages.txt under the committed search: 10/10 each (60/60 plates).
+# Slowest plate: c01.svg 14x14 of corpus 6, grille found after 84,687,851 nodes, 96.3 s.
+
+########## 2. Long plates (long-messages.txt, a key per plate), --node-limit 400000000 ##########
+# Run A: an earlier version of the same search (without the check that a grille reads as words)
+  OK  c01.svg 16x16: grille found after 631,123 nodes, 0.6 s  the brothers will gather in the chapter house after compline to hear the letter from the abbot of citeaux about the new
+  OK  c02.svg 18x18: grille found after 20,147,232 nodes, 22.4 s  the brothers will gather in the chapter house after compline to hear the letter from the abbot of citeaux about the new rule for the copying of books and the
+      c03.svg 20x20: no grille found after 400,000,001 nodes, 386.8 s  
+      c04.svg 24x24: no grille found after 400,000,001 nodes, 492.1 s  
+      c05.svg 26x26: no grille found after 400,000,001 nodes, 459.3 s  
+      c06.svg 30x30: no grille found after 400,000,001 nodes, 532.5 s  
+      c07.svg 30x30: no grille found after 400,000,001 nodes, 429.9 s  
+# Run B: as committed; stopped after 20 x 20 (larger plates only take longer)
+  OK  c01.svg 16x16: grille found after 1,847,075 nodes, 2.4 s  the brothers will gather in the chapter house after compline to hear the letter from the abbot of citeaux about the new
+      c02.svg 18x18: no grille found after 400,000,001 nodes, 502.4 s  
+      c03.svg 20x20: no grille found after 400,000,001 nodes, 636.8 s  
+
+########## 3. One key for 3 plates of 20 x 20 (shared-messages.txt), --shared-key ##########
+# Run A: an earlier version, --node-limit 300000000
+3 plates of 20x20 under one grille: found=False after 300,000,001 nodes, 722.4s
+# Run B
+  3 plates under one grille, 20x20: grille found after 119,491,569 nodes, 197.5 s
+  OK  c01.svg  the brothers will gather in the chapter house after compline to hear the letter from the abbot of citeaux about the new rule for the copying of books and the care of the library
+  OK  c02.svg  send the new psalter to the priory before easter with two candles and the small key to the library and tell the cellarer to count the barrels of wine and oil in the cellar
+  OK  c03.svg  the bishop arrives on thursday with twelve horsemen so the novices must clean the cloister and the refectory and prepare beds in the guest house near the gate of the abbey
+  character accuracy: 100.0%; messages fully recovered: 3/3
+# Run C
+  3 plates under one grille, 20x20: no grille found after 400,000,001 nodes, 689.6 s
+      c01.svg  
+      c02.svg  
+      c03.svg  
+  character accuracy: 0.0%; messages fully recovered: 0/3
+# Run D
+  3 plates under one grille, 20x20: grille found after 7,814,621 nodes, 15.8 s
+  OK  c01.svg  the brothers will gather in the chapter house after compline to hear the letter from the abbot of citeaux about the new rule for the copying of books and the care of the library
+  OK  c02.svg  send the new psalter to the priory before easter with two candles and the small key to the library and tell the cellarer to count the barrels of wine and oil in the cellar
+  OK  c03.svg  the bishop arrives on thursday with twelve horsemen so the novices must clean the cloister and the refectory and prepare beds in the guest house near the gate of the abbey
+  character accuracy: 100.0%; messages fully recovered: 3/3
+# The first plate of run B's corpus attacked alone (no --shared-key); stopped after it
+      c01.svg 20x20: no grille found after 400,000,001 nodes, 633.2 s  

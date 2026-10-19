@@ -105,7 +105,7 @@ Constraints:
                      placeholder="<%= Cistergraphia::Grille::EXAMPLE %>" autocomplete="off" autocapitalize="characters" spellcheck="false"
                      aria-describedby="grille-error grille-hint"<%== ' aria-invalid="true" autofocus' if @grille_error %>>
               <div class="field-notes">
-                <p class="field-meta" id="grille-hint">Leave it empty and a new grille is drawn for this plate.</p>
+                <p class="field-meta" id="grille-hint">Leave it empty and a new grille is drawn for this plate. Each plate written under the same key makes that key easier to break.</p>
                 <p class="field-error" id="grille-error" aria-live="polite"><%= @grille_error %></p>
               </div>
             </div>
