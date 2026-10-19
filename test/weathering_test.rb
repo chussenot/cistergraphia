@@ -131,6 +131,16 @@ class WeatheringTest < Minitest::Test
     assert_equal ' ', Weathering::Edition::Token.new([' '], :restored).to_s
   end
 
+  def test_a_pair_wholly_lost_is_weighed_without_trying_every_pair_of_values
+    all = Weathering::POSITIONS.values.flatten(1)
+    lost = Weathering.candidates(Weathering.surviving(1234, all), all) # 10,000 values each
+
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    readings = Weathering.readings(lost, lost)
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 1
+    assert_equal (C::CHARACTERS.values + [Weathering::NULL]).sort, readings
+  end
+
   def test_a_pair_that_cannot_balance_is_no_edition
     assert_raises(C::DecodeError) { Weathering::Edition.text([[[3], false], [[8], true]]) }
   end
