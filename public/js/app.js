@@ -792,11 +792,15 @@
       for (let first = 0; first < values.length; first += 2) {
         const open = bySign.has(first) || bySign.has(first + 1);
         const reading = weigh(first);
-        if (reading === null) continue;
+        // A null pair is left out when its 9999 can be seen (as the server does);
+        // one whose 9999 was lost and pressed back keeps the three characters
+        // its [.] took ([·], nothing written here), so the line never rewraps
+        if (reading === null && !bySign.has(first + 1)) continue;
+        if (reading === null) { out.push('[·]'); continue; }
         if (reading === undefined) out.push('[.]');
         else if (reading === false) out.push('[?]');
         else if (!open) out.push(reading);
-        else out.push(`[${reading}]`); // a restored space keeps its brackets: the line never rewraps
+        else out.push(`[${reading === ' ' ? '\u00a0' : reading}]`); // a restored space: brackets, and no new break
       }
       edition.textContent = out.join('');
     }

@@ -129,6 +129,20 @@ const openWeatheredPlate = async (page) => {
   await page.waitForSelector('[data-plate] svg');
 };
 
+// One weathered plate page for both the JS-on and JS-off runs: two random
+// plates would differ in their editions, which is not what the comparison is about
+const pageOnce = new Map();
+const openSamePlate = (form) => async (page) => {
+  const key = JSON.stringify(form);
+  if (!pageOnce.has(key)) {
+    const response = await page.request.post(`${baseUrl}/generate`, { form });
+    pageOnce.set(key, await response.text());
+  }
+  await page.goto(`${baseUrl}/`);
+  await page.setContent(pageOnce.get(key), { waitUntil: 'load' });
+  await page.waitForSelector('[data-plate] svg');
+};
+
 // The number a Lectio sign shows, read from its strokes with the page's own table
 const lectioTarget = (page) => page.evaluate(() => {
   const key = (coords) => coords.join(',');
@@ -303,7 +317,7 @@ const PAGES = [
       await page.waitForSelector('[data-plate] svg');
     }
   },
-  { page: 'weathered', open: openWeatheredPlate },
+  { page: 'weathered', open: openSamePlate({ message: MESSAGE, weathered: '1' }) },
   {
     page: 'edition',
     open: async (page) => {
