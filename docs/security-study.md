@@ -122,6 +122,21 @@ Do not count on a long message for secrecy. Two more reasons:
 dies at once, 0/10. The grille adds nothing to secret mode either: AES-GCM does the sealing, and
 the grille only makes the reader need a key as well as the passphrase.
 
+**Two readers** (a second message on the same plate, under a novice's grille drawn from the
+abbot's key) add a reader, not secrecy. Not measured; what the construction implies:
+
+- **No deniability.** The novice's grille reads about half the cells; whoever holds it sees that
+  the rest is something else.
+- **In the game, the novice can reach the abbot's message.** The novice's key tells which orbits
+  are the abbot's, so the attack above has only those left to search, on a share of the plate.
+- **Sealed, the novice needs more than the passphrase.** The novice's message is sealed with the
+  passphrase, the abbot's with the passphrase and the abbot's key. Otherwise a novice, knowing the
+  abbot's cells and the passphrase, could try the abbot's holes one orbit at a time and watch the
+  decrypted bytes turn into text (AES-GCM decrypts in counter mode, before the tag is checked).
+  With the key in the seal, the novice must first find the abbot's key. The cheapest way is to
+  try abbot's keys until one gives the novice's key: about 2⁵⁰ SHA-256 hashes, out of reach for a
+  laptop, within reach of dedicated hardware, like any 50-bit grille key.
+
 ## Why game mode falls, worst first
 
 1. **No key.** Whoever has the algorithm has every message.

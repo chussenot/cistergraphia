@@ -56,6 +56,16 @@ class TwoReadersTest < Minitest::Test
     assert_raises(Cistergraphia::WrongGrilleError) { TwoReaders.read(svg, abbot, passphrase: 'not the passphrase') }
   end
 
+  def test_the_passphrase_alone_does_not_open_the_abbots_share
+    passphrase = 'abbey of molesme'
+    _sequence, svg, abbot = TwoReaders.inscribe('Les reliques sont à Cîteaux', 'Vêpres', passphrase: passphrase)
+    share = Cistergraphia::SVG.read(svg, layout: abbot.as(:abbot)) # the cells a novice knows are the abbot's
+
+    assert_raises(Cistergraphia::DecodeError) { Cistergraphia::Secret.decrypt(share, passphrase) }
+    assert_equal 'Les reliques sont à Cîteaux',
+                 Cistergraphia::Secret.decrypt(share, TwoReaders.abbots_passphrase(passphrase, abbot))
+  end
+
   def test_an_ordinary_grille_plate_reads_whole
     grille = Grille.new(KEY)
     _sequence, svg = Cistergraphia.inscribe('Ora et labora', layout: grille)

@@ -63,6 +63,13 @@ module Cistergraphia
       frame(to_digits(seal(plaintext, passphrase)))
     end
 
+    # The most signs #seal_to_digits can give for a message, without sealing it
+    # (the count depends on the random salt and nonce, by one sign at most)
+    def max_sealed_size(message)
+      bytes = HEADER_BYTES + message.to_s.strip.encode(Encoding::UTF_8).bytesize + TAG_BYTES
+      ((2 * (256**bytes)) - 1).digits(BASE).size + 2
+    end
+
     # Inverse of #encrypt; raises DecodeError on a wrong passphrase or any tampering
     def decrypt(sequence, passphrase)
       raise DecodeError, 'Too few symbols for a secret message' if sequence.size < 2

@@ -112,4 +112,13 @@ class SecretTest < Minitest::Test
 
     assert_equal bytes, Cistergraphia::Secret.from_digits(Cistergraphia::Secret.to_digits(bytes))
   end
+
+  def test_the_sealed_size_has_an_upper_bound_without_sealing
+    ['a', 'Les reliques sont à Cîteaux', 'x' * 500].each do |message|
+      sizes = Array.new(5) { Cistergraphia::Secret.seal_to_digits(message, PASSPHRASE).size }
+
+      assert_operator sizes.max, :<=, Cistergraphia::Secret.max_sealed_size(message)
+      assert_operator sizes.min, :>=, Cistergraphia::Secret.max_sealed_size(message) - 1
+    end
+  end
 end
