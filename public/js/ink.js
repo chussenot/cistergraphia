@@ -1,8 +1,9 @@
 // Cistergraphia ink: the one motion vocabulary of the UI.
 //
 // Every sign is pressed, as a stylus leaves it in clay: each stroke is a
-// wedge. A stroke is never popped in: it is *pressed* (it appears wet in the
-// mode's colour, then dries to ink) or *lifted* (it fades). Changing a sign
+// wedge. A stroke is never popped in: it is *pressed* (the stylus bites at its
+// head and runs to its tip, wet in the mode's colour, then the ink dries) or
+// *lifted* (it fades). Changing a sign
 // *morphs* it: shared strokes stay, the others lift or are pressed. Under
 // prefers-reduced-motion everything is instant.
 //
@@ -52,34 +53,81 @@
     return wedge;
   }
 
-  // Classes are removed when dry, so static styles (highlights) apply again
-  // and nothing lingers in exported files
-  const drying = new WeakSet();
-  function dried(event) {
-    if (event.animationName === 'ink-dry') dry(event.currentTarget);
+  // Where a wedge bites and which way it runs, read from its outline:
+  // Cistergraphia::Stylus writes the head's back corners first and third (the
+  // stroke's start lies between them) and the tail's tip second in the tail
+  function bite(mark) {
+    const n = (mark.getAttribute('d') || '').match(/-?\d+(?:\.\d+)?/g) || [];
+    if (n.length !== 14) return null; // not a wedge
+    const [x, y] = [(Number(n[0]) + Number(n[4])) / 2, (Number(n[1]) + Number(n[5])) / 2];
+    return { x, y, angle: (Math.atan2(Number(n[11]) - y, Number(n[10]) - x) * 180) / Math.PI };
   }
 
-  // Finish drying now (the mark stays where it is, in ink)
+  // When the wedge is drawn and its ink dry, its classes and styles go, so
+  // static styles (highlights) apply again and nothing lingers in exported files
+  function settle(mark) {
+    mark.classList.remove('ink-press', 'is-wet', 'ink-dry');
+    ['--delay', '--dry-delay', '--ox', '--oy', '--a', '--from'].forEach((name) => mark.style.removeProperty(name));
+    ['class', 'style'].forEach((name) => { if (!mark.getAttribute(name)) mark.removeAttribute(name); });
+  }
+
+  // At the tip the stylus lifts: a wet wedge hands over to drying
+  function ended(event) {
+    const mark = event.currentTarget;
+    if (event.animationName === 'ink-press' && mark.classList.contains('is-wet')) {
+      mark.classList.remove('ink-press', 'is-wet');
+      mark.classList.add('ink-dry');
+    } else if (event.animationName === 'ink-press' || event.animationName === 'ink-dry') {
+      settle(mark);
+    }
+  }
+
+  // Dry the ink now: the wedge is in ink at once, and still runs to its tip
+  // if the stylus is on its way
   function dry(mark) {
-    if (!mark.classList.contains('ink-press')) return;
-    mark.classList.remove('ink-press');
-    mark.style.removeProperty('--delay');
+    mark.classList.remove('is-wet');
+    if (mark.classList.contains('ink-dry')) settle(mark);
   }
 
+  const listening = new WeakSet();
   function listen(mark) {
-    if (drying.has(mark)) return;
-    drying.add(mark);
-    mark.addEventListener('animationend', dried);
+    if (listening.has(mark)) return;
+    listening.add(mark);
+    mark.addEventListener('animationend', ended);
   }
 
-  // Press a wedge (a stroke, or a plate's whole sign): wet in the mode's colour, then drying
+  // Press a wedge: the stylus bites at its head and runs to its tip, wet in
+  // the mode's colour, then the ink dries
   function press(mark, delay = 0) {
     if (reducedMotion) return;
+    const at = bite(mark);
+    if (at) {
+      mark.style.setProperty('--ox', at.x.toFixed(1));
+      mark.style.setProperty('--oy', at.y.toFixed(1));
+      mark.style.setProperty('--a', `${at.angle.toFixed(1)}deg`);
+      mark.style.setProperty('--from', '0.02');
+    }
     mark.style.setProperty('--delay', `${Math.round(delay)}ms`);
-    mark.classList.remove('ink-press');
-    mark.getBoundingClientRect(); // restart the animation
-    mark.classList.add('ink-press');
+    restart(mark);
+    mark.classList.add('ink-press', 'is-wet');
     listen(mark);
+  }
+
+  // A wedge already there, wet, that dries in its turn: for plates too long to
+  // draw stroke by stroke, where the drying front alone shows the reading order
+  function wet(mark, delay = 0) {
+    if (reducedMotion) return;
+    mark.style.setProperty('--dry-delay', `${Math.round(delay)}ms`);
+    restart(mark);
+    mark.classList.add('ink-dry');
+    listen(mark);
+  }
+
+  // Pressed again: restart (a reflow, only then)
+  function restart(mark) {
+    if (!mark.classList.contains('ink-press') && !mark.classList.contains('ink-dry')) return;
+    mark.classList.remove('ink-press', 'is-wet', 'ink-dry');
+    mark.getBoundingClientRect();
   }
 
   function lift(mark) {
@@ -145,5 +193,5 @@
     return text.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/ +/g, ' ').trim();
   }
 
-  window.Ink = { glyphTable, digitsOf, strokesOf, glyph, adopt, morph, press, dry, lift, normalize, reducedMotion, PLACES };
+  window.Ink = { glyphTable, digitsOf, strokesOf, glyph, adopt, morph, press, wet, dry, lift, normalize, reducedMotion, PLACES };
 })();

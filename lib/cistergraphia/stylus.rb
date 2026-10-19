@@ -35,7 +35,10 @@ module Cistergraphia
     end
 
     # The outlines of one stroke (x1, y1, x2, y2), pressed: the head and the
-    # tail, each a closed polygon of [x, y] points
+    # tail, each a closed polygon of [x, y] points. The order of the points is
+    # read back by public/js/ink.js to draw the wedge: the head's back corners
+    # come first and third (the stroke's start lies between them), the tail's
+    # tip second in the tail (its end).
     def wedge(stroke, random)
       x1, y1, x2, y2 = ductus(stroke)
       angle, length, width, head_length = hand(x2 - x1, y2 - y1, random)

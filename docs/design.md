@@ -86,8 +86,8 @@ Motion and interaction follow four rules. Anything that breaks one does not ship
 
 1. **Motion only when it carries meaning.** Nothing loops, nothing moves for show; every
    animation either teaches how the cipher works or answers something you did.
-2. **One vocabulary: ink.** A wedge is *pressed* (it appears wet in the mode's colour, then
-   dries to iron-gall ink) or *lifted* (it fades). A sign changes by *morphing*:
+2. **One vocabulary: ink.** A wedge is *pressed* (the stylus bites at its head and runs to
+   its tip, wet in the mode's colour, then the ink dries to iron-gall) or *lifted* (it fades). A sign changes by *morphing*:
    shared strokes stay, only the difference is pressed. Never a pop, a bounce or a shake.
 3. **The game is reading.** The page invites you to read the signs yourself, at your own
    pace: no timers, no sound, no confetti. Mistakes are shown, not punished.
@@ -120,15 +120,19 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | How to read a sign | The four corners are dials (click, or arrow keys up/down); only the changed strokes are rewritten; hovering a corner lights its strokes; some years name themselves (1098, 1115, 1153, this year) | How the places combine |
 | Inscribe | Choosing Secret unfolds the passphrase below the message | What sealing needs |
 | Inscribe key | Choosing a layout re-inks the "Order of reading" path, in place | Where the plate starts and how it runs |
-| Plate | Pressed sign by sign in reading order, the wet rubric front visibly coiling inward (or climbing the rows) | The reading order |
+| Plate | Pressed stroke by stroke in reading order, each wedge running from its head to its tip, the wet rubric front visibly coiling inward (or climbing the rows). Past 1,200 wedges (about 85 letters in a game) the signs are too small to see a stroke run: the plate is there at once and only its ink dries along the path, which keeps 60 fps | The reading order |
 | Plate | Walk it: point at a sign, or focus the plate and use the arrow keys / Home / End; a soft field glides along the path; "Sign 12 of 36 · 4127", with "upside down: turn the plate to read it" on turned signs | Reading the numerals, the first step of solving a game plate |
 | Plate (Rongorongo) | **Turn the plate**: the plate rotates half round, as the readers of Rapa Nui turned their tablets; the turned rows now read upright, and walking follows | Why every other row is upside down |
 | Transcription | The decoded message appears letter by letter after its initial | The payoff of decoding |
 | About · Lectio | Read the sign, type its number. Novice (units) → Monk (tens) → Prior (hundreds) → Abbot (thousands) every three in a row; a misread corner is lit (an empty corner is named as a zero) and you continue when ready; best run kept in the browser | Fluency in the signs |
 | Read | A received file's sign is pressed | Your file arrived |
 
-Implementation: `public/js/ink.js` holds the vocabulary (`press`, `dry`, `lift`, `morph`,
-`glyph`), `public/js/app.js` the interactions. The plate's cells and geometry come from
+Implementation: `public/js/ink.js` holds the vocabulary (`press`, `wet`, `dry`, `lift`, `morph`,
+`glyph`). A wedge's drawing is read from its own outline (where the head bites, which way the
+tail runs) and is a stretch along the stroke from there; drawing and drying are two animations
+in turn, never at once, because animating shape and colour together on thousands of SVG paths
+drops the frame rate several times over. `public/js/app.js` holds the interactions.
+The plate's cells and geometry come from
 `ViewHelpers#plate_cells_json` / `#plate_layout_json` (built from `Cistergraphia::SVG.path`, with
 each sign's turned flag), so walking the plate follows the real path. Turning is a class on
 the frame, never on the SVG, and exports strip every class, style and the walking field: the
@@ -152,7 +156,7 @@ downloaded SVG is unchanged.
 - **Progressive enhancement.** Without JS, every form works: both modes, decoding, and the
   read-it-back form. JS adds the mode switch, counter, reveal, exports, drag and drop, and
   the animation.
-- **Exports stay decodable.** A plate file holds its pressed wedges (one path per sign) and
+- **Exports stay decodable.** A plate file holds its pressed wedges (one path per stroke) and
   every stroke as a hidden `<line>`: the decoder reads the lines, the wedges are only the look,
   and plates drawn before the wedges still read. Display styling is CSS-only, and the
   animation's inline styles are stripped before Download SVG, PNG or Copy.
