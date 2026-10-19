@@ -49,13 +49,18 @@ module Cistergraphia
     # Message + passphrase => sequence of numbers (0..9999) padded to a perfect
     # square (with an even side if `even`, as a grille needs)
     def encrypt(message, passphrase, even: false)
+      pad_to_square(seal_to_digits(message, passphrase), even: even)
+    end
+
+    # Message + passphrase => the framed signs (length, then payload), unpadded
+    def seal_to_digits(message, passphrase)
       problem = passphrase_problem(passphrase)
       raise Error, problem if problem
 
       plaintext = message.to_s.strip
       raise EmptyMessageError, 'Message is empty' if plaintext.empty?
 
-      pad_to_square(frame(to_digits(seal(plaintext, passphrase))), even: even)
+      frame(to_digits(seal(plaintext, passphrase)))
     end
 
     # Inverse of #encrypt; raises DecodeError on a wrong passphrase or any tampering

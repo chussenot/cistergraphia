@@ -488,24 +488,25 @@
   function initGrille() {
     const frame = $('[data-plate]');
     const svg = plateSvg();
-    const template = $('template[data-stencil]');
+    const templates = $$('template[data-stencil]');
     const button = $('[data-action="lay-grille"]');
-    if (!frame || !svg || !template || !button || !frame.dataset.plateCells) return;
-    const cells = JSON.parse(frame.dataset.plateCells);
+    if (!frame || !svg || !templates.length || !button || !frame.dataset.plateCells) return;
     const layout = JSON.parse(frame.dataset.plateLayout);
-    const quarter = cells.length / 4;
     const readingEl = $('[data-plate-reading]');
     const caption = readingEl.closest('.plate-reading');
 
-    const sheet = template.content.querySelector('svg').cloneNode(true);
-    sheet.setAttribute('class', 'grille-sheet');
-    sheet.setAttribute('aria-hidden', 'true');
-    frame.appendChild(sheet);
-    const place = () => {
-      Object.assign(sheet.style, {
-        left: `${svg.offsetLeft}px`, top: `${svg.offsetTop}px`, width: `${svg.offsetWidth}px`, height: `${svg.offsetHeight}px`
-      });
-    };
+    // Each grille: its stencil over the plate, its reading path and its name.
+    // A plate with two readers has two (the abbot's and the novice's), one laid at a time
+    const grilles = templates.map((template) => {
+      const sheet = template.content.querySelector('svg').cloneNode(true);
+      sheet.setAttribute('class', 'grille-sheet');
+      sheet.setAttribute('aria-hidden', 'true');
+      frame.appendChild(sheet);
+      return { part: template.dataset.stencil, label: template.dataset.label, sheet, path: JSON.parse(template.dataset.path) };
+    });
+    const place = () => grilles.forEach(({ sheet }) => Object.assign(sheet.style, {
+      left: `${svg.offsetLeft}px`, top: `${svg.offsetTop}px`, width: `${svg.offsetWidth}px`, height: `${svg.offsetHeight}px`
+    }));
     place();
     if (window.ResizeObserver) new ResizeObserver(place).observe(svg);
 
@@ -520,39 +521,50 @@
       wedges.get(key).push(wedge);
     });
 
+    let active = grilles[0];
     let turn = -1;
     const show = () => {
+      const quarter = active.path.length / 4;
       $$('path.is-lit', svg).forEach((wedge) => wedge.classList.remove('is-lit'));
       if (turn >= 0) {
-        cells.slice(turn * quarter, (turn + 1) * quarter).forEach(([row, col]) => {
+        active.path.slice(turn * quarter, (turn + 1) * quarter).forEach(([row, col]) => {
           (wedges.get(`${row},${col}`) || []).forEach((wedge) => {
             Ink.dry(wedge); // red means one thing at a time
             wedge.classList.add('is-lit');
           });
         });
       }
-      sheet.classList.toggle('is-laid', turn >= 0);
+      grilles.forEach(({ sheet }) => sheet.classList.toggle('is-laid', turn >= 0 && sheet === active.sheet));
       button.setAttribute('aria-pressed', String(turn >= 0));
       button.textContent = turn < 0 ? 'Lay the grille' : turn === 3 ? 'Lift the grille' : `Turn it to ${TURNS[turn + 1]}`;
+      const name = active.label.charAt(0).toUpperCase() + active.label.slice(1);
       readingEl.textContent = turn < 0 ? ''
-        : `The grille at ${TURNS[turn]}: signs ${(turn * quarter) + 1} to ${(turn + 1) * quarter} of ${cells.length}, row by row`;
+        : `${name} at ${TURNS[turn]}: signs ${(turn * quarter) + 1} to ${(turn + 1) * quarter} of ${active.path.length}, row by row`;
       caption.classList.toggle('is-walking', turn >= 0);
     };
 
-    button.classList.remove('awaits-script');
+    // Laid again, or another grille laid: from N, without turning back through W, S, E
+    const reset = (sheet) => {
+      sheet.style.transition = 'none';
+      sheet.style.setProperty('--turn', 0);
+      sheet.getBoundingClientRect();
+      sheet.style.removeProperty('transition');
+    };
+
     $$('.grille-actions .awaits-script').forEach((el) => el.classList.remove('awaits-script'));
     button.addEventListener('click', () => {
       turn = turn === 3 ? -1 : turn + 1;
-      if (turn === 0) { // laid again: from N, without turning back through W, S, E
-        sheet.style.transition = 'none';
-        sheet.style.setProperty('--turn', 0);
-        sheet.getBoundingClientRect();
-        sheet.style.removeProperty('transition');
-      } else if (turn > 0) {
-        sheet.style.setProperty('--turn', turn);
-      }
+      if (turn === 0) reset(active.sheet);
+      else if (turn > 0) active.sheet.style.setProperty('--turn', turn);
       show();
     });
+    $$('[data-grille-choice]').forEach((choice) => choice.addEventListener('click', () => {
+      $$('[data-grille-choice]').forEach((other) => other.setAttribute('aria-pressed', String(other === choice)));
+      active = grilles.find((grille) => grille.part === choice.dataset.grilleChoice) || grilles[0];
+      turn = -1;
+      grilles.forEach(({ sheet }) => reset(sheet));
+      show();
+    }));
   }
 
   // The exported file must be the plain SVG the decoder reads: drop
@@ -631,8 +643,10 @@
         return;
       }
       if (action === 'download-stencil') {
-        const stencil = $('template[data-stencil]');
-        if (stencil) download(new Blob([stencil.innerHTML.trim()], { type: 'image/svg+xml' }), 'cistergraphia-grille.svg');
+        $$('template[data-stencil]').forEach((stencil) => {
+          const part = stencil.dataset.stencil === 'whole' ? '' : `-${stencil.dataset.stencil}`;
+          download(new Blob([stencil.innerHTML.trim()], { type: 'image/svg+xml' }), `cistergraphia-grille${part}.svg`);
+        });
         return;
       }
       const source = cleanSvgSource();

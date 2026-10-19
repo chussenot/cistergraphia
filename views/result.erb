@@ -29,6 +29,9 @@ Constraints:
   <h1 id="plate-title" class="rubric"><%= @secret ? 'Your sealed Cistergraphia' : 'Your Cistergraphia' %></h1>
 
   <p class="message-echo"><span class="visually-hidden">Message: </span><q><%= @message %></q></p>
+  <% if @decoy %>
+    <p class="decoy-echo"><span class="label">For the novice</span> <q><%= @decoy %></q></p>
+  <% end %>
   <% if @secret %>
     <p class="lede">Secret mode: sealed with your passphrase. Without it, this plate reveals nothing but its length.</p>
   <% elsif @normalized != @message %>
@@ -42,7 +45,10 @@ Constraints:
     <div><dt>Signs</dt><dd><%= @symbols %></dd></div>
     <div><dt>Grid</dt><dd><%= Integer.sqrt(@symbols) %> × <%= Integer.sqrt(@symbols) %></dd></div>
     <div><dt>Layout</dt><dd><%= layout_name(@layout) %></dd></div>
-    <% if grille? %>
+    <% if grille? && @decoy %>
+      <div><dt>Abbot’s key</dt><dd><code class="grille-key"><%= @layout %></code></dd></div>
+      <div><dt>Novice’s key</dt><dd><code class="grille-key"><%= @layout.novice %></code></dd></div>
+    <% elsif grille? %>
       <div><dt>Grille key</dt><dd><code class="grille-key"><%= @layout %></code></dd></div>
     <% end %>
   </dl>
@@ -57,6 +63,8 @@ Constraints:
       <span class="plate-reading">
         <% if @layout == :rongorongo %>
           <span class="plate-reading-rest">Read from the bottom left, left to right; turn the plate half round for each next line.</span>
+        <% elsif grille? && @decoy %>
+          <span class="plate-reading-rest">Two grilles share this plate: the abbot’s reads the message, the novice’s the other one. The abbot’s key gives both; the novice’s, only its own.</span>
         <% elsif grille? %>
           <span class="plate-reading-rest">Read through the grille: N at the top, the holes row by row, then a quarter turn clockwise. Without it, the plate is an anagram of itself.</span>
         <% else %>
@@ -69,12 +77,24 @@ Constraints:
   </figure>
 
   <% if grille? %>
+    <% grilles = plate_grilles %>
     <div class="actions grille-actions">
+      <% if grilles.size > 1 %>
+        <div class="segments grille-choice awaits-script" role="group" aria-label="Which grille to lay">
+          <% grilles.each_with_index do |grille, i| %>
+            <button type="button" class="segment" data-grille-choice="<%= grille[:part] %>" aria-pressed="<%= i.zero? %>"><span class="segment-title"><%= grille[:part] == :abbot ? 'Abbot' : 'Novice' %></span></button>
+          <% end %>
+        </div>
+      <% end %>
       <button type="button" class="btn btn--primary awaits-script" data-action="lay-grille" aria-pressed="false">Lay the grille</button>
-      <button type="button" class="btn awaits-script" data-action="download-stencil">Download the stencil</button>
-      <button type="button" class="btn awaits-script" data-action="copy-key" data-key="<%= @layout %>">Copy the key</button>
+      <button type="button" class="btn awaits-script" data-action="download-stencil"><%= grilles.size > 1 ? 'Download the stencils' : 'Download the stencil' %></button>
+      <% grilles.each do |grille| %>
+        <button type="button" class="btn awaits-script" data-action="copy-key" data-key="<%= grille[:key] %>"><%= grilles.size > 1 ? "Copy #{grille[:label].sub('grille', 'key')}" : 'Copy the key' %></button>
+      <% end %>
     </div>
-    <template data-stencil><%== Cistergraphia::SVG.stencil(Integer.sqrt(@symbols), @layout) %></template>
+    <% grilles.each do |grille| %>
+      <template data-stencil="<%= grille[:part] %>" data-label="<%= grille[:label] %>" data-path="<%= grille[:path] %>"><%== grille[:stencil] %></template>
+    <% end %>
   <% end %>
 
   <div class="actions">

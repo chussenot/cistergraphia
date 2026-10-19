@@ -13,6 +13,7 @@ module Cistergraphia
   # Where each sign goes is the Layout's business.
   module SVG
     HOLE_MARGIN = 8 # between a stencil's hole and the edge of its cell
+    STENCIL_NAMES = { whole: 'Grille', abbot: 'Abbot’s grille', novice: 'Novice’s grille' }.freeze
 
     module_function
 
@@ -95,7 +96,7 @@ module Cistergraphia
         <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{side}" height="#{side}" viewBox="0 0 #{side} #{side}">
           <path class="stencil-sheet" d="M0 0H#{side}V#{side}H0Z#{stencil_holes(size, grille)}" fill="#efe6d4" fill-rule="evenodd" stroke="#2b241c" stroke-width="2"/>
           <text class="stencil-north" x="#{side / 2}" y="38" text-anchor="middle" font-family="Georgia, serif" font-size="32" fill="#a3301c">N</text>
-          <text class="stencil-key" x="#{side / 2}" y="#{side - 17}" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#62574a">Grille #{grille} · turn clockwise</text>
+          <text class="stencil-key" x="#{side / 2}" y="#{side - 17}" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#62574a">#{STENCIL_NAMES.fetch(grille.part)} #{grille} · turn clockwise</text>
         </svg>
       SVG
     end

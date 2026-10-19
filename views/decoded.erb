@@ -8,9 +8,14 @@ Purpose:
 <section class="leaf leaf--narrow" aria-labelledby="transcription-title">
   <p class="folio-mark" aria-hidden="true">fol. 2<sup>v</sup></p>
   <h1 id="transcription-title" class="rubric">Decoded message</h1>
-  <p class="lede"><%= @secret ? 'Unsealed with its passphrase: authentic and unaltered.' : 'Read back from the game: letters and spaces, as enciphered.' %></p>
+  <p class="lede"><%= @secret ? 'Unsealed with its passphrase: authentic and unaltered.' : 'Read back from the game: letters and spaces, as enciphered.' %>
+    <% if @reader == :abbot %>Read with the abbot’s key: the novice’s message follows.<% elsif @reader == :novice %>Read with the novice’s key.<% end %></p>
 
   <p class="transcription" data-transcription><%= @message %></p>
+  <% if @decoy %>
+    <h2 class="index-heading">The novice’s grille reads</h2>
+    <p class="transcription transcription--second"><%= @decoy %></p>
+  <% end %>
 
   <div class="actions">
     <button type="button" class="btn" data-action="copy-text">Copy text</button>

@@ -54,7 +54,9 @@ A third gesture belongs to the cipher-makers. In 1550 Girolamo Cardano laid a pi
 a letter and wrote his secret through the holes; three centuries later the sheet learned to
 turn, a quarter at a time, until every cell of the page had passed under a hole. Jules Verne hid
 a whole novel's plot under one. A Grille plate is written like a page and read like a secret:
-without its parchment, it is an anagram of itself.
+without its parchment, it is an anagram of itself. Give it a second message and it gets a second
+reader: the abbot's grille reads the real one, the novice's grille, cut from the cells the abbot's
+leaves, reads the other.
 
 Why two ways to send it?
 ------------------------
@@ -105,6 +107,8 @@ bundle exec rackup                                      # then open http://local
 ./cistergraphia -m "Meet me at the old abbey after vespers"
 ./cistergraphia -m "Vespers at six" -g K7Q2M-ZXB4P --stencil grille.svg  # -l grille draws a new key
 ./cistergraphia -d tmp/inline.svg -g K7Q2M-ZXB4P                          # read it under its grille
+./cistergraphia -m "The relics are under the third stone" --decoy "Vespers at six" -g K7Q2M-ZXB4P
+                                     # two readers: K7Q2M-ZXB4P reads both, the novice's key only the decoy
 ```
 
 A web server sees what you seal on it: serve it over HTTPS, or use the command line, which keeps

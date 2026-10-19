@@ -109,6 +109,15 @@ Constraints:
                 <p class="field-error" id="grille-error" aria-live="polite"><%= @grille_error %></p>
               </div>
             </div>
+            <div class="field">
+              <label for="decoy">Novice’s message <span class="label-note">· optional: a second reader</span></label>
+              <textarea id="decoy" name="decoy" rows="2" maxlength="<%= CistergraphiaApp::MAX_PAIR_LENGTH %>"
+                        placeholder="Vespers at six in the choir" aria-describedby="decoy-error decoy-hint"<%== ' aria-invalid="true" autofocus' if @decoy_error %>><%= @decoy %></textarea>
+              <div class="field-notes">
+                <p class="field-meta" id="decoy-hint">A novice’s grille reads it, drawn from your key: yours reads both messages, the novice’s only this one. Up to <%= CistergraphiaApp::MAX_PAIR_LENGTH %> characters each.</p>
+                <p class="field-error" id="decoy-error" aria-live="polite"><%= @decoy_error %></p>
+              </div>
+            </div>
           </div>
         </div>
         <div class="slot secret-slot">
