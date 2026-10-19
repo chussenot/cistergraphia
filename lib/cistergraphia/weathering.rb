@@ -98,9 +98,15 @@ module Cistergraphia
       readings(firsts, seconds)
     end
 
-    # Every letter (or NULL) a pair can balance as, given each sign's candidate values
+    # Every letter (or NULL) a pair can balance as, given each sign's candidate
+    # values. Linear in the candidates (a sign wholly lost has 10,000), never
+    # their product: each tablet value is looked up, not every pair of values
     def readings(firsts, seconds)
-      firsts.product(seconds).filter_map { |a, b| balance(a, b) }.uniq.sort
+      return [] if firsts.empty?
+
+      others = seconds.to_set
+      letters = CHARACTERS.select { |sum, _| firsts.any? { |a| others.include?(sum - a) } }.values
+      (others.include?(EVIL_MARKER) ? letters + [NULL] : letters).sort
     end
 
     # A tablet letter, NULL for a null pair, or nil when the pair does not balance
