@@ -35,10 +35,23 @@ module ViewHelpers
   end
 
   # Where each sign of a plate sits, in reading order, for walking the plate in
-  # app.js: [[row, col, value, turned], ...] plus the grid geometry
-  def plate_cells_json(sequence, layout = :phaistos)
+  # app.js: [[row, col, value, turned], ...] plus the grid geometry. A sign a
+  # lacuna took part of has no value (null): the page must not hold the answer
+  def plate_cells_json(sequence, layout = :phaistos, damage = {})
     path = Cistergraphia::Layout.path(Integer.sqrt(sequence.size), layout)
-    JSON.generate(path.zip(sequence).map { |(row, col, turned), value| [row, col, value, turned] })
+    JSON.generate(path.zip(sequence).each_with_index.map do |((row, col, turned), value), index|
+      [row, col, damage.key?(index) ? nil : value, turned]
+    end)
+  end
+
+  # A Leiden edition as HTML: [r] restored, [b/l] doubtful, the rest as read
+  def leiden_html(text)
+    text.split(/(\[[^\]]*\])/).reject(&:empty?).map do |part|
+      next Rack::Utils.escape_html(part) unless part.start_with?('[')
+
+      css = part.include?('/') ? 'leiden-doubt' : 'leiden-restored'
+      %(<span class="#{css}">#{Rack::Utils.escape_html(part)}</span>)
+    end.join
   end
 
   # The grid's geometry for walking it: where a cell's box starts (offset) is

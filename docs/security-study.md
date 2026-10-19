@@ -168,6 +168,14 @@ abbot's key) add a reader, not secrecy. Not measured; what the construction impl
    converts them, and a vision model or a small classifier reads them. Pressing the signs in
    wedges does not change this either: the file still carries every stroke as a line (the
    decoder needs them), and the wedges keep each stroke's position and direction.
+7. **Weathering changes nothing here.** A weathered plate only loses information: some strokes,
+   marked where they were. The pair checksum that lets a reader restore them is the same one
+   the attacks above start from. Only a game plate can weather: a sealed plate that loses one
+   stroke fails authentication, by design.
+7. **Weathering changes nothing here.** A weathered plate only loses information: some strokes,
+   marked where they were. The pair checksum that lets a reader restore them is the same one
+   the attacks above start from. Only a game plate can weather: a sealed plate that loses one
+   stroke fails authentication, by design.
 
 **Why not harden the game instead?** The attacking agent suggested a keyed tablet, a keyed route
 and sums modulo 10,000. These remain classical constructions: a keyed homophonic substitution

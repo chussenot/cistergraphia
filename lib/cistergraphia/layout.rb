@@ -63,6 +63,13 @@ module Cistergraphia
       [x + dx, y + dy]
     end
 
+    # A cell's lines made relative to its sign and turned back upright
+    def upright(lines, row, col, turned, layout)
+      x, y = origin(row, col, layout)
+      local = lines.map { |x1, y1, x2, y2| [x1 - x, y1 - y, x2 - x, y2 - y] }
+      turned ? local.map { |stroke| Glyphs.turn(stroke) } : local
+    end
+
     # Grid [row, col] a line belongs to, from its top-left-most point
     def cell_of(line, layout = :phaistos)
       x1, y1, x2, y2 = line

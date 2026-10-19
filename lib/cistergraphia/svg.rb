@@ -10,7 +10,7 @@ module Cistergraphia
   # A plate shows its signs pressed in wedges (Stylus), one path per stroke in
   # reading order, and keeps every stroke as a hidden <line>: what the decoder
   # reads. Plates drawn before the wedges (visible lines only) read the same.
-  # Where each sign goes is the Layout's business.
+  # Where each sign goes is the Layout's business; a weathered plate's lacunae, Lacunae's.
   module SVG
     HOLE_MARGIN = 8 # between a stencil's hole and the edge of its cell
     STENCIL_NAMES = { whole: 'Grille', abbot: 'Abbot’s grille', novice: 'Novice’s grille' }.freeze
@@ -18,18 +18,21 @@ module Cistergraphia
     module_function
 
     # Renders the sequence as a standalone SVG document along a layout's path
-    def render(sequence, layout: :phaistos)
+    # (with the strokes lost to weathering taken away: damage is Weathering's)
+    def render(sequence, layout: :phaistos, damage: {})
       width, height, cols, _rows = Layout.dimensions(sequence, layout)
 
       <<~SVG
         <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}">
           <rect width="100%" height="100%" fill="white"/>
+          #{Lacunae.patches(cols, layout, damage)}
           <g fill="black">
-        #{pressed(sequence, cols, layout).map { |outline| %(    <path d="#{outline}"/>) }.join("\n")}
+        #{pressed(sequence, cols, layout, damage).map { |outline| %(    <path d="#{outline}"/>) }.join("\n")}
           </g>
           <g stroke="black" stroke-width="2" display="none">
-        #{strokes(sequence, cols, layout).map { |line| line_tag(line) }.join("\n")}
+        #{strokes(sequence, cols, layout, damage).map { |line| line_tag(line) }.join("\n")}
           </g>
+        #{Lacunae.hidden(cols, layout, damage)}
         </svg>
       SVG
     end
@@ -39,15 +42,15 @@ module Cistergraphia
     # with its cell, as the scribe wrote it with the tablet turned. The hand is
     # seeded by the sign's place in the reading order, so the same plate is
     # always pressed the same way.
-    def pressed(sequence, cols, layout)
+    def pressed(sequence, cols, layout, damage = {})
       Layout.path(cols, layout).zip(sequence).each_with_index.flat_map do |((row, col, turned), num), index|
-        press(num, turned, Layout.origin(row, col, layout), Random.new(index))
+        press(Lacunae.strokes(num, damage.fetch(index, [])), turned, Layout.origin(row, col, layout), Random.new(index))
       end
     end
 
     # One sign's wedges as path data, in its cell (turned half round if need be)
-    def press(num, turned, (x, y), random)
-      Glyphs.strokes(num).map do |stroke|
+    def press(strokes, turned, (x, y), random)
+      strokes.map do |stroke|
         Stylus.wedge(stroke, random).map do |polygon|
           Stylus.outline(turned ? polygon.map { |px, py| [Glyphs::WIDTH - px, Glyphs::HEIGHT - py] } : polygon, x, y)
         end.join
@@ -55,10 +58,12 @@ module Cistergraphia
     end
 
     # Absolute strokes of every symbol in reading order, turned where the path says so
-    def strokes(sequence, cols, layout)
-      Layout.path(cols, layout).zip(sequence).flat_map do |(row, col, turned), num|
+    def strokes(sequence, cols, layout, damage = {})
+      Layout.path(cols, layout).zip(sequence).each_with_index.flat_map do |((row, col, turned), num), index|
         x, y = Layout.origin(row, col, layout)
-        Glyphs.strokes(num).map { |stroke| relative(turned ? Glyphs.turn(stroke) : stroke, -x, -y) }
+        Lacunae.strokes(num, damage.fetch(index, [])).map do |stroke|
+          relative(turned ? Glyphs.turn(stroke) : stroke, -x, -y)
+        end
       end
     end
 
@@ -76,8 +81,7 @@ module Cistergraphia
     # The number in one cell, its strokes made relative to the sign and turned back upright
     def read_cell(cells, (row, col), turned, layout)
       strokes = cells.fetch([row, col]) { raise DecodeError, "Missing symbol at row #{row}, column #{col}" }
-      local = strokes.map { |line| relative(line, *Layout.origin(row, col, layout)) }
-      Glyphs.read(turned ? local.map { |stroke| Glyphs.turn(stroke) } : local)
+      Glyphs.read(Layout.upright(strokes, row, col, turned, layout))
     end
 
     # True for a plate written under a grille: only those are square
@@ -124,16 +128,21 @@ module Cistergraphia
       [x1 - x, y1 - y, x2 - x, y2 - y]
     end
 
-    # Every <line> of the document as [x1, y1, x2, y2] integers
-    def lines(svg)
+    # Every <line> of the document as [x1, y1, x2, y2] integers: the strokes,
+    # or (layer: :lacunae) the stroke positions a weathered plate has lost
+    def lines(svg, layer: :strokes)
       root = parse(svg).root
       raise DecodeError, 'Not an SVG document' unless root&.name == 'svg'
 
       lines = []
       root.each_recursive do |node|
-        lines << %w[x1 y1 x2 y2].map { |attr| coordinate(node.attributes[attr]) } if node.name == 'line'
+        lines << %w[x1 y1 x2 y2].map { |attr| coordinate(node.attributes[attr]) } if in_layer?(node, layer)
       end
       lines
+    end
+
+    def in_layer?(node, layer)
+      node.name == 'line' && (node.parent.attributes['class'] == Lacunae::CLASS) == (layer == :lacunae)
     end
 
     def parse(svg)

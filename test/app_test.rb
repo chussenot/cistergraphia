@@ -503,4 +503,57 @@ class AppTest < Minitest::Test
 
     assert_equal 413, last_response.status
   end
+
+  def test_the_form_offers_a_weathered_plate
+    get '/'
+
+    assert_match(/<input type="checkbox" name="weathered" value="1"/, last_response.body)
+    assert_includes last_response.body, 'A sealed plate cannot weather'
+  end
+
+  def test_a_weathered_plate_shows_its_lacunae_and_never_its_lost_values
+    post '/generate', message: 'the brothers will gather in the chapter house', weathered: '1'
+
+    assert_predicate last_response, :ok?
+    body = last_response.body
+    assert_includes body, 'class="weathering"'
+    assert_match(%r{<dt>Condition</dt><dd>Weathered</dd>}, body)
+    assert_match(/Weathered: \d+ lacunae/, body)
+    cells = JSON.parse(CGI.unescapeHTML(body[/data-plate-cells="([^"]*)"/, 1]))
+    assert(cells.any? { |_, _, value| value.nil? }, 'a worn sign has no value on the page')
+    refute_match(/ style="/, body)
+  end
+
+  def test_a_sealed_plate_cannot_weather
+    post '/generate', message: 'relics', mode: 'secret', passphrase: 'abbey of molesme', weathered: '1'
+
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, Cistergraphia::Lacunae::NOT_SEALED
+    assert_match(/name="weathered" value="1" data-weathered checked/, last_response.body)
+  end
+
+  def test_two_readers_cannot_weather_yet
+    post '/generate', message: 'relics', layout: 'grille', decoy: 'vespers', weathered: '1'
+
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, Cistergraphia::Lacunae::NOT_TWO_READERS
+  end
+
+  def test_a_weathered_plate_is_read_back_as_an_edition
+    _, svg, = Cistergraphia::Lacunae.inscribe('ora et labora', random: Random.new(3))
+
+    post '/decode', svg: svg
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'Restored from a weathered plate'
+    assert_match(%r{<span class="leiden-(restored|doubt)">\[[^<]*\]</span>}, last_response.body)
+  end
+
+  def test_a_weathered_grille_plate_is_read_with_its_key
+    grille = Cistergraphia::Grille.new('K7Q2M-ZXB4P')
+    _, svg, = Cistergraphia::Lacunae.inscribe('ora et labora', layout: grille)
+
+    post '/decode', svg: svg, grille: grille.to_s
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'leiden-'
+  end
 end

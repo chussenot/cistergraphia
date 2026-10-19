@@ -14,6 +14,9 @@
 #   (--grille): writing without one draws a new grille and prints its key, and
 #   --stencil writes the grille to print and cut. --decoy adds a second message
 #   for a second reader: the novice's grille, drawn from the abbot's key
+# - --weathered writes a game plate that has lost some strokes; decoding a
+#   weathered plate restores what the pairs decide and prints the edition in
+#   the Leiden conventions: [r] restored, [b/l] for the reader to settle
 #
 # Design Decisions:
 # - Uses OptionParser for command-line argument parsing
@@ -63,6 +66,7 @@ parser = OptionParser.new do |opts|
   opts.on('-g', '--grille KEY', "The grille's key (#{Cistergraphia::Grille::EXAMPLE}): writes or reads under it") { |g| options[:grille] = g }
   opts.on('--stencil FILE', 'Also write the grille as a stencil to print and cut') { |f| options[:stencil] = f }
   opts.on('--decoy MESSAGE', "A second message, for a novice's grille (implies a grille)") { |d| options[:decoy] = d }
+  opts.on('-w', '--weathered', 'Game mode: some strokes lost, to restore') { options[:weathered] = true }
 
   opts.on('-s', '--secret', 'Secret mode: encrypt/decrypt with a passphrase (prompted, ' \
                             'or taken from CISTERGRAPHIA_PASSPHRASE)') do
@@ -152,8 +156,14 @@ begin
   if options[:stencil] && !layout.is_a?(Cistergraphia::Grille)
     abort '--stencil needs a grille: add --layout grille or --grille KEY'
   end
+  abort Cistergraphia::Lacunae::NOT_SEALED if options[:weathered] && options[:secret]
+  abort Cistergraphia::Lacunae::NOT_TWO_READERS if options[:weathered] && options[:decoy]
   passphrase = ask_passphrase(confirm: true) if options[:secret]
-  if options[:decoy]
+  if options[:weathered]
+    sequence, svg, damage = Cistergraphia::Lacunae.inscribe(message, layout: layout)
+    lacunae = damage.size == 1 ? '1 lacuna' : "#{damage.size} lacunae"
+    puts "Weathered: #{lacunae}. Restore them by balancing the pairs (-d shows the edition)"
+  elsif options[:decoy]
     given = layout if options[:grille]
     sequence, svg, layout = Cistergraphia::TwoReaders.inscribe(message, options[:decoy], passphrase: passphrase,
                                                                                          grille: given)

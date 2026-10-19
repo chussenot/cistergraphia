@@ -10,6 +10,8 @@
 # - Three layouts (reading paths): Phaistos (the snail, default), Rongorongo,
 #   or a turning Grille with its key (a new one unless one is given); decoding
 #   detects the first two, and a grille's plate asks for its key
+# - A game plate can be weathered (some strokes lost); decoding one restores
+#   what the pairs decide, as an edition in the Leiden conventions
 #
 # Design Decisions:
 # - Modular Sinatra app (sinatra/base), no classic top-level DSL
@@ -101,7 +103,8 @@ class CistergraphiaApp < Sinatra::Base
     # the form, with what was written
     @passphrase_error = Cistergraphia::Secret.passphrase_problem(passphrase) if @secret
     @decoy = decoy
-    halt 422, erb(:index) if @passphrase_error || @grille_error || @decoy_error
+    @weathered = weathered?
+    halt 422, erb(:index) if @passphrase_error || @grille_error || @decoy_error || @weathered_error
     @sequence, @svg_content, grille = inscribe_plate
     @layout = grille.as(:pair) if @decoy
     @symbols = @sequence.size

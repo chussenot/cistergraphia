@@ -17,6 +17,7 @@
 const { chromium } = require('playwright');
 
 const [baseUrl, plateFile, executablePath] = process.argv.slice(2);
+const weatheredFile = plateFile.replace(/\.svg$/, '-weathered.svg'); // written beside it by stability.rb
 const VIEWPORTS = [
   { width: 320, height: 640 }, // the smallest phone
   { width: 390, height: 844 }, // a common phone
@@ -119,6 +120,15 @@ const openGrillePlate = async (page, decoy = '') => {
   await page.waitForSelector('[data-plate] svg');
 };
 
+// A weathered plate: some strokes lost to the centuries
+const openWeatheredPlate = async (page) => {
+  await page.goto(`${baseUrl}/`);
+  await page.fill('#message', MESSAGE);
+  await page.check('input[name="weathered"]');
+  await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
+  await page.waitForSelector('[data-plate] svg');
+};
+
 // The number a Lectio sign shows, read from its strokes with the page's own table
 const lectioTarget = (page) => page.evaluate(() => {
   const key = (coords) => coords.join(',');
@@ -148,6 +158,7 @@ const FLOWS = [
       { name: 'type a message', act: async (p) => { await p.click('#message'); await p.keyboard.type(MESSAGE); } },
       { name: 'edit at the start', act: async (p) => { await p.keyboard.press('Control+Home'); await p.keyboard.type('Brother, '); } },
       { name: 'delete', act: async (p) => { await p.keyboard.press('Control+End'); for (let i = 0; i < 30; i += 1) await p.keyboard.press('Backspace'); } },
+      { name: 'weather the plate', act: (p) => p.click('label.check') },
       { name: 'choose secret', anchor: '.entry-end', act: (p) => p.click('label.segment--secret') },
       { name: 'type a sealed message', act: async (p) => { await p.click('#message'); await p.keyboard.type(' and a seal'); } },
       { name: 'seal with too short a passphrase', act: async (p) => { await p.fill('#passphrase', 'short'); await p.click('[data-submit]'); } },
@@ -202,6 +213,14 @@ const FLOWS = [
     ]
   },
   {
+    page: 'weathered',
+    open: openWeatheredPlate,
+    steps: [
+      { name: 'walk the worn signs', act: async (p) => { await p.focus('[data-plate]'); for (let i = 0; i < 12; i += 1) await p.keyboard.press('ArrowRight'); await p.keyboard.press('End'); } },
+      { name: 'point at signs', act: hoverPlate }
+    ]
+  },
+  {
     page: 'decoded',
     open: async (page) => {
       await page.goto(`${baseUrl}/decode`);
@@ -211,6 +230,18 @@ const FLOWS = [
     },
     steps: [
       { name: 'copy the text', act: (p) => p.click('[data-action="copy-text"]') }
+    ]
+  },
+  {
+    page: 'edition',
+    open: async (page) => {
+      await page.goto(`${baseUrl}/decode`);
+      await page.setInputFiles('#file', weatheredFile);
+      await Promise.all([page.waitForURL('**/decode'), page.click('.entry [type="submit"]')]);
+      await page.waitForSelector('[data-transcription]');
+    },
+    steps: [
+      { name: 'copy the edition', act: (p) => p.click('[data-action="copy-text"]') }
     ]
   },
   {
@@ -266,6 +297,16 @@ const PAGES = [
       await page.fill('#grille', 'k7q2m-zxb4p');
       await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
       await page.waitForSelector('[data-plate] svg');
+    }
+  },
+  { page: 'weathered', open: openWeatheredPlate },
+  {
+    page: 'edition',
+    open: async (page) => {
+      await page.goto(`${baseUrl}/decode`);
+      await page.setInputFiles('#file', weatheredFile);
+      await Promise.all([page.waitForURL('**/decode'), page.click('.entry [type="submit"]')]);
+      await page.waitForSelector('[data-transcription]');
     }
   },
   { page: 'read', open: (page) => page.goto(`${baseUrl}/decode`) },
