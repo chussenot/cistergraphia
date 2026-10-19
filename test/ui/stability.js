@@ -111,8 +111,8 @@ const settle = (page) => page.evaluate(() => new Promise((resolve) => {
 // The number a Lectio sign shows, read from its strokes with the page's own table
 const lectioTarget = (page) => page.evaluate(() => {
   const key = (coords) => coords.join(',');
-  const shown = Array.from(document.querySelectorAll('[data-lectio-sign] line'))
-    .map((l) => key(['x1', 'y1', 'x2', 'y2'].map((a) => Number(l.getAttribute(a))))).sort().join(' ');
+  const shown = Array.from(document.querySelectorAll('[data-lectio-sign] path'))
+    .map((wedge) => wedge.dataset.stroke).sort().join(' ');
   for (let n = 0; n <= 9999; n += 1) {
     if (Ink.strokesOf(n).map((s) => key(s.coords)).sort().join(' ') === shown) return n;
   }

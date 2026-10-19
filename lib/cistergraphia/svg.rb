@@ -7,7 +7,7 @@ module Cistergraphia
   # and reads it back. SVG is written as plain strings (numbers only, nothing to escape) and
   # parsed with REXML, so no native XML dependency is needed.
   #
-  # A plate shows its signs pressed in wedges (Stylus), one path per sign in
+  # A plate shows its signs pressed in wedges (Stylus), one path per stroke in
   # reading order, and keeps every stroke as a hidden <line>: what the decoder
   # reads. Plates drawn before the wedges (visible lines only) read the same.
   module SVG
@@ -54,26 +54,24 @@ module Cistergraphia
       SVG
     end
 
-    # Each sign pressed by the hand, as SVG path data, in reading order. A turned
-    # sign is pressed upright, then turned with its cell, as the scribe wrote it
-    # with the tablet turned. The hand is seeded by the sign's place in the
-    # reading order, so the same plate is always pressed the same way.
+    # Every stroke pressed by the hand, as SVG path data (one wedge each), sign
+    # by sign in reading order. A turned sign is pressed upright, then turned
+    # with its cell, as the scribe wrote it with the tablet turned. The hand is
+    # seeded by the sign's place in the reading order, so the same plate is
+    # always pressed the same way.
     def pressed(sequence, cols, layout)
-      path(cols, layout).zip(sequence).each_with_index.map do |((row, col, turned), num), index|
+      path(cols, layout).zip(sequence).each_with_index.flat_map do |((row, col, turned), num), index|
         press(num, turned, origin(row, col), Random.new(index))
       end
     end
 
     # One sign's wedges as path data, in its cell (turned half round if need be)
     def press(num, turned, (x, y), random)
-      Glyphs.strokes(num).flat_map { |stroke| Stylus.wedge(stroke, random) }.map do |polygon|
-        outline(turned ? polygon.map { |px, py| [Glyphs::WIDTH - px, Glyphs::HEIGHT - py] } : polygon, x, y)
-      end.join
-    end
-
-    # A closed polygon, moved to the cell's origin, with one decimal
-    def outline(points, x, y)
-      "M#{points.map { |px, py| "#{(px + x).round(1)} #{(py + y).round(1)}" }.join('L')}Z"
+      Glyphs.strokes(num).map do |stroke|
+        Stylus.wedge(stroke, random).map do |polygon|
+          Stylus.outline(turned ? polygon.map { |px, py| [Glyphs::WIDTH - px, Glyphs::HEIGHT - py] } : polygon, x, y)
+        end.join
+      end
     end
 
     # Absolute strokes of every symbol in reading order, turned where the path says so

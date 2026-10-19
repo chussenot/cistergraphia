@@ -45,11 +45,11 @@ class AppTest < Minitest::Test
     end
   end
 
-  def test_key_illustrations_use_the_real_glyph_geometry
+  def test_key_illustrations_are_the_real_glyph_geometry_pressed
     get '/'
 
-    Cistergraphia::Glyphs.strokes(1098).each do |x1, y1, x2, y2|
-      assert_includes last_response.body, %(<line x1="#{x1}" y1="#{y1}" x2="#{x2}" y2="#{y2}"/>)
+    Cistergraphia::Glyphs.strokes(1098).each do |stroke|
+      assert_includes last_response.body, %(<path d="#{Cistergraphia::Stylus.press(stroke)}"/>)
     end
   end
 
@@ -87,6 +87,8 @@ class AppTest < Minitest::Test
     table = JSON.parse(json)
     assert_equal Cistergraphia::Glyphs::STEM, table['stem']
     assert_equal(Cistergraphia::Glyphs::LINES.transform_keys(&:to_s), table['lines'])
+    strokes = [Cistergraphia::Glyphs::STEM, *Cistergraphia::Glyphs::LINES.values.flatten(1)]
+    assert_equal(strokes.to_h { |stroke| [stroke.join(','), Cistergraphia::Stylus.press(stroke)] }, table['wedges'])
     assert_equal 9000, table['tablet'][' ']
     assert_equal 10, table['tablet']['a']
   end

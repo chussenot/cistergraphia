@@ -28,23 +28,30 @@ class StylusTest < Minitest::Test
     refute_equal Stylus.wedge([50, 0, 50, 150], Random.new(7)), Stylus.wedge([50, 0, 50, 150], Random.new(8))
   end
 
-  def test_a_plate_is_pressed_one_path_per_sign_and_keeps_its_strokes_for_the_decoder
+  def test_the_page_hand_presses_a_stroke_the_same_way_every_time_whichever_way_it_was_drawn
+    assert_equal Stylus.press([50, 0, 100, 50]), Stylus.press([100, 50, 50, 0])
+    refute_equal Stylus.press([50, 0, 100, 50]), Stylus.press([50, 50, 100, 0]) # each stroke its own hand
+    assert_match(/\AM[^Z]+ZM[^Z]+Z\z/, Stylus.press(Cistergraphia::Glyphs::STEM)) # a head and a tail
+  end
+
+  def test_a_plate_is_pressed_one_path_per_stroke_and_keeps_its_strokes_for_the_decoder
     svg = Cistergraphia.to_svg([1, 2, 3, 4])
     doc = REXML::Document.new(svg)
 
-    assert_equal 4, doc.root.get_elements('//path').size
+    assert_equal 4 + 4, doc.root.get_elements('//path').size # four stems, four units: one wedge each
     hidden = doc.root.get_elements('//g').find { |g| g['display'] == 'none' }
-    assert_equal 4 + 4, hidden.get_elements('line').size # four stems, four units
+    assert_equal 4 + 4, hidden.get_elements('line').size
     assert_equal [1, 2, 3, 4], Cistergraphia::SVG.read(svg)
     assert_equal svg, Cistergraphia.to_svg([1, 2, 3, 4]) # the same plate, pressed the same way
   end
 
   def test_turned_signs_are_pressed_upright_then_turned_with_their_cell
-    # Rongorongo 2 x 2: the bottom row upright, the top row turned and read right to left
+    # Rongorongo 2 x 2: the bottom row upright, the top row turned and read right to left.
+    # Each sign is a stem and a unit, so the stems are wedges 0, 2, 4 and 6.
     paths = REXML::Document.new(Cistergraphia.to_svg([1, 1, 1, 1], layout: :rongorongo)).root.get_elements('//path')
 
     assert_equal [100.0, 220.0], stem_start(paths[0]) # bottom left, upright: the stem's head on top
-    assert_equal [220.0, 200.0], stem_start(paths[2]) # top right, turned: the stem's head at the bottom
+    assert_equal [220.0, 200.0], stem_start(paths[4]) # top right, turned: the stem's head at the bottom
   end
 
   private
@@ -53,7 +60,7 @@ class StylusTest < Minitest::Test
     [(x1 + x2) / 2.0, (y1 + y2) / 2.0]
   end
 
-  # The centre of the back of the first wedge drawn in a sign: its stem's start
+  # The centre of the back of a stem's head: where the stem starts
   def stem_start(path)
     corner1, _point, corner2 = path['d'][/M([^Z]*)Z/, 1].split('L').map { |p| p.split.map(&:to_f) }
     midpoint(corner1, corner2).map { |v| v.round(0) }

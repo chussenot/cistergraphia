@@ -30,7 +30,7 @@ require_relative 'web/view_helpers'
 
 class CistergraphiaApp < Sinatra::Base
   MAX_MESSAGE_LENGTH = 500 # ~1000 symbols, a 32x32 grid
-  MAX_SVG_BYTES = 2 * 1024 * 1024 # The largest plate (500 four-byte characters, sealed) is ~1.3 MB
+  MAX_SVG_BYTES = 2 * 1024 * 1024 # The largest plate (500 four-byte characters, sealed) is ~1.4 MB
   CONTENT_SECURITY_POLICY = [
     "default-src 'self'", "img-src 'self' data: blob:", "object-src 'none'", "base-uri 'none'",
     "form-action 'self'", "frame-ancestors 'none'"

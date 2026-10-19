@@ -1,19 +1,20 @@
 // Cistergraphia ink: the one motion vocabulary of the UI.
 //
-// A stroke is never popped in: it is *inked* (drawn from one end to the
-// other, wet in the mode's colour, then drying to ink) or *lifted* (it fades).
-// A plate's signs are wedges, so they are *pressed*: they appear wet, then dry.
-// Changing a sign *morphs* it: shared strokes stay, the others lift or are
-// inked. Under prefers-reduced-motion everything is instant.
+// Every sign is pressed, as a stylus leaves it in clay: each stroke is a
+// wedge. A stroke is never popped in: it is *pressed* (the stylus bites at its
+// head and runs to its tip, wet in the mode's colour, then the ink dries) or
+// *lifted* (it fades). Changing a sign
+// *morphs* it: shared strokes stay, the others lift or are pressed. Under
+// prefers-reduced-motion everything is instant.
 //
-// The geometry comes from the JSON table the server builds from
-// Cistergraphia::Glyphs (data-glyph-table): no second copy of the cipher here.
+// The geometry and the wedges come from the JSON table the server builds from
+// Cistergraphia::Glyphs and ::Stylus (data-glyph-table): no second copy of the
+// cipher, or of the hand, here.
 (() => {
   'use strict';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const PLACES = [1, 10, 100, 1000];
-  const ATTRS = ['x1', 'y1', 'x2', 'y2'];
   const STROKE_GAP = 70; // ms between two strokes of one sign, like a scribe's hand
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -42,66 +43,103 @@
     return strokes;
   }
 
-  const coordsOf = (line) => ATTRS.map((a) => Number(line.getAttribute(a)));
-  const keyOf = (coords) => coords.join(',');
-
-  function lineFor({ coords, place }) {
-    const line = document.createElementNS(SVG_NS, 'line');
-    ATTRS.forEach((a, i) => line.setAttribute(a, coords[i]));
-    line.dataset.place = place;
-    return line;
+  // One stroke as its wedge, keyed by the stroke ("x1,y1,x2,y2") for morphing
+  function wedgeFor({ coords, place }) {
+    const wedge = document.createElementNS(SVG_NS, 'path');
+    const key = coords.join(',');
+    wedge.setAttribute('d', glyphTable().wedges[key]);
+    wedge.dataset.stroke = key;
+    wedge.dataset.place = place;
+    return wedge;
   }
 
-  // Ink one line: drawn, then drying. Classes are removed when dry, so static
-  // styles (highlights) apply again and nothing lingers in exported files.
-  const drying = new WeakSet();
-  function dried(event) {
-    if (event.animationName === 'ink-dry' || event.animationName === 'ink-dry-fill') dry(event.currentTarget);
+  // Where a wedge bites and which way it runs, read from its outline:
+  // Cistergraphia::Stylus writes the head's back corners first and third (the
+  // stroke's start lies between them) and the tail's tip second in the tail
+  function bite(mark) {
+    const n = (mark.getAttribute('d') || '').match(/-?\d+(?:\.\d+)?/g) || [];
+    if (n.length !== 14) return null; // not a wedge
+    const [x, y] = [(Number(n[0]) + Number(n[4])) / 2, (Number(n[1]) + Number(n[5])) / 2];
+    return { x, y, angle: (Math.atan2(Number(n[11]) - y, Number(n[10]) - x) * 180) / Math.PI };
   }
 
-  // Finish drying now (the mark stays where it is, in ink)
+  // When the wedge is drawn and its ink dry, its classes and styles go, so
+  // static styles (highlights) apply again and nothing lingers in exported files
+  function settle(mark) {
+    mark.classList.remove('ink-press', 'is-wet', 'ink-dry');
+    ['--delay', '--dry-delay', '--ox', '--oy', '--a', '--from'].forEach((name) => mark.style.removeProperty(name));
+    ['class', 'style'].forEach((name) => { if (!mark.getAttribute(name)) mark.removeAttribute(name); });
+  }
+
+  // At the tip the stylus lifts: a wet wedge hands over to drying
+  function ended(event) {
+    const mark = event.currentTarget;
+    if (event.animationName === 'ink-press' && mark.classList.contains('is-wet')) {
+      mark.classList.remove('ink-press', 'is-wet');
+      mark.classList.add('ink-dry');
+    } else if (event.animationName === 'ink-press' || event.animationName === 'ink-dry') {
+      settle(mark);
+    }
+  }
+
+  // Dry the ink now: the wedge is in ink at once, and still runs to its tip
+  // if the stylus is on its way
   function dry(mark) {
-    if (!mark.classList.contains('ink-in') && !mark.classList.contains('ink-press')) return;
-    mark.classList.remove('ink-in', 'ink-press');
-    mark.style.removeProperty('--len');
-    mark.style.removeProperty('--delay');
+    mark.classList.remove('is-wet');
+    if (mark.classList.contains('ink-dry')) settle(mark);
   }
 
+  const listening = new WeakSet();
   function listen(mark) {
-    if (drying.has(mark)) return;
-    drying.add(mark);
-    mark.addEventListener('animationend', dried);
+    if (listening.has(mark)) return;
+    listening.add(mark);
+    mark.addEventListener('animationend', ended);
   }
 
-  function inkIn(line, delay = 0) {
+  // Press a wedge: the stylus bites at its head and runs to its tip, wet in
+  // the mode's colour, then the ink dries
+  function press(mark, delay = 0) {
     if (reducedMotion) return;
-    const [x1, y1, x2, y2] = coordsOf(line);
-    line.style.setProperty('--len', Math.hypot(x2 - x1, y2 - y1).toFixed(1));
-    line.style.setProperty('--delay', `${Math.round(delay)}ms`);
-    line.classList.remove('ink-in');
-    line.getBoundingClientRect(); // restart the animation
-    line.classList.add('ink-in');
-    listen(line);
+    const at = bite(mark);
+    if (at) {
+      mark.style.setProperty('--ox', at.x.toFixed(1));
+      mark.style.setProperty('--oy', at.y.toFixed(1));
+      mark.style.setProperty('--a', `${at.angle.toFixed(1)}deg`);
+      mark.style.setProperty('--from', '0.02');
+    }
+    mark.style.setProperty('--delay', `${Math.round(delay)}ms`);
+    restart(mark);
+    mark.classList.add('ink-press', 'is-wet');
+    listen(mark);
   }
 
-  // Press a wedge-drawn sign (a path): wet in the mode's colour, then drying
-  function press(sign, delay = 0) {
+  // A wedge already there, wet, that dries in its turn: for plates too long to
+  // draw stroke by stroke, where the drying front alone shows the reading order
+  function wet(mark, delay = 0) {
     if (reducedMotion) return;
-    sign.style.setProperty('--delay', `${Math.round(delay)}ms`);
-    sign.classList.add('ink-press');
-    listen(sign);
+    mark.style.setProperty('--dry-delay', `${Math.round(delay)}ms`);
+    restart(mark);
+    mark.classList.add('ink-dry');
+    listen(mark);
   }
 
-  function lift(line) {
+  // Pressed again: restart (a reflow, only then)
+  function restart(mark) {
+    if (!mark.classList.contains('ink-press') && !mark.classList.contains('ink-dry')) return;
+    mark.classList.remove('ink-press', 'is-wet', 'ink-dry');
+    mark.getBoundingClientRect();
+  }
+
+  function lift(mark) {
     if (reducedMotion) {
-      line.remove();
+      mark.remove();
       return;
     }
-    line.classList.add('ink-lift');
-    line.addEventListener('animationend', () => line.remove(), { once: true });
+    mark.classList.add('ink-lift');
+    mark.addEventListener('animationend', () => mark.remove(), { once: true });
   }
 
-  // A new sign as an inline SVG, optionally inked stroke by stroke
+  // A new sign as an inline SVG, optionally pressed stroke by stroke
   function glyph(num, { label, inked = false, delay = 0 } = {}) {
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('class', 'glyph');
@@ -114,37 +152,37 @@
     }
     const g = document.createElementNS(SVG_NS, 'g');
     strokesOf(num).forEach((stroke, i) => {
-      const line = lineFor(stroke);
-      g.appendChild(line);
-      if (inked) inkIn(line, delay + i * STROKE_GAP);
+      const wedge = wedgeFor(stroke);
+      g.appendChild(wedge);
+      if (inked) press(wedge, delay + i * STROKE_GAP);
     });
     svg.appendChild(g);
     return svg;
   }
 
-  // Take over a server-drawn sign: same strokes, now tagged with their places
+  // Take over a server-drawn sign: same wedges, now tagged with their strokes and places
   function adopt(svg, num) {
-    svg.querySelector('g').replaceChildren(...strokesOf(num).map(lineFor));
+    svg.querySelector('g').replaceChildren(...strokesOf(num).map(wedgeFor));
   }
 
-  // Turn a sign into another: shared strokes stay, the rest lift or are inked
+  // Turn a sign into another: shared strokes stay, the rest lift or are pressed
   function morph(svg, num, { label } = {}) {
     const g = svg.querySelector('g');
-    const wanted = new Map(strokesOf(num).map((stroke) => [keyOf(stroke.coords), stroke]));
-    g.querySelectorAll('line:not(.ink-lift)').forEach((line) => {
-      const key = keyOf(coordsOf(line));
+    const wanted = new Map(strokesOf(num).map((stroke) => [stroke.coords.join(','), stroke]));
+    g.querySelectorAll('path:not(.ink-lift)').forEach((wedge) => {
+      const key = wedge.dataset.stroke;
       if (wanted.has(key)) {
-        line.dataset.place = wanted.get(key).place;
+        wedge.dataset.place = wanted.get(key).place;
         wanted.delete(key);
       } else {
-        lift(line);
+        lift(wedge);
       }
     });
     let delay = 0;
     wanted.forEach((stroke) => {
-      const line = lineFor(stroke);
-      g.appendChild(line);
-      inkIn(line, delay);
+      const wedge = wedgeFor(stroke);
+      g.appendChild(wedge);
+      press(wedge, delay);
       delay += STROKE_GAP;
     });
     if (label) svg.setAttribute('aria-label', label);
@@ -155,5 +193,5 @@
     return text.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/ +/g, ' ').trim();
   }
 
-  window.Ink = { glyphTable, digitsOf, strokesOf, glyph, adopt, morph, inkIn, press, dry, lift, normalize, reducedMotion, PLACES };
+  window.Ink = { glyphTable, digitsOf, strokesOf, glyph, adopt, morph, press, wet, dry, lift, normalize, reducedMotion, PLACES };
 })();
