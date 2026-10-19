@@ -58,6 +58,12 @@ without its parchment, it is an anagram of itself. Give it a second message and 
 reader: the abbot's grille reads the real one, the novice's grille, cut from the cells the abbot's
 leaves, reads the other.
 
+Old records reach us damaged, and arithmetic outlives the damage: the Inka khipus repeat their
+cords' values as sums on higher cords, and in 2024 two fragments of a broken one were rejoined
+by that arithmetic alone. A weathered plate has lost some strokes. Each pair must still add up
+to a value on the tablet, so the restoration is the puzzle, and the decoder prints its edition
+the way epigraphers do: `[r]` restored, `[b/l]` for the words to decide.
+
 Why two ways to send it?
 ------------------------
 
@@ -110,6 +116,7 @@ bundle exec rackup                                      # then open http://local
 ./cistergraphia -d tmp/inline.svg -g K7Q2M-ZXB4P                          # read it under its grille
 ./cistergraphia -m "The relics are under the third stone" --decoy "Vespers at six" -g K7Q2M-ZXB4P
                                      # two readers: K7Q2M-ZXB4P reads both, the novice's key only the decoy
+./cistergraphia -m "Ora et labora" --weathered            # some strokes lost; -d prints the edition
 ```
 
 A web server sees what you seal on it: serve it over HTTPS, or use the command line, which keeps

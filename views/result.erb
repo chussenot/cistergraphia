@@ -17,6 +17,8 @@ Design Decisions:
   embedded once) is laid over the plate and turned N, E, S, W, lighting the
   signs under its holes; the same file downloads, to print and cut. The key
   goes along with "Read it back"
+- A weathered plate shows its lacunae; walking a worn sign says it is worn,
+  never its value (the page must not hold the answer)
 - Nothing moves while you walk or turn the plate: the live reading takes the
   resting caption's place, and the script-only controls have their space from
   the first paint
@@ -32,7 +34,9 @@ Constraints:
   <% if @decoy %>
     <p class="decoy-echo"><span class="label">For the novice</span> <q><%= @decoy %></q></p>
   <% end %>
-  <% if @secret %>
+  <% if @damage %>
+    <p class="lede">Weathered: <%= @damage.size %> <%= @damage.size == 1 ? 'lacuna' : 'lacunae' %>. Restore what is lost: each pair of signs must sum to a value on the tablet. Read it back to see the edition.</p>
+  <% elsif @secret %>
     <p class="lede">Secret mode: sealed with your passphrase. Without it, this plate reveals nothing but its length.</p>
   <% elsif @normalized != @message %>
     <p class="lede">Enciphered as: <code><%= @normalized %></code></p>
@@ -45,6 +49,9 @@ Constraints:
     <div><dt>Signs</dt><dd><%= @symbols %></dd></div>
     <div><dt>Grid</dt><dd><%= Integer.sqrt(@symbols) %> × <%= Integer.sqrt(@symbols) %></dd></div>
     <div><dt>Layout</dt><dd><%= layout_name(@layout) %></dd></div>
+    <% if @damage %>
+      <div><dt>Condition</dt><dd>Weathered</dd></div>
+    <% end %>
     <% if grille? && @decoy %>
       <div><dt>Abbot’s key</dt><dd><code class="grille-key"><%= @layout %></code></dd></div>
       <div><dt>Novice’s key</dt><dd><code class="grille-key"><%= @layout.novice %></code></dd></div>
@@ -56,7 +63,7 @@ Constraints:
   <figure class="plate">
     <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
          aria-label="The plate. Use the arrow keys to walk its signs in reading order."
-         data-plate-cells="<%= plate_cells_json(@sequence, @layout) %>" data-plate-layout="<%= plate_layout_json(@sequence, @layout) %>">
+         data-plate-cells="<%= plate_cells_json(@sequence, @layout, @damage || {}) %>" data-plate-layout="<%= plate_layout_json(@sequence, @layout) %>">
       <%== @svg_content %>
     </div>
     <figcaption>

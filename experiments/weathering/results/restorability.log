@@ -1,0 +1,37 @@
+1. Random damage, 4000 sites per row (messages.txt, game plates)
+  one quadrant lost                            restored  70.4%  letters that balance: mean 2.54, max 10
+    ...the 1s quadrant                         restored 100.0%  letters that balance: mean 1.00, max 1
+    ...the 10s quadrant                        restored  45.1%  letters that balance: mean 5.30, max 10
+    ...the 100s quadrant                       restored  62.1%  letters that balance: mean 1.38, max 2
+    ...the 1000s quadrant                      restored  73.8%  letters that balance: mean 2.55, max 9
+  1 of 5 stroke positions lost                 restored  88.2%  letters that balance: mean 1.12, max 2
+  2 of 5 stroke positions lost                 restored  81.7%  letters that balance: mean 1.31, max 4
+  3 of 5 stroke positions lost                 restored  76.6%  letters that balance: mean 1.60, max 7
+  two quadrants of one sign lost               restored  45.7%  letters that balance: mean 4.63, max 19
+  a quadrant lost in each sign of a pair       restored  49.3%  letters that balance: mean 4.37, max 19
+  whole sign lost (all four quadrants)         restored   9.7%  letters that balance: mean 15.43, max 28
+
+2. What the generator lays (Lacunae.inscribe), 400 plates
+  10496 lacunae on 31712 pairs (one pair in 3.0)
+  restored by the balance alone: 88.7%; left to the words: 11.3%
+  letters that balance, per lacuna: 1: 9313, 2: 1022, 3: 161
+
+# tally.rb
+12 x 12 plate (144 signs + 25 tally signs), 2000 trials each
+   1 signs lost: rows only 100.0%   rows + columns 100.0%   rows + columns, clustered 100.0%
+   2 signs lost: rows only  91.9%   rows + columns 100.0%   rows + columns, clustered 100.0%
+   4 signs lost: rows only  59.6%   rows + columns 100.0%   rows + columns, clustered  96.6%
+   8 signs lost: rows only   6.0%   rows + columns  98.0%   rows + columns, clustered   0.0%
+  12 signs lost: rows only   0.0%   rows + columns  85.2%   rows + columns, clustered   0.0%
+  16 signs lost: rows only   0.0%   rows + columns  52.0%   rows + columns, clustered   0.0%
+  24 signs lost: rows only   0.0%   rows + columns   0.0%   rows + columns, clustered   0.0%
+  32 signs lost: rows only   0.0%   rows + columns   0.0%   rows + columns, clustered   0.0%
+20 x 20 plate (400 signs + 41 tally signs), 2000 trials each
+   1 signs lost: rows only 100.0%   rows + columns 100.0%   rows + columns, clustered 100.0%
+   2 signs lost: rows only  94.9%   rows + columns 100.0%   rows + columns, clustered 100.0%
+   4 signs lost: rows only  74.2%   rows + columns 100.0%   rows + columns, clustered  99.4%
+   8 signs lost: rows only  22.1%   rows + columns  99.8%   rows + columns, clustered   0.0%
+  12 signs lost: rows only   1.4%   rows + columns  98.2%   rows + columns, clustered   0.0%
+  16 signs lost: rows only   0.0%   rows + columns  92.2%   rows + columns, clustered   0.0%
+  24 signs lost: rows only   0.0%   rows + columns  56.6%   rows + columns, clustered   0.0%
+  32 signs lost: rows only   0.0%   rows + columns   6.2%   rows + columns, clustered   0.0%

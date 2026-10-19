@@ -25,6 +25,9 @@ Design Decisions:
   detects the first two, so they are never asked. A grille is drawn for each
   plate unless the key of one already shared is given: that field unfolds
   below the message, like the passphrase, and keeps its value on a 422
+- Condition: a weathered plate loses some strokes (game only: a sealed plate
+  would never open). One checkbox under the layouts, with one reserved line
+  whose note says why it is off in secret mode
 
 Constraints:
 - Posts to /generate; message limited to 500 characters
@@ -75,6 +78,20 @@ Constraints:
             <p class="choice-note" id="note-phaistos" data-note="phaistos">The snail: clockwise from the top-left corner, coiling to the centre.</p>
             <p class="choice-note" id="note-rongorongo" data-note="rongorongo">From the bottom up, turning the plate half round at every line.</p>
             <p class="choice-note" id="note-grille" data-note="grille">Row by row, as on a page, through a pierced parchment turned four times.</p>
+          </div>
+        </fieldset>
+
+        <fieldset class="choice choice--condition">
+          <legend>Condition</legend>
+          <label class="check">
+            <input type="checkbox" name="weathered" value="1" data-weathered<%= ' checked' if @weathered %>
+                   aria-describedby="note-weathered note-unweathered weathered-error"<%== ' aria-invalid="true"' if @weathered_error %>>
+            <span class="check-title">Weathered</span>
+          </label>
+          <div class="choice-notes">
+            <p class="choice-note" id="note-weathered" data-note="weathered">Some strokes are lost to the centuries. Restore them: each pair of signs must balance.</p>
+            <p class="choice-note" id="note-unweathered" data-note="unweathered">A sealed plate cannot weather: with one stroke lost, it would never open again.</p>
+            <p class="choice-note field-error" id="weathered-error" aria-live="polite"><%= @weathered_error %></p>
           </div>
         </fieldset>
       </div>

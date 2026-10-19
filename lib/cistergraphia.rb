@@ -88,6 +88,8 @@ module Cistergraphia
   # (square) can only be read with its grille.
   def decode(svg, passphrase: nil, layout: nil)
     Grille.check(svg, layout)
+    return Lacunae.decode(svg, passphrase: passphrase, layout: layout) if Lacunae.weathered?(svg)
+
     errors = (layout ? [layout] : Layout::KEYLESS).map do |candidate|
       sequence = SVG.read(svg, layout: candidate)
       return passphrase ? Secret.decrypt(sequence, passphrase) : decipher(sequence)
@@ -211,3 +213,5 @@ require_relative 'cistergraphia/layout'
 require_relative 'cistergraphia/svg'
 require_relative 'cistergraphia/secret'
 require_relative 'cistergraphia/two_readers'
+require_relative 'cistergraphia/weathering'
+require_relative 'cistergraphia/lacunae'

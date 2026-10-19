@@ -15,6 +15,7 @@ require 'tmpdir'
 require_relative '../../lib/cistergraphia'
 
 ROOT = File.expand_path('../..', __dir__)
+MESSAGE = 'Meet me at the old abbey after vespers, under the cloister arches by the well'
 
 def free_port
   server = TCPServer.new('127.0.0.1', 0)
@@ -86,6 +87,8 @@ Dir.mktmpdir do |dir|
   # A long name: the read page must cut it, not wrap it
   plate = File.join(dir, 'a-plate-with-a-rather-long-name-from-the-abbey-of-citeaux.svg')
   File.write(plate, Cistergraphia.inscribe('ora et labora', layout: :rongorongo).last)
+  # The same weathered plate for every run (its edition's length depends on its lacunae)
+  File.write(plate.sub(/\.svg\z/, '-weathered.svg'), Cistergraphia::Lacunae.inscribe(MESSAGE)[1])
 
   ok = if ENV['BASE_URL']
          check(ENV.fetch('BASE_URL'), plate)

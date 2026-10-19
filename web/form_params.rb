@@ -53,8 +53,23 @@ module FormParams
     text
   end
 
-  # [sequence, svg, grille]: a plate for one reader, or for two (the grille is the abbot's)
+  # A weathered plate asked for: game mode only, one reader only. What cannot
+  # weather (@weathered_error) goes back to the form
+  def weathered?
+    return false unless params[:weathered] == '1'
+
+    @weathered_error = Cistergraphia::Lacunae::NOT_SEALED if passphrase
+    @weathered_error = Cistergraphia::Lacunae::NOT_TWO_READERS if @decoy
+    true
+  end
+
+  # [sequence, svg, grille]: a plate for one reader, or for two (the grille is
+  # the abbot's). A weathered plate's lacunae go to @damage
   def inscribe_plate
+    if @weathered
+      sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout)
+      return [sequence, svg, @layout]
+    end
     return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout) + [@layout] unless @decoy
 
     given = @layout unless params[:grille].to_s.strip.empty? # a shared key is kept; a new one may be redrawn
@@ -65,6 +80,7 @@ module FormParams
   # an abbot's key); otherwise the message along the layout the decoder finds
   def read_plate
     svg = submitted_svg
+    @weathered = Cistergraphia::Lacunae.weathered?(svg)
     grille = submitted_grille
     return Cistergraphia::TwoReaders.read(svg, grille, passphrase: passphrase) if grille
 

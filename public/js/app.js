@@ -49,6 +49,7 @@
     if (!form) return;
     const submit = $('[data-submit]', form);
     const passphrase = $('#passphrase', form);
+    const weathered = $('[data-weathered]', form);
 
     const apply = () => {
       const mode = $('input[name="mode"]:checked', form)?.value || 'game';
@@ -58,6 +59,7 @@
         passphrase.disabled = !secret;
         passphrase.required = secret;
       }
+      if (weathered) weathered.disabled = secret; // a sealed plate cannot weather
       if (submit) submit.textContent = secret ? 'Seal & inscribe' : 'Inscribe';
       if (!secret) explain('');
     };
@@ -428,7 +430,8 @@
       focus.classList.add('is-visible');
       const upsideDown = Boolean(turned) !== isTurned() ? ' · upside down: turn the plate' : '';
       const underGrille = layout.grille ? ` · under the grille at ${TURNS[Math.floor((4 * i) / cells.length)]}` : '';
-      readingEl.textContent = `Sign ${i + 1} of ${cells.length} · ${value}${upsideDown}${underGrille}`;
+      const read = value === null ? 'worn: part of this sign is lost' : value;
+      readingEl.textContent = `Sign ${i + 1} of ${cells.length} · ${read}${upsideDown}${underGrille}`;
       caption.classList.add('is-walking');
     };
 
@@ -664,13 +667,16 @@
     const text = el.textContent;
     el.dataset.text = text;
     if (reducedMotion || !text) return;
-    const chars = Array.from(text);
+    // Each letter keeps the class of the span it came from (a weathered
+    // plate's restorations and doubts)
+    const chars = Array.from(el.childNodes).flatMap((node) =>
+      Array.from(node.textContent).map((char) => [char, node.nodeType === 1 ? node.className : '']));
     const step = Math.min(32, 1500 / chars.length);
     const shown = document.createElement('span');
     shown.setAttribute('aria-hidden', 'true');
-    chars.forEach((char, i) => {
+    chars.forEach(([char, css], i) => {
       const span = document.createElement('span');
-      span.className = 'reveal';
+      span.className = css ? `reveal ${css}` : 'reveal';
       span.style.setProperty('--d', `${Math.round(250 + i * step)}ms`);
       span.textContent = char;
       shown.appendChild(span);

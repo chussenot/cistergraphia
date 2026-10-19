@@ -4,14 +4,16 @@ Cistergraphia: Transcription (fol. 2v)
 
 Purpose:
 - Show the decoded message as a transcription, with a plain Cistercian initial
+- A weathered plate's text is an edition (Leiden conventions): restorations
+  in rubric, doubts the balance cannot settle dotted, for the reader to choose
 %>
 <section class="leaf leaf--narrow" aria-labelledby="transcription-title">
   <p class="folio-mark" aria-hidden="true">fol. 2<sup>v</sup></p>
   <h1 id="transcription-title" class="rubric">Decoded message</h1>
-  <p class="lede"><%= @secret ? 'Unsealed with its passphrase: authentic and unaltered.' : 'Read back from the game: letters and spaces, as enciphered.' %>
+  <p class="lede"><% if @weathered %>Restored from a weathered plate, in the epigraphers’ notation: [r] the pair balances only one way; [b/l] it balances both ways, and the words decide.<% else %><%= @secret ? 'Unsealed with its passphrase: authentic and unaltered.' : 'Read back from the game: letters and spaces, as enciphered.' %><% end %>
     <% if @reader == :abbot %>Read with the abbot’s key: the novice’s message follows.<% elsif @reader == :novice %>Read with the novice’s key.<% end %></p>
 
-  <p class="transcription" data-transcription><%= @message %></p>
+  <p class="transcription" data-transcription><% if @weathered %><%== leiden_html(@message) %><% else %><%= @message %><% end %></p>
   <% if @decoy %>
     <h2 class="index-heading">The novice’s grille reads</h2>
     <p class="transcription transcription--second"><%= @decoy %></p>
