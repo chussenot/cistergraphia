@@ -18,7 +18,8 @@
 #   weathered plate restores what the pairs decide and prints the edition in
 #   the Leiden conventions: [r] restored, [b/l] for the reader to settle
 # - --broken writes a game plate in two to four fragments, laid in a tray
-#   under an empty board; decoding a broken plate rejoins it by its sums
+#   under an empty board; decoding a broken plate rejoins it by its sums.
+#   With --weathered too, it is weathered first, and rejoined as an edition
 #
 # Design Decisions:
 # - Uses OptionParser for command-line argument parsing
@@ -160,11 +161,13 @@ begin
   abort Cistergraphia::Tally::NOT_SEALED if options[:tally] && options[:secret]
   abort Cistergraphia::Lacunae::NOT_TWO_READERS if options[:weathered] && options[:decoy]
   abort Cistergraphia::Fragments::NOT_SEALED if options[:broken] && options[:secret]
-  abort Cistergraphia::Fragments::ONE_CONDITION if options[:broken] && (options[:weathered] || options[:tally])
+  abort Cistergraphia::Fragments::NOT_TALLIED if options[:broken] && options[:tally]
   passphrase = ask_passphrase(confirm: true) if options[:secret]
   if options[:broken]
-    sequence, svg, pieces = Cistergraphia::Fragments.inscribe(message, layout: layout)
-    puts "Broken: #{pieces.size} fragments. Rejoin them on the board: every pair must balance (-d rejoins them)"
+    sequence, svg, pieces, damage = Cistergraphia::Fragments.inscribe(message, layout: layout,
+                                                                               weathered: options[:weathered])
+    worn = ", #{damage.size} lacunae" if damage.any?
+    puts "Broken: #{pieces.size} fragments#{worn}. Rejoin them on the board: every pair must balance (-d rejoins them)"
   elsif options[:weathered]
     sequence, svg, damage = Cistergraphia::Lacunae.inscribe(message, layout: layout, tally: options[:tally])
     lacunae = damage.size == 1 ? '1 lacuna' : "#{damage.size} lacunae"

@@ -7,7 +7,9 @@ require 'json'
 module TrayHelpers
   # The board's geometry, both reading paths, the tablet, and every fragment
   # in file order: its size and each sign read upright and turned half round,
-  # row by row, as the fragment lies in the tray
+  # row by row, as the fragment lies in the tray: [upright, turned, worn], the
+  # readings as candidate values (one for an intact sign, what the strokes
+  # allow for a worn one: what the file shows, never what was lost)
   def fragments_json(svg, size)
     fragments = Cistergraphia::Fragments.read(svg)
     JSON.generate(

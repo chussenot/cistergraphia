@@ -29,7 +29,9 @@ Design Decisions:
   the board for its top-left corner; arrow keys move a picked fragment by a
   cell, T or a double click turns it half round. Once they cover the board,
   the page weighs every pair along both reading paths, and says how many
-  balance. The page holds what the file shows, never where a fragment goes
+  balance. The page holds what the file shows, never where a fragment goes.
+  A weathered broken plate is weighed by what each worn sign may hold; whole
+  again, it reads as an edition (there is no bench on a plate in pieces)
 - Nothing moves while you walk or turn the plate: the live reading takes the
   resting caption's place, and the script-only controls have their space from
   the first paint
@@ -45,7 +47,9 @@ Constraints:
   <% if @decoy %>
     <p class="decoy-echo"><span class="label">For the novice</span> <q><%= @decoy %></q></p>
   <% end %>
-  <% if @pieces %>
+  <% if @pieces && @damage %>
+    <p class="lede">Broken and weathered: <%= fragments_count(@pieces.size) %>, <%= @damage.size %> <%= @damage.size == 1 ? 'lacuna' : 'lacunae' %>. Rejoin them on the board: a join is right when every pair can balance, whatever its lacunae held. Whole again, the plate reads as an edition. Read it back to have the decoder do both.</p>
+  <% elsif @pieces %>
     <p class="lede">Broken: <%= fragments_count(@pieces.size) %>. Rejoin them on the board: a join is right when every pair of signs balances again. Read it back to have the decoder rejoin them.</p>
   <% elsif @damage %>
     <p class="lede">Weathered: <%= @damage.size %> <%= @damage.size == 1 ? 'lacuna' : 'lacunae' %>. Restore what is lost: each pair of signs must sum to a value on the tablet. Read it back to see the edition.</p>
@@ -63,7 +67,7 @@ Constraints:
     <div><dt>Grid</dt><dd><%= Integer.sqrt(@symbols) %> × <%= Integer.sqrt(@symbols) %></dd></div>
     <div><dt>Layout</dt><dd><%= layout_name(@layout) %></dd></div>
     <% if @pieces %>
-      <div><dt>Condition</dt><dd>Broken, in <%= fragments_count(@pieces.size) %></dd></div>
+      <div><dt>Condition</dt><dd>Broken, in <%= fragments_count(@pieces.size) %><%= ', and weathered' if @damage %></dd></div>
     <% elsif @damage || @tally %>
       <div><dt>Condition</dt><dd><%= [('Weathered' if @damage), ('tally signs' if @tally)].compact.join(', with ').capitalize %></dd></div>
     <% end %>
@@ -124,7 +128,7 @@ Constraints:
   </figure>
   <% end %>
 
-  <% if @damage %>
+  <% if @damage && !@pieces %>
     <% entries = lacunae(@sequence, @layout, @damage) %>
     <% first = entries.first %>
     <section class="bench awaits-script" aria-labelledby="bench-title" data-bench

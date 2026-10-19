@@ -373,6 +373,7 @@ const PAGES = [
   { page: 'weathered', open: openSamePlate({ message: MESSAGE, weathered: '1' }) },
   { page: 'tallied', open: openSamePlate({ message: MESSAGE, weathered: '1', tally: '1' }) },
   { page: 'broken', open: openSamePlate({ message: MESSAGE, broken: '1' }) },
+  { page: 'worn+broken', open: openSamePlate({ message: MESSAGE, broken: '1', weathered: '1' }) },
   {
     page: 'edition',
     open: async (page) => {

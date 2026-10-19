@@ -81,8 +81,8 @@ module FormParams
     true
   end
 
-  # A broken plate asked for: game mode only, along the snail, and no other
-  # condition. What cannot break (@broken_error) goes back to the form
+  # A broken plate asked for: game mode only, along the snail, weathered or
+  # not, without tally signs. What cannot break (@broken_error) goes back to the form
   def broken?
     return false unless params[:broken] == '1'
 
@@ -92,7 +92,7 @@ module FormParams
 
   def broken_problem
     return Cistergraphia::Fragments::NOT_SEALED if passphrase
-    return Cistergraphia::Fragments::ONE_CONDITION if @weathered || @tally
+    return Cistergraphia::Fragments::NOT_TALLIED if @tally
     return Cistergraphia::Fragments::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
 
     Cistergraphia::Fragments::NOT_ALONG_THE_ROWS unless @layout == :phaistos
@@ -133,7 +133,9 @@ module FormParams
   # A broken or a weathered game plate: [sequence, svg, layout]
   def damaged_plate
     if @broken
-      sequence, svg, @pieces = Cistergraphia::Fragments.inscribe(@message, layout: @layout)
+      sequence, svg, @pieces, damage = Cistergraphia::Fragments.inscribe(@message, layout: @layout,
+                                                                                   weathered: @weathered)
+      @damage = damage unless damage.empty?
     else
       sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout, tally: @tally)
     end

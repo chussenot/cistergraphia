@@ -11,7 +11,7 @@ Purpose:
 <section class="leaf leaf--narrow" aria-labelledby="transcription-title">
   <p class="folio-mark" aria-hidden="true">fol. 2<sup>v</sup></p>
   <h1 id="transcription-title" class="rubric">Decoded message</h1>
-  <p class="lede"><% if @broken %>Rejoined from a broken plate: of every way its fragments fit the board, turned or not, one balances every pair.<% elsif @weathered %>Restored from a weathered plate, in the epigraphers’ notation: [r] the pair balances only one way; [b/l] it balances both ways, and the words decide.<% else %><%= @secret ? 'Unsealed with its passphrase: authentic and unaltered.' : 'Read back from the game: letters and spaces, as enciphered.' %><% end %>
+  <p class="lede"><% if @broken && @weathered %>Rejoined from a broken, weathered plate: of every way its fragments fit the board, turned or not, one lets every pair balance. Then restored, in the epigraphers’ notation: [r] the pair balances only one way; [b/l] it balances both ways, and the words decide.<% elsif @broken %>Rejoined from a broken plate: of every way its fragments fit the board, turned or not, one balances every pair.<% elsif @weathered %>Restored from a weathered plate, in the epigraphers’ notation: [r] the pair balances only one way; [b/l] it balances both ways, and the words decide.<% else %><%= @secret ? 'Unsealed with its passphrase: authentic and unaltered.' : 'Read back from the game: letters and spaces, as enciphered.' %><% end %>
     <% if @reader == :abbot %>Read with the abbot’s key: the novice’s message follows.<% elsif @reader == :novice %>Read with the novice’s key.<% end %></p>
 
   <p class="transcription" data-transcription><% if @weathered %><%== leiden_html(@message) %><% else %><%= @message %><% end %></p>

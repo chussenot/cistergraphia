@@ -12,6 +12,8 @@
 #   the generator draws) and, for comparison, along the rows (Rongorongo)
 # - how often a first break rejoins one way only (else the generator draws again)
 # - how long the decoder's search takes
+# Then the same for plates weathered first (Weathering, as the generator lays
+# it): a worn sign lets its pair balance more ways, so wrong arrangements could too
 
 require_relative '../../lib/cistergraphia'
 
@@ -65,4 +67,26 @@ puts 'side  letters  pieces 2/3/4   arrangements (median, max)  ' \
               snail: share(rows.count { |row| row[2] == 1 }, PLATES),
               rows: share(rows.count { |row| row[3] == 1 }, PLATES),
               mean: times.sum / times.size, slowest: times.max)
+end
+
+# [lacunae, arrangements that hold, seconds] for one plate weathered, then broken, along the snail
+def weathered(sequence, random)
+  damage = Cistergraphia::Weathering.weather(sequence, random: random)
+  pieces = Fragments::Breaking.cut(Integer.sqrt(sequence.size), random)
+  fragments = Fragments.read(Fragments::Tray.render(sequence, :phaistos, pieces, random, damage))
+  started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  found = Fragments::Join.all(fragments, Cistergraphia::Layout::KEYLESS).size
+  [damage.size, found, Process.clock_gettime(Process::CLOCK_MONOTONIC) - started]
+end
+
+puts "\nWeathered first, then broken: #{PLATES} plates per size"
+puts 'side  letters  lacunae (mean)  one way on the snail   two or more   search (mean, max)'
+[[4, 7], [8, 30], [14, 95], [32, 500]].each do |side, letters|
+  rows = Array.new(PLATES) { weathered(Cistergraphia.encode(message(letters, random)), random) }
+  times = rows.map(&:last)
+  puts format('%<side>4d  %<letters>7d  %<lacunae>14.1f  %<one>s                 %<more>s        ' \
+              '%<mean>.3fs, %<slowest>.3fs',
+              side: side, letters: letters, lacunae: rows.sum(&:first).fdiv(PLATES),
+              one: share(rows.count { |row| row[1] == 1 }, PLATES),
+              more: share(rows.count { |row| row[1] > 1 }, PLATES), mean: times.sum / times.size, slowest: times.max)
 end

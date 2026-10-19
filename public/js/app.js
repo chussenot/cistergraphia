@@ -703,36 +703,54 @@
     const onBoard = (piece) => piece.row !== null
       && piece.row + piece.rows <= data.size && piece.col + piece.cols <= data.size;
 
-    // Every board cell's sign as it lies there, [upright, turned], or null if the board is not covered once over
+    // Every board cell's sign as it lies there, [upright, turned, worn] (candidate
+    // values, null where it does not read), or null if the board is not covered once over
     const laid = () => {
       if (!pieces.every(onBoard)) return null;
       const board = Array.from({ length: data.size }, () => Array(data.size).fill(null));
       for (const piece of pieces) {
         for (let r = 0; r < piece.rows; r += 1) {
           for (let c = 0; c < piece.cols; c += 1) {
-            const [upright, half] = piece.signs[(r * piece.cols) + c];
+            const [upright, half, worn] = piece.signs[(r * piece.cols) + c];
             const [row, col] = piece.turned ? [piece.rows - 1 - r, piece.cols - 1 - c] : [r, c];
             const cell = board[piece.row + row];
             if (cell[piece.col + col]) return null; // two fragments overlap
-            cell[piece.col + col] = piece.turned ? [half, upright] : [upright, half];
+            cell[piece.col + col] = piece.turned ? [half, upright, worn] : [upright, half, worn];
           }
         }
       }
       return board;
     };
 
-    // How many pairs balance along a path, and the letters they make
+    // The letters a pair can balance as, '' for a null pair (noise): as the
+    // decoder weighs them (Weathering.readings), each tablet value looked up
+    const sums = Object.keys(data.tablet).map(Number);
+    const lettersOf = (firsts, seconds) => {
+      if (!firsts || !seconds) return [];
+      const others = new Set(seconds);
+      const letters = sums.filter((sum) => firsts.some((a) => others.has(sum - a))).map((sum) => data.tablet[sum]);
+      return (others.has(data.null) ? ['', ...letters] : letters).sort();
+    };
+
+    // A pair as the decoder's edition prints it, in the Leiden conventions:
+    // [r] restored, [b/l] for the words to decide; a restored space is plain
+    const token = (letters, worn) => {
+      if (!worn) return letters[0];
+      if (letters.length > 1) return `[${letters.join('/')}]`;
+      return letters[0] === ' ' ? ' ' : `[${letters[0]}]`;
+    };
+
+    // How many pairs balance along a path, and the edition they make
     const weigh = (board, path) => {
       let balanced = 0;
       let text = '';
       for (let i = 0; i + 1 < path.length; i += 2) {
-        const [a, b] = [path[i], path[i + 1]].map(([row, col, turned]) => board[row][col][turned ? 1 : 0]);
-        if (a === null || b === null) continue;
-        if (b === data.null) balanced += 1; // a null pair: noise
-        else if (data.tablet[a + b] !== undefined) {
-          balanced += 1;
-          text += data.tablet[a + b];
-        }
+        const [[firsts, wornA], [seconds, wornB]] = [path[i], path[i + 1]]
+          .map(([row, col, turned]) => [board[row][col][turned ? 1 : 0], board[row][col][2]]);
+        const letters = lettersOf(firsts, seconds);
+        if (!letters.length) continue;
+        balanced += 1;
+        if (letters.length > 1 || letters[0] !== '') text += token(letters, wornA || wornB);
       }
       return { balanced, pairs: Math.floor(path.length / 2), text };
     };
@@ -750,7 +768,9 @@
         .reduce((a, b) => (b.balanced > a.balanced ? b : a));
       if (best.balanced === best.pairs && best.text) {
         status.textContent = 'Whole again: every pair balances.';
-        readingEl.textContent = `It reads: ${best.text}`;
+        readingEl.textContent = best.text.includes('[')
+          ? `It reads, restored: ${best.text}`
+          : `It reads: ${best.text}`;
         frame.classList.add('is-whole');
         return;
       }
