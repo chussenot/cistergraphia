@@ -78,9 +78,9 @@ one.
 
 It looks like a leaf from an abbey's index (vellum, iron-gall ink, ruled lines), and it writes
 with only two inks, as the reformed order allowed itself: red for the riddle, blue for the seal.
-Signs are not displayed; they are written, stroke by stroke, and the ink dries. Nothing moves
-under your hand while you write: no line jumps, no field slides away, nothing claims attention you
-did not give. When something is wrong, the page says so in place, in plain words, and keeps what
+Signs are not displayed; they are written stroke by stroke, and on a plate pressed wedge by wedge,
+like a stylus in clay, and then the ink dries. Nothing moves under your hand while you write: no
+line jumps, no field slides away, nothing claims attention you did not give. When something is wrong, the page says so in place, in plain words, and keeps what
 you wrote.
 
 Reading is the real game. Walk a plate sign by sign. Turn a tablet to read the lines that stood

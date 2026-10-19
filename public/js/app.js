@@ -364,25 +364,14 @@
     return $('[data-plate] svg');
   }
 
-  // Ink each sign in reading order; the wet rubric front follows the snail
+  // Press each sign in reading order (one wedge path per sign, in that order):
+  // the wet rubric front follows the path, coiling in or climbing the rows
   function inkPlate() {
     const svg = plateSvg();
     if (!svg || reducedMotion) return;
-    const lines = $$('line', svg);
-    const isStem = (l) => l.getAttribute('x1') === l.getAttribute('x2') &&
-      Math.abs(l.getAttribute('y2') - l.getAttribute('y1')) === 150;
-    const signs = lines.filter(isStem).length || 1;
-    const step = Math.min(60, 2800 / signs);
-    let sign = -1;
-    let stroke = 0;
-    lines.forEach((line) => {
-      if (isStem(line)) {
-        sign += 1;
-        stroke = 0;
-      }
-      Ink.inkIn(line, Math.max(sign, 0) * step + stroke * Math.min(22, step / 3));
-      stroke += 1;
-    });
+    const signs = $$('path', svg);
+    const step = Math.min(70, 2800 / (signs.length || 1));
+    signs.forEach((sign, i) => Ink.press(sign, i * step));
   }
 
   function initPlateWalk() {

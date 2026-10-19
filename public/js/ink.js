@@ -2,6 +2,7 @@
 //
 // A stroke is never popped in: it is *inked* (drawn from one end to the
 // other, wet in the mode's colour, then drying to ink) or *lifted* (it fades).
+// A plate's signs are wedges, so they are *pressed*: they appear wet, then dry.
 // Changing a sign *morphs* it: shared strokes stay, the others lift or are
 // inked. Under prefers-reduced-motion everything is instant.
 //
@@ -55,15 +56,21 @@
   // styles (highlights) apply again and nothing lingers in exported files.
   const drying = new WeakSet();
   function dried(event) {
-    if (event.animationName === 'ink-dry') dry(event.currentTarget);
+    if (event.animationName === 'ink-dry' || event.animationName === 'ink-dry-fill') dry(event.currentTarget);
   }
 
-  // Finish drying now (the stroke stays where it is, in ink)
-  function dry(line) {
-    if (!line.classList.contains('ink-in')) return;
-    line.classList.remove('ink-in');
-    line.style.removeProperty('--len');
-    line.style.removeProperty('--delay');
+  // Finish drying now (the mark stays where it is, in ink)
+  function dry(mark) {
+    if (!mark.classList.contains('ink-in') && !mark.classList.contains('ink-press')) return;
+    mark.classList.remove('ink-in', 'ink-press');
+    mark.style.removeProperty('--len');
+    mark.style.removeProperty('--delay');
+  }
+
+  function listen(mark) {
+    if (drying.has(mark)) return;
+    drying.add(mark);
+    mark.addEventListener('animationend', dried);
   }
 
   function inkIn(line, delay = 0) {
@@ -74,10 +81,15 @@
     line.classList.remove('ink-in');
     line.getBoundingClientRect(); // restart the animation
     line.classList.add('ink-in');
-    if (!drying.has(line)) {
-      drying.add(line);
-      line.addEventListener('animationend', dried);
-    }
+    listen(line);
+  }
+
+  // Press a wedge-drawn sign (a path): wet in the mode's colour, then drying
+  function press(sign, delay = 0) {
+    if (reducedMotion) return;
+    sign.style.setProperty('--delay', `${Math.round(delay)}ms`);
+    sign.classList.add('ink-press');
+    listen(sign);
   }
 
   function lift(line) {
@@ -143,5 +155,5 @@
     return text.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/ +/g, ' ').trim();
   }
 
-  window.Ink = { glyphTable, digitsOf, strokesOf, glyph, adopt, morph, inkIn, dry, lift, normalize, reducedMotion, PLACES };
+  window.Ink = { glyphTable, digitsOf, strokesOf, glyph, adopt, morph, inkIn, press, dry, lift, normalize, reducedMotion, PLACES };
 })();

@@ -184,5 +184,6 @@ module Cistergraphia
 end
 
 require_relative 'cistergraphia/glyphs'
+require_relative 'cistergraphia/stylus'
 require_relative 'cistergraphia/svg'
 require_relative 'cistergraphia/secret'
