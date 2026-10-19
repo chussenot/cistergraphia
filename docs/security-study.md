@@ -7,6 +7,7 @@
 | Mode | Who can read a message | Evidence |
 |---|---|---|
 | **Game** (no passphrase) | Anyone. An LLM agent recovered 10/10 messages from the SVGs alone in about 2.5 minutes, and a 300-line script recovers a message from **a single** SVG. | [blind LLM](../experiments/cryptanalysis/blind-llm/PROTOCOL.md), [scripted attack](../experiments/cryptanalysis/results/scripted-attack.log) |
+| **Game under a Grille** (50-bit key) | Anyone, for short messages. An LLM agent recovered 10/10 from the SVGs alone in about 26 minutes; a script that knows the scheme but not the key reads plates up to 18 × 18 (about 150 characters) from a single SVG, in seconds. Longer plates resisted that script; nothing says they resist a better one. | [blind LLM](../experiments/cryptanalysis/blind-llm-grille/PROTOCOL.md), [scripted attack](../experiments/cryptanalysis/results/grille-attack.log) |
 | **Secret** (passphrase) | Only someone with the passphrase, unless it is weak enough to guess. | The scripted attack finds no structure (pair test at chance level). The construction is standard authenticated encryption. |
 
 The game mode is a puzzle, not encryption. It has no key, so by
@@ -66,6 +67,61 @@ and English/French word lists. Same 10 plaintexts in both modes, fresh corpus pe
 The CI job `cryptanalysis` reruns this on every push and fails if game mode stops being
 breakable (< 90%) or secret mode starts leaking (> 10%).
 
+## Experiment 3: the Grille
+
+The Grille layout writes the plate row by row under a turning grille: one hole per orbit of
+four cells, read at N, E, S and W. Its key, 10 characters of base 32 (50 bits), places the holes.
+Both attacks were run again on grille plates, game mode, each plate under its own random key.
+
+**A model given only the SVGs.** Same agent, same rules, 10 new messages on 10 × 10 and
+12 × 12 plates ([protocol](../experiments/cryptanalysis/blind-llm-grille/PROTOCOL.md)). It was
+not told about the grille. **All 10 recovered exactly**, in about 26 minutes and 81 tool calls,
+ten times the effort of the plain layouts ([report](../experiments/cryptanalysis/blind-llm-grille/REPORT.md),
+[answers](../experiments/cryptanalysis/blind-llm-grille/ANSWERS.md)). Its path:
+
+1. Read the glyphs, then tried about ten dead ends (letter codes, running sums, runs of cells).
+2. Noticed that cells close together **in row-by-row order** add up to round numbers far more
+   often than chance (9000: 28 times against 1.6 expected), and that column neighbours do not.
+   The grille keeps the two halves of a letter next to each other within a quarter.
+3. Recovered the whole tablet from those sums, word frequencies and the first readable words.
+4. Guessed a turning (Fleissner) grille. Each candidate pair then becomes an equation between
+   two orbits' settings; a union-find check found almost no contradictions on the 12 × 12
+   plates (0 of 23 cycles, against about 75% by chance), which confirmed the model.
+5. Solved each plate by simulated annealing and local search over the orbits' settings, scored
+   by how many pairs read as letters. Two plates took several restarts.
+
+**A script that knows the scheme.** By Kerckhoffs's principle the code is public, so the attacker
+of interest knows the tablet, the 9999 filler and the grille's rules, and lacks only the key.
+[`crack_grille.py`](../experiments/cryptanalysis/crack_grille.py) scans the plate row by row; at
+each orbit it meets for the first time it tries the 4 holes, and it drops a branch as soon as a
+completed pair is not a letter. Short plates have false grilles too, under which every pair is a
+letter but the letters are not text, so it accepts a grille only if most of what it reads is
+dictionary words, and searches on past the others. It works on **one SVG at a time** and never
+touches the key space ([log](../experiments/cryptanalysis/results/grille-attack.log)):
+
+| Plate | Message | Result |
+|---|---|---|
+| 12 × 12 and 14 × 14 (the 10 messages of Experiment 2, 7 fresh corpora) | 53 to 81 characters | **70/70**; most in under a second, the slowest in 1.5 min |
+| 16 × 16 | 119 characters | recovered, 0.6 s |
+| 18 × 18 | 157 characters | recovered, 22 s |
+| 20 × 20 to 30 × 30 | 195 to 416 characters | no grille within 400 million steps (6 to 9 min each) |
+| 3 plates of 20 × 20 under **one** key | 171 to 177 characters each | no grille within 300 million steps (12 min) |
+
+The wall at 20 × 20 is **this search's, not the grille's.** In row order, each row opens up to
+n new orbits (4 choices each) but completes only about n/2 pairs to check them, so the cost grows
+exponentially with the side. A search that orders the orbits by the constraints they share, the
+blind agent's annealing, or more compute would likely go further; none was tried at that size.
+Do not count on a long message for secrecy. Two more reasons:
+
+- **The key is 50 bits.** With the code, trying every key is about 10¹⁵ grilles, each checked by
+  its first few pairs. Out of reach for a laptop, within reach of dedicated hardware.
+- **The tablet is still fixed.** The grille moves the signs; it does not change what they are.
+  The frequencies of the pair sums, and so the space and the common letters, show through.
+
+**Secret mode under a grille** gives the attack nothing: no pair reads as a letter, every branch
+dies at once, 0/10. The grille adds nothing to secret mode either: AES-GCM does the sealing, and
+the grille only makes the reader need a key as well as the passphrase.
+
 ## Why game mode falls, worst first
 
 1. **No key.** Whoever has the algorithm has every message.
@@ -83,11 +139,10 @@ breakable (< 90%) or secret mode starts leaking (> 10%).
    (On very short messages the pair test can pass along both routes, about 1 two-letter plate
    in 100; the encoder redraws those, so the test always names one.)
    The **Grille** layout is the one route with a key: a turning grille, set by a code of 50
-   bits. It hides exactly what the attacks above start from, which cells are neighbours in
-   reading order. But a turning grille is a transposition cipher of the 19th century: the pair
-   test gives an attacker a score to climb, one hole at a time, and the German army withdrew its
-   grilles in 1916 after four months. It has not been measured here yet (see the limits below);
-   until it is, count it as a puzzle with a key, not as secrecy.
+   bits. It hides what the attacks above start from, which cells are neighbours in reading
+   order, and it slows a blind attacker tenfold. But it keeps the order inside each quarter,
+   so the pair test still gives an attacker a score to climb, one hole at a time: see
+   [Experiment 3](#experiment-3-the-grille). It is a puzzle with a key, not a seal.
 6. **Images instead of SVG would not help.** The glyphs are regular and documented: dCode
    converts them, and a vision model or a small classifier reads them. Pressing the signs in
    wedges does not change this either: the file still carries every stroke as a line (the
@@ -152,13 +207,14 @@ payload bytes ──base 10,000──▶ glyph values ──▶ [length, length,
   committed with the experiment, only touch the corpus.
 - No one attempted a passphrase-guessing attack on secret mode. Its strength there is scrypt's
   cost times the passphrase's entropy.
-- The Grille layout is not measured yet: neither experiment above was run on grille plates.
+- The Grille was measured on short plates by both attackers, and on long ones by the script
+  only. That the script stalls at 20 × 20 bounds this search, not the grille.
 
 ## Reproduce
 
 ```
 apt install wamerican wfrench          # word lists for the scripted attacker
-experiments/cryptanalysis/run.sh       # both modes, fresh corpora, ~40 s
+experiments/cryptanalysis/run.sh       # both modes, with and without a grille, fresh corpora, ~1 min
 ```
 
 ## Sources
