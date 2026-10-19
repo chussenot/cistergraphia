@@ -1,35 +1,42 @@
 <!DOCTYPE html>
 <%# Social preview card, rendered to PNG by web/og/render.rb (not served) %>
+<%#
+The lock-up, set like a ruled manuscript leaf:
+- The mark hangs in the margin like an initial. Its stem runs from the
+  wordmark's cap height to its descender (59 + 19 px at 88 px), and its
+  stroke matches the wordmark's stems (~8 px): 18 units at that scale.
+- The baseline shares the wordmark's left edge, and both sit on ruled lines
+  (the ruling is every 32 px, its lines at y = 31 + 32k): the name, then
+  its baseline two rules down, the pair centred on the plate.
+Baseline offsets (from the top of a line-height: 1 box) were measured in
+Chromium for the self-hosted EB Garamond cuts.
+%>
+<% axis = 148; rule = ->(k) { 31 + (32 * k) } %>
+<% lines = { name: rule.(9), monk: rule.(11) } %>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <style>
-  @font-face { font-family: "EB Garamond"; src: url("<%= fonts %>/eb-garamond-latin-400-normal.woff2"); font-weight: 400; }
   @font-face { font-family: "EB Garamond"; src: url("<%= fonts %>/eb-garamond-latin-400-italic.woff2"); font-weight: 400; font-style: italic; }
   @font-face { font-family: "EB Garamond"; src: url("<%= fonts %>/eb-garamond-latin-600-normal.woff2"); font-weight: 600; }
   * { box-sizing: border-box; margin: 0; }
   html, body { width: <%= width %>px; height: <%= height %>px; overflow: hidden; }
   body {
+    position: relative;
     background-color: #f3ede1;
     background-image: repeating-linear-gradient(to bottom, transparent 0 31px, rgb(160 132 92 / 0.09) 31px 32px);
     color: #2b241c;
     font-family: "EB Garamond", Georgia, serif;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 72px;
-    align-items: center;
-    padding: 0 76px;
   }
-  .card { display: grid; gap: 26px; }
-  .mark { width: 62px; }
-  .mark g { stroke: #a3301c; stroke-width: 8; stroke-linecap: square; fill: none; }
-  h1 { font-size: 100px; font-weight: 600; line-height: 0.95; letter-spacing: -0.005em; }
-  p { font-size: 38px; font-style: italic; color: #62574a; line-height: 1.25; max-width: 15em; }
-  .modes { display: flex; gap: 34px; font-family: system-ui, sans-serif; font-size: 22px; font-weight: 600;
-           letter-spacing: 0.16em; text-transform: uppercase; color: #62574a; }
-  .modes span::before { content: ""; display: inline-block; width: 14px; height: 14px; border-radius: 50%;
-                        margin-right: 12px; vertical-align: 1px; background: var(--c); }
-  .plate { background: #fbf8f2; border: 1px solid #d9cdb6; border-radius: 4px; padding: 26px;
+  /* Each line is placed by its baseline: top = baseline - offset */
+  .line { position: absolute; left: <%= axis %>px; line-height: 1; white-space: nowrap; }
+  .name { font-size: 88px; font-weight: 600; letter-spacing: -0.005em; top: <%= lines[:name] - 75 %>px; }
+  .monk { font-size: 32px; font-style: italic; color: #62574a; top: <%= lines[:monk] - 27 %>px; }
+  /* The mark: visual box from the cap line to the descender line */
+  .mark { position: absolute; left: 76px; top: <%= lines[:name] - 58 %>px; height: 77px; width: auto; overflow: visible; }
+  .mark g { stroke: #a3301c; stroke-width: 18; stroke-linecap: square; fill: none; }
+  .plate { position: absolute; right: 76px; top: 50%; transform: translateY(-50%);
+           background: #fbf8f2; border: 1px solid #d9cdb6; border-radius: 4px; padding: 26px;
            box-shadow: 0 1px 2px rgb(43 36 28 / 0.06), 0 22px 48px -18px rgb(43 36 28 / 0.28),
                        inset 0 0 0 6px #fbf8f2, inset 0 0 0 7px #d9cdb6; }
   .plate svg { display: block; height: <%= height - 120 - 52 %>px; width: auto; }
@@ -38,12 +45,9 @@
 </style>
 </head>
 <body>
-  <div class="card">
-    <svg class="mark" viewBox="-8 -8 116 166"><g><%= mark %></g></svg>
-    <h1>Cistergraphia</h1>
-    <p>Messages written as the ciphers of the Cistercian monks, coiled like a snail.</p>
-    <div class="modes"><span style="--c:#a3301c">Game</span><span style="--c:#2b4a74">Secret</span></div>
-  </div>
+  <svg class="mark" viewBox="-9 -9 118 168"><g><%= mark %></g></svg>
+  <p class="line name">Cistergraphia</p>
+  <p class="line monk">Your secrets, in a monk’s handwriting.</p>
   <div class="plate"><%= plate %></div>
 </body>
 </html>
