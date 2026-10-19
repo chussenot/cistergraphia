@@ -11,9 +11,11 @@ Design Decisions:
 - Exact years in the timeline are written as Cistercian signs
 - History follows the Wikipedia article and David A. King (2001); vague or
   unverifiable claims are left out
-- Two ways to read a plate: each layout with the script it comes from, sourced
+- Three ways to read a plate: each layout with where it comes from, sourced
   (Phaistos: the disc's clockwise inward spiral; Rongorongo: reverse
-  boustrophedon, the tablet turned at every line)
+  boustrophedon, the tablet turned at every line; Grille: Cardano's pierced
+  sheet and the turning grille), and what the grille is worth (a puzzle with a
+  key, not a seal)
 - The playground and the tablet are drawn from the real cipher geometry
 - Lectio: a reading game, novice to abbot as the signs grow. Its first sign
   is drawn here and its controls are enabled by JS (like the dials), so it is
@@ -56,11 +58,11 @@ Design Decisions:
       </ol>
     </section>
 
-    <section class="layouts-origin" id="two-layouts" aria-labelledby="layouts-title">
-      <h2 id="layouts-title" class="index-heading">Two ways to read a plate</h2>
-      <p>A plate is laid out along one of two reading paths. Each takes its movement from an
+    <section class="layouts-origin" id="layouts" aria-labelledby="layouts-title">
+      <h2 id="layouts-title" class="index-heading">Three ways to read a plate</h2>
+      <p>A plate is laid out along one of three reading paths. Two take their movement from an
         undeciphered script that turns as it is read: a clay disc from Crete, and the wooden tablets of
-        Rapa Nui.</p>
+        Rapa Nui. The third comes from the cipher-makers themselves: a pierced sheet that turns over the page.</p>
 
       <h3 class="layout-title">Phaistos: the spiral</h3>
       <div class="turnings">
@@ -100,7 +102,33 @@ Design Decisions:
         script is undeciphered, and many scholars think it is proto-writing rather than true writing. Its
         reader turns the text at every line, and so does the reader of a Rongorongo plate.</p>
 
-      <p>You choose the layout when you inscribe; the decoder recognises it on its own.</p>
+      <h3 class="layout-title">Grille: the turning parchment</h3>
+      <div class="turnings">
+        <figure>
+          <%== cardano_svg %>
+          <figcaption><b>Cardano’s grille, 1550.</b> A pierced sheet laid on the paper: the secret is written
+            through its openings, then an ordinary letter around it.</figcaption>
+        </figure>
+        <figure>
+          <%== grille_order_svg %>
+          <figcaption><b>The Grille layout.</b> A turning grille: read the signs under its holes row by row,
+            then turn it a quarter clockwise. At N, E, S and W its holes uncover every sign once.</figcaption>
+        </figure>
+      </div>
+      <p>In 1550 Girolamo Cardano proposed a pierced sheet for private letters: write the secret through its
+        openings, lift it, and write an ordinary letter around the words, so that the whole does not look like
+        a cipher at all. A square grille that turns came later. The mathematician C. F. Hindenburg studied it in
+        1796, and Eduard Fleissner von Wostrowitz’s <em>Handbuch der Kryptographie</em> (1881) gave it the name
+        it still carries. Laid on the page and turned a quarter at a time, its holes uncover every cell exactly
+        once. Jules Verne built <em>Mathias Sandorf</em> (1885) around one, six squares a side. The German army
+        issued them in 1916 and withdrew them after four months: they were too easy to break.</p>
+      <p>A Grille plate is written row by row, like a page, in the order its grille reads it: without the grille
+        it is an anagram of its own message. Each plate gets a grille from a key of ten letters and digits, shown
+        with the plate, and a stencil to print and cut. Lay it on the printed plate with N at the top, read
+        the holes, and turn it. It is a puzzle with a key, not a seal: secrecy is the Secret mode’s.</p>
+
+      <p>You choose the layout when you inscribe. The decoder recognises the first two on its own, and asks
+        for a grille’s key.</p>
     </section>
 
     <section aria-labelledby="modes-title">
@@ -176,5 +204,6 @@ Design Decisions:
     <li><a href="https://glossographia.wordpress.com/2013/07/09/cistercian-number-magic-of-the-boy-scouts/">Glossographia: Cistercian number magic of the boy scouts</a>.</li>
     <li><a href="https://en.wikipedia.org/wiki/Rongorongo">Rongorongo</a> and <a href="https://en.wikipedia.org/wiki/Boustrophedon">Boustrophedon</a>, Wikipedia, and the sources they cite.</li>
     <li><a href="https://en.wikipedia.org/wiki/Phaistos_Disc">Phaistos Disc</a> and <a href="https://en.wikipedia.org/wiki/Lead_Plaque_of_Magliano">Lead Plaque of Magliano</a>, Wikipedia, and the sources they cite.</li>
+    <li><a href="https://en.wikipedia.org/wiki/Cardan_grille">Cardan grille</a> and <a href="https://en.wikipedia.org/wiki/Grille_(cryptography)">Grille (cryptography)</a>, Wikipedia, and the sources they cite.</li>
   </ul>
 </section>

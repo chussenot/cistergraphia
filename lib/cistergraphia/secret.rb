@@ -46,15 +46,16 @@ module Cistergraphia
       "A passphrase needs at least #{MIN_PASSPHRASE_LENGTH} characters" if passphrase.length < MIN_PASSPHRASE_LENGTH
     end
 
-    # Message + passphrase => sequence of numbers (0..9999) padded to a perfect square
-    def encrypt(message, passphrase)
+    # Message + passphrase => sequence of numbers (0..9999) padded to a perfect
+    # square (with an even side if `even`, as a grille needs)
+    def encrypt(message, passphrase, even: false)
       problem = passphrase_problem(passphrase)
       raise Error, problem if problem
 
       plaintext = message.to_s.strip
       raise EmptyMessageError, 'Message is empty' if plaintext.empty?
 
-      pad_to_square(frame(to_digits(seal(plaintext, passphrase))))
+      pad_to_square(frame(to_digits(seal(plaintext, passphrase))), even: even)
     end
 
     # Inverse of #encrypt; raises DecodeError on a wrong passphrase or any tampering
@@ -74,9 +75,10 @@ module Cistergraphia
     end
 
     # Random glyphs, indistinguishable from the ciphertext, fill the square grid
-    def pad_to_square(sequence)
+    def pad_to_square(sequence, even: false)
       size = Integer.sqrt(sequence.size)
       size += 1 unless size**2 == sequence.size
+      size += 1 if even && size.odd?
       sequence + Array.new((size**2) - sequence.size) { SecureRandom.random_number(BASE) }
     end
 

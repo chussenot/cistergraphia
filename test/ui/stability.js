@@ -108,6 +108,16 @@ const settle = (page) => page.evaluate(() => new Promise((resolve) => {
   requestAnimationFrame(() => requestAnimationFrame(resolve));
 }));
 
+// A plate written under a known grille
+const openGrillePlate = async (page) => {
+  await page.goto(`${baseUrl}/`);
+  await page.fill('#message', MESSAGE);
+  await page.click('label.segment:has(input[value="grille"])');
+  await page.fill('#grille', 'k7q2m-zxb4p');
+  await page.click('[data-submit]');
+  await page.waitForSelector('[data-plate] svg');
+};
+
 // The number a Lectio sign shows, read from its strokes with the page's own table
 const lectioTarget = (page) => page.evaluate(() => {
   const key = (coords) => coords.join(',');
@@ -143,6 +153,9 @@ const FLOWS = [
       { name: 'show the passphrase', act: async (p) => { await p.fill('#passphrase', 'abbey of molesme'); await p.click('[data-reveal="passphrase"]'); } },
       { name: 'back to game', anchor: '.entry-end', act: (p) => p.click('label.segment--game') },
       { name: 'choose rongorongo', act: (p) => p.click('label.segment:has(input[value="rongorongo"])') },
+      { name: 'choose grille', anchor: '.entry-end', act: (p) => p.click('label.segment:has(input[value="grille"])') },
+      { name: 'type a grille key', act: (p) => p.fill('#grille', 'k7q2m-zxb4p') },
+      { name: 'back to phaistos', anchor: '.entry-end', act: (p) => p.click('label.segment:has(input[value="phaistos"])') },
       { name: 'turn the dials', act: async (p) => { for (const q of ['tens', 'units', 'hundreds', 'thousands']) await p.click(`.quadrant--${q}`); await p.keyboard.press('ArrowUp'); } }
     ]
   },
@@ -164,6 +177,17 @@ const FLOWS = [
     ]
   },
   {
+    page: 'grille',
+    open: openGrillePlate,
+    steps: [
+      { name: 'lay the grille', act: (p) => p.click('[data-action="lay-grille"]') },
+      { name: 'turn it to E, S, W', act: async (p) => { for (let i = 0; i < 3; i += 1) await p.click('[data-action="lay-grille"]'); } },
+      { name: 'walk under the grille', act: async (p) => { await p.focus('[data-plate]'); await p.keyboard.press('Home'); await p.keyboard.press('ArrowRight'); } },
+      { name: 'lift the grille', act: (p) => p.click('[data-action="lay-grille"]') },
+      { name: 'copy the key', act: (p) => p.click('[data-action="copy-key"]') }
+    ]
+  },
+  {
     page: 'decoded',
     open: async (page) => {
       await page.goto(`${baseUrl}/decode`);
@@ -181,6 +205,7 @@ const FLOWS = [
     steps: [
       { name: 'choose a file', act: (p) => p.setInputFiles('#file', plateFile) },
       { name: 'type a passphrase', act: async (p) => { await p.fill('#passphrase', 'abbey of molesme'); await p.click('[data-reveal="passphrase"]'); } },
+      { name: 'type a grille key', act: (p) => p.fill('#grille', 'k7q2m-zxb4p') },
       { name: 'open the paste box', anchor: 'details.paste', act: (p) => p.click('details.paste summary') }
     ]
   },
@@ -214,6 +239,17 @@ const PAGES = [
       await page.goto(`${baseUrl}/`);
       await page.fill('#message', MESSAGE);
       await page.check('input[value="rongorongo"]', { force: true });
+      await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
+      await page.waitForSelector('[data-plate] svg');
+    }
+  },
+  {
+    page: 'grille',
+    open: async (page) => {
+      await page.goto(`${baseUrl}/`);
+      await page.fill('#message', MESSAGE);
+      await page.check('input[value="grille"]', { force: true });
+      await page.fill('#grille', 'k7q2m-zxb4p');
       await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
       await page.waitForSelector('[data-plate] svg');
     }

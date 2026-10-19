@@ -133,7 +133,7 @@ class AppTest < Minitest::Test
     assert_equal(Cistergraphia::SVG.read(svg), cells.map { |_, _, value, _| value }) # values, in reading order
     assert_equal(Cistergraphia.spiral_coordinates(layout['size']), cells.map { |row, col, _| [row, col] })
     assert(cells.none? { |*, turned| turned })
-    assert_equal({ 'padding' => 50, 'cell' => [120, 170], 'space' => 20 }, layout.except('size'))
+    assert_equal({ 'padding' => 50, 'cell' => [120, 170], 'offset' => -10, 'grille' => false }, layout.except('size'))
     assert_includes last_response.body, 'tabindex="0"'
   end
 
@@ -145,16 +145,18 @@ class AppTest < Minitest::Test
     assert_equal(order, order.sort_by { |marker| body.index(marker) }) # choices above what you type
     refute_match(/<div class="preview[^"]*" data-preview[^>]* hidden[ >]/, body) # laid out from the first paint
     assert_includes body, 'preview-note--secret'                       # the sealed state shares the strip
-    assert_includes body, 'class="secret-slot"'                        # unfolded by CSS, not by JS
+    assert_includes body, 'class="slot secret-slot"'                   # unfolded by CSS, not by JS
+    assert_includes body, 'class="slot grille-slot"'
     assert_match(/anatomy-hint awaits-script/, body)                   # space kept until JS
   end
 
-  def test_index_offers_both_layouts
+  def test_index_offers_three_layouts
     get '/'
 
     assert_match(/name="layout" value="phaistos" checked/, last_response.body)
     assert_match(/name="layout" value="rongorongo"/, last_response.body)
-    assert_equal 2, last_response.body.scan('data-layout-note=').size # the key follows the choice
+    assert_match(/name="layout" value="grille"/, last_response.body)
+    assert_equal 3, last_response.body.scan('data-layout-note=').size # the key follows the choice
   end
 
   def test_rongorongo_plate_is_walked_with_its_turned_rows
@@ -199,17 +201,85 @@ class AppTest < Minitest::Test
     assert_equal [%w[tens 10], %w[units 1], %w[thousands 1000], %w[hundreds 100]], dials
   end
 
-  def test_about_page_explains_the_two_layouts_and_their_origins
+  def test_grille_plate_shows_its_key_and_its_stencil
+    post '/generate', message: 'Ora et labora', layout: 'grille', grille: 'k7q2m zxb4p'
+    body = last_response.body
+
+    assert_includes body, '<dd>Grille</dd>'
+    assert_includes body, '<code class="grille-key">K7Q2M-ZXB4P</code>'
+    assert_includes body, 'data-action="lay-grille"'
+    assert_includes body, '<template data-stencil><svg'
+    assert_includes body, '<input type="hidden" name="grille" value="K7Q2M-ZXB4P">' # read it back with its grille
+  end
+
+  def test_grille_plate_is_walked_through_the_grille
+    post '/generate', message: 'Ora et labora', layout: 'grille', grille: 'k7q2m zxb4p'
+    cells, layout, svg = plate_of(last_response.body)
+    grille = Cistergraphia::Grille.new('K7Q2M-ZXB4P')
+
+    assert_equal(grille.path(layout['size']), cells.map { |row, col, _| [row, col] })
+    assert_equal({ 'padding' => 50, 'cell' => [170, 170], 'offset' => 0, 'grille' => true }, layout.except('size'))
+    assert_equal 'ora et labora', Cistergraphia.decode(svg, layout: grille)
+  end
+
+  def test_a_grille_is_drawn_for_each_plate_unless_its_key_is_given
+    keys = Array.new(2) do
+      post '/generate', message: 'Ora et labora', layout: 'grille'
+      last_response.body[%r{<code class="grille-key">([^<]+)</code>}, 1]
+    end
+
+    assert(keys.all? { |key| key.match?(/\A\w{5}-\w{5}\z/) })
+    refute_equal keys.first, keys.last
+  end
+
+  def test_a_malformed_grille_key_returns_to_the_form_with_what_was_written
+    post '/generate', message: 'Ora et labora', layout: 'grille', grille: 'abbey'
+
+    assert_equal 422, last_response.status
+    body = last_response.body
+    assert_match(/id="grille-error"[^>]*>A grille key has 10 letters and digits/, body)
+    assert_match(/name="layout" value="grille" checked/, body)
+    refute_match(/name="layout" value="phaistos" checked/, body)
+    assert_includes body, 'value="abbey"'
+    assert_includes body, 'Ora et labora'
+  end
+
+  def test_a_grille_plate_is_read_with_its_key_and_asks_for_it_without
+    _, svg = Cistergraphia.inscribe('Vespers at six', layout: Cistergraphia::Grille.new('K7Q2M-ZXB4P'))
+
+    post '/decode', svg: svg
+    assert_equal 400, last_response.status
+    assert_includes last_response.body, 'This plate was written under a grille: it needs its key.'
+
+    post '/decode', svg: svg, grille: 'k7q2m-zxb4p'
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'vespers at six'
+
+    post '/decode', svg: svg, grille: '00000-00000'
+    assert_includes last_response.body, Cistergraphia::Grille::WRONG_KEY
+    refute_includes last_response.body, 'secret mode' # the key is the problem here, not a passphrase
+  end
+
+  def test_largest_sealed_grille_plate_fits_the_upload_limit
+    message = '🙏' * CistergraphiaApp::MAX_MESSAGE_LENGTH
+    layout = Cistergraphia::Grille.new('K7Q2M-ZXB4P')
+    svg = Cistergraphia.to_svg(Cistergraphia.encode(message, passphrase: 'abbey of molesme', even: true),
+                               layout: layout)
+
+    assert_operator svg.bytesize, :<, CistergraphiaApp::MAX_SVG_BYTES
+  end
+
+  def test_about_page_explains_the_three_layouts_and_their_origins
     get '/about'
 
     body = last_response.body
-    assert_includes body, 'Two ways to read a plate'
+    assert_includes body, 'Three ways to read a plate'
     assert_includes body, 'reverse boustrophedon'
-    assert_includes body, 'https://en.wikipedia.org/wiki/Phaistos_Disc'
-    assert_includes body, 'https://en.wikipedia.org/wiki/Rongorongo'
-    assert_equal 2, body.scan('<svg class="turning"').size # the disc and the tablet
+    %w[Phaistos_Disc Rongorongo Cardan_grille].each { |page| assert_includes body, "https://en.wikipedia.org/wiki/#{page}" }
+    assert_equal 3, body.scan('<svg class="turning"').size # the disc, the tablet, Cardano's letter
     assert_equal 2, body.scan('<svg class="snail"').size   # and each layout drawn from it
-    assert_includes body, 'id="two-layouts"'               # linked from the inscribe key
+    assert_equal 1, body.scan('<svg class="grille-order"').size
+    assert_includes body, 'id="layouts"'                   # linked from the inscribe key
     refute_match(/why a snail|began with|the default/i, body) # neither layout comes first
   end
 

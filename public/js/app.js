@@ -1,6 +1,6 @@
 // Cistergraphia web UI: progressive enhancement only.
 // Every form works without this file. It adds the mode switch, the live
-// preview, the dials, the walkable plate, Lectio, exports and drag & drop.
+// preview, the dials, the walkable plate, the grille, Lectio, exports and drag & drop.
 // Motion comes from ink.js, and only where it carries meaning.
 (() => {
   'use strict';
@@ -10,6 +10,7 @@
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const { reducedMotion } = window.Ink;
   const PLACE_NAMES = { 1: 'units', 10: 'tens', 100: 'hundreds', 1000: 'thousands' };
+  const TURNS = ['N', 'E', 'S', 'W']; // the grille's four positions
 
   // ---------- Toast ----------
   let toastTimer;
@@ -414,8 +415,8 @@
         return;
       }
       const [row, col, value, turned] = cells[i];
-      const x = layout.padding + (col * cellWidth) - (layout.space / 2);
-      const y = layout.padding + (row * cellHeight) - (layout.space / 2);
+      const x = layout.padding + (col * cellWidth) + layout.offset;
+      const y = layout.padding + (row * cellHeight) + layout.offset;
       // Appear in place, glide only from sign to sign
       const appearing = !focus.classList.contains('is-visible');
       if (appearing) focus.style.transition = 'none';
@@ -426,7 +427,8 @@
       }
       focus.classList.add('is-visible');
       const upsideDown = Boolean(turned) !== isTurned() ? ' · upside down: turn the plate' : '';
-      readingEl.textContent = `Sign ${i + 1} of ${cells.length} · ${value}${upsideDown}`;
+      const underGrille = layout.grille ? ` · under the grille at ${TURNS[Math.floor((4 * i) / cells.length)]}` : '';
+      readingEl.textContent = `Sign ${i + 1} of ${cells.length} · ${value}${upsideDown}${underGrille}`;
       caption.classList.add('is-walking');
     };
 
@@ -448,8 +450,8 @@
       let fx = (event.clientX - rect.left) / rect.width;
       let fy = (event.clientY - rect.top) / rect.height;
       if (isTurned()) [fx, fy] = [1 - fx, 1 - fy];
-      const col = Math.floor(((view.x + (fx * view.width)) - layout.padding + (layout.space / 2)) / cellWidth);
-      const row = Math.floor(((view.y + (fy * view.height)) - layout.padding + (layout.space / 2)) / cellHeight);
+      const col = Math.floor(((view.x + (fx * view.width)) - layout.padding - layout.offset) / cellWidth);
+      const row = Math.floor(((view.y + (fy * view.height)) - layout.padding - layout.offset) / cellHeight);
       const i = index.get(`${row},${col}`);
       return i === undefined ? -1 : i;
     };
@@ -475,6 +477,82 @@
       show(Math.min(Math.max(moves[event.key], 0), cells.length - 1));
     });
     $('[data-plate-hint]').classList.remove('awaits-script');
+  }
+
+  // ---------- The grille: a parchment laid on the plate, turned N, E, S, W ----------
+  // The stencil is the server's (the file Download the stencil saves). It shares
+  // the plate's viewBox, so given the plate's box it lies exactly over it. Each
+  // quarter turn lights the signs under its holes: the next quarter of the
+  // reading order, row by row. A wedge's cell is read from its bite (where
+  // Cistergraphia::Stylus starts it: between the first and third points).
+  function initGrille() {
+    const frame = $('[data-plate]');
+    const svg = plateSvg();
+    const template = $('template[data-stencil]');
+    const button = $('[data-action="lay-grille"]');
+    if (!frame || !svg || !template || !button || !frame.dataset.plateCells) return;
+    const cells = JSON.parse(frame.dataset.plateCells);
+    const layout = JSON.parse(frame.dataset.plateLayout);
+    const quarter = cells.length / 4;
+    const readingEl = $('[data-plate-reading]');
+    const caption = readingEl.closest('.plate-reading');
+
+    const sheet = template.content.querySelector('svg').cloneNode(true);
+    sheet.setAttribute('class', 'grille-sheet');
+    sheet.setAttribute('aria-hidden', 'true');
+    frame.appendChild(sheet);
+    const place = () => {
+      Object.assign(sheet.style, {
+        left: `${svg.offsetLeft}px`, top: `${svg.offsetTop}px`, width: `${svg.offsetWidth}px`, height: `${svg.offsetHeight}px`
+      });
+    };
+    place();
+    if (window.ResizeObserver) new ResizeObserver(place).observe(svg);
+
+    const [cellWidth, cellHeight] = layout.cell;
+    const wedges = new Map();
+    $$('path', svg).forEach((wedge) => {
+      const n = (wedge.getAttribute('d').match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
+      if (n.length < 6) return;
+      const key = [Math.floor((((n[1] + n[5]) / 2) - layout.padding) / cellHeight),
+        Math.floor((((n[0] + n[4]) / 2) - layout.padding) / cellWidth)].join(',');
+      if (!wedges.has(key)) wedges.set(key, []);
+      wedges.get(key).push(wedge);
+    });
+
+    let turn = -1;
+    const show = () => {
+      $$('path.is-lit', svg).forEach((wedge) => wedge.classList.remove('is-lit'));
+      if (turn >= 0) {
+        cells.slice(turn * quarter, (turn + 1) * quarter).forEach(([row, col]) => {
+          (wedges.get(`${row},${col}`) || []).forEach((wedge) => {
+            Ink.dry(wedge); // red means one thing at a time
+            wedge.classList.add('is-lit');
+          });
+        });
+      }
+      sheet.classList.toggle('is-laid', turn >= 0);
+      button.setAttribute('aria-pressed', String(turn >= 0));
+      button.textContent = turn < 0 ? 'Lay the grille' : turn === 3 ? 'Lift the grille' : `Turn it to ${TURNS[turn + 1]}`;
+      readingEl.textContent = turn < 0 ? ''
+        : `The grille at ${TURNS[turn]}: signs ${(turn * quarter) + 1} to ${(turn + 1) * quarter} of ${cells.length}, row by row`;
+      caption.classList.toggle('is-walking', turn >= 0);
+    };
+
+    button.classList.remove('awaits-script');
+    $$('.grille-actions .awaits-script').forEach((el) => el.classList.remove('awaits-script'));
+    button.addEventListener('click', () => {
+      turn = turn === 3 ? -1 : turn + 1;
+      if (turn === 0) { // laid again: from N, without turning back through W, S, E
+        sheet.style.transition = 'none';
+        sheet.style.setProperty('--turn', 0);
+        sheet.getBoundingClientRect();
+        sheet.style.removeProperty('transition');
+      } else if (turn > 0) {
+        sheet.style.setProperty('--turn', turn);
+      }
+      show();
+    });
   }
 
   // The exported file must be the plain SVG the decoder reads: drop
@@ -548,6 +626,15 @@
         copy(transcription?.dataset.text ?? transcription?.textContent ?? '', 'Message copied');
         return;
       }
+      if (action === 'copy-key') {
+        copy(button.dataset.key, 'Grille key copied');
+        return;
+      }
+      if (action === 'download-stencil') {
+        const stencil = $('template[data-stencil]');
+        if (stencil) download(new Blob([stencil.innerHTML.trim()], { type: 'image/svg+xml' }), 'cistergraphia-grille.svg');
+        return;
+      }
       const source = cleanSvgSource();
       if (!source) return;
       if (action === 'download-svg') download(new Blob([source], { type: 'image/svg+xml' }), 'cistergraphia.svg');
@@ -619,6 +706,7 @@
     initLectio();
     inkPlate();
     initPlateWalk();
+    initGrille();
     initTranscription();
   });
 })();
