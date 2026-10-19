@@ -649,6 +649,8 @@ class AppTest < Minitest::Test
       assert_equal 422, last_response.status, form.inspect
       assert_includes last_response.body, CGI.escapeHTML(error)
       assert_match(/name="broken" value="1" data-weathered checked/, last_response.body)
+      assert_match(/name="broken"[^>]*aria-invalid="true" autofocus>/m, last_response.body) # never missed
+      assert_includes last_response.body[%r{id="weathered-error"[^>]*>[^<]*</p>}], CGI.escapeHTML(error)
     end
   end
 

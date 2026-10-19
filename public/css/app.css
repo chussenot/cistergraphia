@@ -446,7 +446,10 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .choice:has(input[value="grille"]:checked) [data-note="grille"] { visibility: visible; }
   .entry:has(input[name="mode"][value="game"]:checked) [data-note="weathered"],
   .entry:has(input[name="mode"][value="secret"]:checked) [data-note="unweathered"] { visibility: visible; }
-  .choice-notes:has(.field-error:not(:empty)) .choice-note:not(.field-error) { visibility: hidden; }
+  /* A condition sent back with an error: the error takes its note's place (the notes
+     shown above weigh more, hence .entry) */
+  .entry .choice-notes:has(.field-error:not(:empty)) .choice-note:not(.field-error) { visibility: hidden; }
+  .choice-notes .choice-note.field-error:not(:empty) { visibility: visible; }
   .entry:has(input[name="mode"][value="secret"]:checked) .check { opacity: 0.5; }
 }
 
