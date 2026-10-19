@@ -63,7 +63,8 @@ cords' values as sums on higher cords, and in 2024 two fragments of a broken one
 by that arithmetic alone. A weathered plate has lost some strokes. Each pair must still add up
 to a value on the tablet, so the restoration is the puzzle: on the plate page, press the lost
 digits back in and each pair is weighed. The decoder prints the edition the way epigraphers
-do: `[r]` restored, `[b/l]` for the words to decide.
+do: `[r]` restored, `[b/l]` for the words to decide. With tally signs, the sums of every row and
+column on a higher cord, a plate can lose whole signs and still be restored.
 
 Why two ways to send it?
 ------------------------
@@ -118,6 +119,7 @@ bundle exec rackup                                      # then open http://local
 ./cistergraphia -m "The relics are under the third stone" --decoy "Vespers at six" -g K7Q2M-ZXB4P
                                      # two readers: K7Q2M-ZXB4P reads both, the novice's key only the decoy
 ./cistergraphia -m "Ora et labora" --weathered            # some strokes lost; -d prints the edition
+./cistergraphia -m "Ora et labora" --weathered --tally    # with row and column sums: whole signs may go
 ```
 
 A web server sees what you seal on it: serve it over HTTPS, or use the command line, which keeps

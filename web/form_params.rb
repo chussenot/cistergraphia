@@ -63,14 +63,26 @@ module FormParams
     true
   end
 
+  # Tally signs asked for: game mode only, not under a grille. What cannot
+  # carry them (@tally_error) goes back to the form
+  def tally?
+    return false unless params[:tally] == '1'
+
+    @tally_error = Cistergraphia::Tally::NOT_SEALED if passphrase
+    @tally_error = Cistergraphia::Tally::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
+    true
+  end
+
   # [sequence, svg, grille]: a plate for one reader, or for two (the grille is
   # the abbot's). A weathered plate's lacunae go to @damage
   def inscribe_plate
     if @weathered
-      sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout)
+      sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout, tally: @tally)
       return [sequence, svg, @layout]
     end
-    return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout) + [@layout] unless @decoy
+    unless @decoy
+      return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout, tally: @tally) + [@layout]
+    end
 
     given = @layout unless params[:grille].to_s.strip.empty? # a shared key is kept; a new one may be redrawn
     Cistergraphia::TwoReaders.inscribe(@message, @decoy, passphrase: passphrase, grille: given)

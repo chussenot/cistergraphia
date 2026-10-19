@@ -129,6 +129,30 @@ const openWeatheredPlate = async (page) => {
   await page.waitForSelector('[data-plate] svg');
 };
 
+// A weathered plate with tally signs: whole signs may be lost
+const openTalliedPlate = async (page) => {
+  await page.goto(`${baseUrl}/`);
+  await page.fill('#message', MESSAGE);
+  await page.check('input[name="weathered"]');
+  await page.check('input[name="tally"]');
+  await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
+  await page.waitForSelector('[data-plate] svg');
+};
+
+// One weathered plate page for both the JS-on and JS-off runs: two random
+// plates would differ in their editions, which is not what the comparison is about
+const pageOnce = new Map();
+const openSamePlate = (form) => async (page) => {
+  const key = JSON.stringify(form);
+  if (!pageOnce.has(key)) {
+    const response = await page.request.post(`${baseUrl}/generate`, { form });
+    pageOnce.set(key, await response.text());
+  }
+  await page.goto(`${baseUrl}/`);
+  await page.setContent(pageOnce.get(key), { waitUntil: 'load' });
+  await page.waitForSelector('[data-plate] svg');
+};
+
 // The number a Lectio sign shows, read from its strokes with the page's own table
 const lectioTarget = (page) => page.evaluate(() => {
   const key = (coords) => coords.join(',');
@@ -158,7 +182,8 @@ const FLOWS = [
       { name: 'type a message', act: async (p) => { await p.click('#message'); await p.keyboard.type(MESSAGE); } },
       { name: 'edit at the start', act: async (p) => { await p.keyboard.press('Control+Home'); await p.keyboard.type('Brother, '); } },
       { name: 'delete', act: async (p) => { await p.keyboard.press('Control+End'); for (let i = 0; i < 30; i += 1) await p.keyboard.press('Backspace'); } },
-      { name: 'weather the plate', act: (p) => p.click('label.check') },
+      { name: 'weather the plate', act: (p) => p.click('label.check >> nth=0') },
+      { name: 'add tally signs', act: (p) => p.click('label.check >> nth=1') },
       { name: 'choose secret', anchor: '.entry-end', act: (p) => p.click('label.segment--secret') },
       { name: 'type a sealed message', act: async (p) => { await p.click('#message'); await p.keyboard.type(' and a seal'); } },
       { name: 'seal with too short a passphrase', act: async (p) => { await p.fill('#passphrase', 'short'); await p.click('[data-submit]'); } },
@@ -222,6 +247,14 @@ const FLOWS = [
       { name: 'press every digit', act: async (p) => { for (const button of await p.locator('[data-digit]:not([disabled])').all()) await button.click(); } },
       { name: 'take a digit back', act: async (p) => { const pressed = p.locator('[data-digit][aria-pressed="true"]'); if (await pressed.count()) await pressed.click(); } },
       { name: 'step through the lacunae', act: async (p) => { for (let i = 0; i < 4; i += 1) await p.click('[data-bench-step="1"]'); await p.click('[data-bench-step="-1"]'); } }
+    ]
+  },
+  {
+    page: 'tallied',
+    open: openTalliedPlate,
+    steps: [
+      { name: 'press digits into a whole sign', act: async (p) => { for (let i = 0; i < 4; i += 1) { const free = p.locator('[data-digit]:not([disabled])'); await free.nth(i % (await free.count())).click(); await p.click('[data-bench-step="1"]'); } } },
+      { name: 'step back', act: (p) => p.click('[data-bench-step="-1"]') }
     ]
   },
   {
@@ -303,7 +336,8 @@ const PAGES = [
       await page.waitForSelector('[data-plate] svg');
     }
   },
-  { page: 'weathered', open: openWeatheredPlate },
+  { page: 'weathered', open: openSamePlate({ message: MESSAGE, weathered: '1' }) },
+  { page: 'tallied', open: openSamePlate({ message: MESSAGE, weathered: '1', tally: '1' }) },
   {
     page: 'edition',
     open: async (page) => {

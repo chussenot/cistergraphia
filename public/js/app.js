@@ -49,7 +49,7 @@
     if (!form) return;
     const submit = $('[data-submit]', form);
     const passphrase = $('#passphrase', form);
-    const weathered = $('[data-weathered]', form);
+    const conditions = $$('[data-weathered]', form);
 
     const apply = () => {
       const mode = $('input[name="mode"]:checked', form)?.value || 'game';
@@ -59,7 +59,7 @@
         passphrase.disabled = !secret;
         passphrase.required = secret;
       }
-      if (weathered) weathered.disabled = secret; // a sealed plate cannot weather
+      conditions.forEach((box) => { box.disabled = secret; }); // a sealed plate cannot weather
       if (submit) submit.textContent = secret ? 'Seal & inscribe' : 'Inscribe';
       if (!secret) explain('');
     };
@@ -716,8 +716,10 @@
   // ---------- The restoration bench: a weathered plate, restored pair by pair ----------
   // Choose a lacuna (on the plate, or step through them), press a digit back
   // in: its strokes are pressed in rubric where the surface is lost, and the
-  // pair is weighed. The page knows only what the file shows: it says whether
-  // a pair balances, never whether a restoration is right.
+  // pair is weighed (and, with tally signs, the lacuna's row and column). A
+  // sign wholly lost is four lacunae, one per place. The page knows only what
+  // the file shows: it says whether things balance, never whether a
+  // restoration is right.
   function initBench() {
     const bench = $('[data-bench]');
     const frame = $('[data-plate]');
@@ -725,15 +727,16 @@
     if (!bench || !frame || !svg || !Ink.glyphTable()) return;
     const lacunae = JSON.parse(bench.dataset.lacunae);
     if (!lacunae.length) return;
-    const values = JSON.parse(frame.dataset.plateCells).map(([, , value]) => value);
+    const tally = bench.dataset.tally ? JSON.parse(bench.dataset.tally) : null;
+    const cells = JSON.parse(frame.dataset.plateCells); // [row, col, value (null when worn), turned]
     const letters = Object.fromEntries(Object.entries(Ink.glyphTable().tablet).map(([char, value]) => [value, char]));
     const NULL_MARK = 9999;
-    const bySign = new Map(lacunae.map((lacuna) => [lacuna.sign, lacuna]));
-    const chosen = new Map(); // sign => the value pressed into it
-    const which = $('[data-bench-which]', bench);
-    const sumEl = $('[data-bench-sum]', bench);
-    const verdict = $('[data-bench-verdict]', bench);
-    const edition = $('[data-bench-edition]', bench);
+    const bySign = new Map();
+    lacunae.forEach((lacuna) => bySign.set(lacuna.sign, [...(bySign.get(lacuna.sign) || []), lacuna]));
+    const chosen = new Map(); // "sign:place" => the digit pressed in
+    const key = (lacuna) => `${lacuna.sign}:${lacuna.place}`;
+    const [which, sumEl, verdict, tallyEl, edition] = ['which', 'sum', 'verdict', 'tally', 'edition']
+      .map((name) => $(`[data-bench-${name}]`, bench));
     const digits = $$('[data-digit]', bench);
     const digitOf = (value, place) => Math.floor(value / place) % 10;
     const canonical = (coords) => {
@@ -749,8 +752,8 @@
     lacunae.forEach((lacuna, i) => {
       const g = document.createElementNS(SVG_NS, 'g');
       g.setAttribute('transform', `translate(${lacuna.x} ${lacuna.y})${lacuna.turned ? ' rotate(180 50 75)' : ''}`);
-      const points = lacuna.lost.flatMap((key) => {
-        const n = key.split(',').map(Number);
+      const points = lacuna.lost.flatMap((stroke) => {
+        const n = stroke.split(',').map(Number);
         return [[n[0], n[1]], [n[2], n[3]]];
       });
       const xs = points.map(([x]) => x);
@@ -769,61 +772,85 @@
       lacuna.view = { target, pressed };
     });
 
-    // A sign's value as far as the reader knows it: '?' where its lacuna is still open
+    // A sign's value as far as the reader knows it: undefined while a place is open
+    const valueOf = (sign) => {
+      const open = bySign.get(sign);
+      if (!open) return cells[sign][2];
+      if (!open.every((l) => chosen.has(key(l)))) return undefined;
+      return open.reduce((sum, l) => sum + chosen.get(key(l)) * l.place, open[0].known);
+    };
+    // Its digits as shown: '?' in each place still open
     const shown = (sign) => {
-      const lacuna = bySign.get(sign);
-      if (!lacuna) return String(values[sign]).padStart(4, '0');
-      const value = chosen.has(sign) ? chosen.get(sign) : lacuna.options[0];
-      const text = String(value).padStart(4, '0').split('');
-      text[3 - Math.log10(lacuna.place)] = chosen.has(sign) ? String(digitOf(value, lacuna.place)) : '?';
+      const open = bySign.get(sign);
+      const known = open ? open[0].known : cells[sign][2];
+      const text = String(known).padStart(4, '0').split('');
+      (open || []).forEach((l) => { text[3 - Math.log10(l.place)] = chosen.has(key(l)) ? String(chosen.get(key(l))) : '?'; });
       return text.join('');
     };
-    const known = (sign) => (bySign.has(sign) ? chosen.get(sign) : values[sign]);
+    // A digit of a sign as far as it is known (undefined while open)
+    const digitAt = (sign, place) => {
+      const lacuna = (bySign.get(sign) || []).find((l) => l.place === place);
+      if (lacuna) return chosen.get(key(lacuna));
+      const open = bySign.get(sign);
+      return digitOf(open ? open[0].known : cells[sign][2], place);
+    };
     // What a pair reads as: a letter, null (an empty pair), false (no balance) or undefined (still open)
     const weigh = (first) => {
-      const [a, b] = [known(first), known(first + 1)];
+      const [a, b] = [valueOf(first), valueOf(first + 1)];
       if (b === NULL_MARK) return null;
       if (a === undefined || b === undefined) return undefined;
       return letters[a + b] ?? false;
     };
+    // A line's tally in a place: '✓', '✗', or '?' while a digit on it is open
+    const lineCheck = (kind, index, place) => {
+      const on = cells.map((cell, sign) => [cell, sign]).filter(([cell]) => cell[kind === 'row' ? 0 : 1] === index);
+      const found = on.map(([, sign]) => digitAt(sign, place));
+      if (found.includes(undefined)) return '?';
+      const sum = found.reduce((a, b) => a + b, 0) % 10;
+      return sum === digitOf(tally[kind === 'row' ? 'rows' : 'cols'][index], place) ? '✓' : '✗';
+    };
 
     function drawEdition() {
       const out = [];
-      for (let first = 0; first < values.length; first += 2) {
-        const open = bySign.has(first) || bySign.has(first + 1);
+      for (let first = 0; first < cells.length; first += 2) {
         const reading = weigh(first);
         if (reading === null) continue;
+        const open = bySign.has(first) || bySign.has(first + 1);
         if (reading === undefined) out.push('[.]');
         else if (reading === false) out.push('[?]');
-        else if (!open) out.push(reading);
-        else out.push(`[${reading}]`); // a restored space keeps its brackets: the line never rewraps
+        else out.push(open ? `[${reading}]` : reading); // a restored space keeps its brackets: the line never rewraps
       }
       edition.textContent = out.join('');
     }
 
-    // Two short lines that never wrap, even on the smallest phone: the sum, and its verdict
+    // Short lines that never wrap, even on the smallest phone: the sum, its verdict, the tallies
     function drawBalance() {
       const lacuna = lacunae[current];
       const first = lacuna.sign - (lacuna.sign % 2);
       const reading = weigh(first);
       let total = '?';
-      if (reading === null && chosen.has(lacuna.sign)) total = 'null';
-      else if (reading !== undefined && reading !== null) total = known(first) + known(first + 1);
+      if (reading === null && valueOf(lacuna.sign) !== undefined) total = 'null';
+      else if (reading !== undefined && reading !== null) total = valueOf(first) + valueOf(first + 1);
       sumEl.textContent = `${shown(first)} + ${shown(first + 1)} = ${total}`;
-      const done = lacunae.every((l) => chosen.has(l.sign))
-        && Array.from({ length: values.length / 2 }, (_, k) => weigh(2 * k)).every((r) => r !== false);
+      const done = lacunae.every((l) => chosen.has(key(l)))
+        && Array.from({ length: cells.length / 2 }, (_, k) => weigh(2 * k)).every((r) => r !== false);
       if (done) verdict.textContent = 'Every pair balances.';
       else if (reading === null) verdict.textContent = 'A null pair: any digit.';
       else if (reading === undefined) verdict.textContent = 'Press a digit to balance it.';
       else if (reading === false) verdict.textContent = 'Not on the tablet.';
       else verdict.textContent = `“${reading === ' ' ? 'space' : reading}”: it balances.`;
+      if (tally && tallyEl) {
+        const [row, col] = cells[lacuna.sign];
+        tallyEl.textContent = `Tallies, ${PLACE_NAMES[lacuna.place]}: row ${lineCheck('row', row, lacuna.place)}, column ${lineCheck('col', col, lacuna.place)}`;
+      }
     }
 
-    function press(lacuna, value) {
+    function press(lacuna) {
       lacuna.view.pressed.replaceChildren();
-      if (value === undefined) return;
+      if (!chosen.has(key(lacuna))) return;
       const lost = new Set(lacuna.lost);
-      Ink.strokesOf(value).filter(({ place, coords }) => place === lacuna.place && lost.has(canonical(coords)))
+      Ink.strokesOf(chosen.get(key(lacuna)) * lacuna.place)
+        .filter(({ place, coords }) => place === lacuna.place && lost.has(canonical(coords)))
         .forEach((stroke, i) => {
           const wedge = document.createElementNS(SVG_NS, 'path');
           wedge.setAttribute('d', Ink.glyphTable().wedges[stroke.coords.join(',')]);
@@ -840,9 +867,8 @@
       which.textContent = `Lacuna ${current + 1} of ${lacunae.length}: the ${PLACE_NAMES[lacuna.place]}`;
       digits.forEach((button) => {
         const digit = Number(button.dataset.digit);
-        const value = lacuna.options.find((v) => digitOf(v, lacuna.place) === digit);
-        button.disabled = value === undefined;
-        button.setAttribute('aria-pressed', String(chosen.has(lacuna.sign) && digitOf(chosen.get(lacuna.sign), lacuna.place) === digit));
+        button.disabled = !lacuna.digits.includes(digit);
+        button.setAttribute('aria-pressed', String(chosen.get(key(lacuna)) === digit));
         Ink.adopt($('svg', button), digit * lacuna.place);
       });
       drawBalance();
@@ -851,10 +877,9 @@
     digits.forEach((button) => button.addEventListener('click', () => {
       const lacuna = lacunae[current];
       const digit = Number(button.dataset.digit);
-      const value = lacuna.options.find((v) => digitOf(v, lacuna.place) === digit);
-      if (chosen.get(lacuna.sign) === value) chosen.delete(lacuna.sign);
-      else chosen.set(lacuna.sign, value);
-      press(lacuna, chosen.get(lacuna.sign));
+      if (chosen.get(key(lacuna)) === digit) chosen.delete(key(lacuna));
+      else chosen.set(key(lacuna), digit);
+      press(lacuna);
       select(current);
       drawEdition();
     }));

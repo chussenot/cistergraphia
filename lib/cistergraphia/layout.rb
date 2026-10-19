@@ -20,14 +20,16 @@ module Cistergraphia
 
     module_function
 
-    # [width, height, cols, rows] of the plate for a sequence: a square grid
-    def dimensions(sequence, layout = :phaistos)
+    # [width, height, cols, rows] of the plate for a sequence: a square grid,
+    # one cell wider and taller with tally signs
+    def dimensions(sequence, layout = :phaistos, tally: false)
       cols = Integer.sqrt(sequence.size)
       raise EmptyMessageError, 'Cannot lay out an empty sequence' if cols.zero?
 
       rows = sequence.size.ceildiv(cols)
       width, height = cell(layout)
-      [(width * cols) + (PADDING * 2), (height * rows) + (PADDING * 2), cols, rows]
+      extra = tally ? 1 : 0
+      [(width * (cols + extra)) + (PADDING * 2), (height * (rows + extra)) + (PADDING * 2), cols, rows]
     end
 
     # [width, height] of a grid cell

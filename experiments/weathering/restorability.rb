@@ -79,3 +79,16 @@ puts "  #{lacunae} lacunae on #{pairs} pairs (one pair in #{(pairs.to_f / lacuna
 puts "  restored by the balance alone: #{(100.0 * (lacunae - doubts) / lacunae).round(1)}%; " \
      "left to the words: #{(100.0 * doubts / lacunae).round(1)}%"
 puts "  letters that balance, per lacuna: #{widths.sort.map { |n, c| "#{n}: #{c}" }.join(', ')}"
+
+puts "\n3. With tally signs (Lacunae.inscribe tally: true), #{TRIALS / 20} plates"
+lacunae = wholes = pairs = settled = 0
+(TRIALS / 20).times do
+  sequence, svg, damage = Cistergraphia::Lacunae.inscribe(MESSAGES.sample(random: random), tally: true, random: random)
+  pairs += sequence.size / 2
+  lacunae += damage.size
+  wholes += damage.count { |_, lost| lost.size == W::POSITIONS.values.flatten(1).size }
+  settled += 1 unless Cistergraphia.decode(svg).include?('/')
+end
+puts "  #{lacunae} lacunae on #{pairs} pairs (one pair in #{(pairs.to_f / lacunae).round(1)}), " \
+     "#{wholes} of them whole signs (#{(100.0 * wholes / lacunae).round(1)}%)"
+puts "  editions with no doubt left: #{settled} of #{TRIALS / 20}"

@@ -450,7 +450,8 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .entry:has(input[name="mode"][value="secret"]:checked) .check { opacity: 0.5; }
 }
 
-/* Condition: one checkbox, the height of a segment */
+/* Condition: checkboxes, the height of a segment */
+.checks { display: flex; flex-wrap: wrap; column-gap: var(--space-6); }
 .check { display: inline-flex; align-items: center; gap: var(--space-3); min-height: 2.75rem; cursor: pointer; width: fit-content; }
 .check input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .check input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -904,6 +905,9 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .plate-frame svg .bench-target:hover { stroke: var(--parchment-edge); }
 .plate-frame svg .bench-target.is-current { stroke: var(--rubric); }
 .plate-frame svg path.restored { color: var(--rubric); }
+/* Tally signs, past their cords: the higher cord, in rubric */
+.plate-frame svg .tally path { color: var(--rubric); }
+.plate-frame svg .tally .cord { fill: var(--rubric); }
 
 /* A weathered plate's edition: restorations in rubric, doubts dotted under */
 .leiden-restored, .leiden-doubt { color: var(--rubric); }

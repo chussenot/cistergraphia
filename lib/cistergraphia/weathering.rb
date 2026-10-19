@@ -25,7 +25,8 @@ module Cistergraphia
   # Constraints:
   # - Game plates only: a sealed plate that loses one stroke no longer opens
   module Weathering
-    SHARE = 3        # about one pair in three loses something
+    SHARE = 3 # about one pair in three loses something
+    TALLIED_SHARE = 2 # one pair in two, with tally signs to restore whole signs
     MAX_DOUBT = 3    # letters a doubtful lacuna may leave
     NULL = ''        # what a null pair (noise, 9999) reads as
 
@@ -39,28 +40,39 @@ module Cistergraphia
 
     module_function
 
-    # Lacunae for a game sequence: { index => lost strokes }
-    def weather(sequence, random: Random.new)
+    # Lacunae for a game sequence: { index => lost strokes }. With lines (the
+    # grid row and column of every sign, on a plate with tally signs), whole
+    # signs may be lost too, and more pairs are damaged
+    def weather(sequence, random: Random.new, lines: nil)
       starts = (0...sequence.size).step(2).to_a
-      target = [starts.size / SHARE, 1].max
-      words = words_of(sequence)
-      doubted = Set.new
+      target = target_for(starts.size, lines)
+      judge = [words_of(sequence), Set.new, lines && Cords.new(lines)]
       starts.shuffle(random: random).each_with_object({}) do |start, damage|
         break damage if damage.size >= target
 
-        index, lost = try_lacuna(sequence, start, [words, doubted], random)
+        index, lost = try_whole_or_lacuna(sequence, start, judge, random)
         damage[index] = lost if index
       end
     end
 
+    # How many pairs to damage
+    def target_for(pairs, lines)
+      [pairs / (lines ? TALLIED_SHARE : SHARE), 1].max
+    end
+
+    def try_whole_or_lacuna(sequence, start, (words, doubted, cords), random)
+      cords&.try_whole(start, random) || try_lacuna(sequence, start, [words, doubted], random, cords)
+    end
+
     # [index, lost strokes] on one sign of the pair at start, or nil when that
     # lacuna would not be fair (doubts are counted in doubted, by word)
-    def try_lacuna(sequence, start, (words, doubted), random)
+    def try_lacuna(sequence, start, (words, doubted), random, cords = nil)
       index = start + random.rand(2)
       lost = lacuna(random)
       letters = outcomes(sequence, start, { index => lost })
-      return unless fair?(letters, words[start], doubted)
+      return unless fair?(letters, words[start], doubted) && (cords.nil? || cords.free?(index))
 
+      cords&.count(index)
       doubted << words[start] if letters.size > 1
       [index, lost]
     end
@@ -114,6 +126,14 @@ module Cistergraphia
       second == EVIL_MARKER ? NULL : CHARACTERS[first + second]
     end
 
+    # Whether a value can balance with one of its partner's candidates (a set):
+    # a null pair (the second is 9999), or a sum on the tablet
+    def balances?(value, partners, first:)
+      return true if first ? partners.include?(EVIL_MARKER) : value == EVIL_MARKER
+
+      CHARACTERS.each_key.any? { |sum| partners.include?(sum - value) }
+    end
+
     # The strokes of a number that a lacuna leaves (the stem always survives)
     def surviving(num, lost)
       Glyphs.strokes(num).map(&Glyphs::CANONICAL) - lost
@@ -145,6 +165,43 @@ module Cistergraphia
       raise DecodeError, 'Unknown glyph' if found.empty?
 
       found
+    end
+
+    # Where whole signs may be lost, on a plate with tally signs: a whole sign is
+    # given back exactly by a row (or column) tally when it is that line's only
+    # lacuna. So a whole sign needs a line with no lacuna yet, and that line is
+    # then kept clear: no later lacuna may enter it. Other lacunae need only be
+    # fair by their pair, as without tallies (tallies only ever narrow)
+    class Cords
+      WHOLE = POSITIONS.values.flatten(1).freeze
+
+      def initialize(lines)
+        @lines = lines
+        @count = Hash.new(0)
+        @reserved = Set.new
+      end
+
+      # [index, every stroke position] when a whole sign of this pair can go, half the time
+      def try_whole(start, random)
+        return unless random.rand(2).zero?
+
+        index = start + random.rand(2)
+        clear = @lines[index].find { |line| @count[line].zero? }
+        return unless clear && free?(index)
+
+        count(index)
+        @reserved << clear
+        [index, WHOLE]
+      end
+
+      # Whether a lacuna may go on this sign: none of its lines is kept clear
+      def free?(index)
+        @lines[index].none? { |line| @reserved.include?(line) }
+      end
+
+      def count(index)
+        @lines[index].each { |line| @count[line] += 1 }
+      end
     end
 
     # The restored text: every pair weighed, in the Leiden conventions

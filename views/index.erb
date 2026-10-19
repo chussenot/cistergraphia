@@ -83,15 +83,22 @@ Constraints:
 
         <fieldset class="choice choice--condition">
           <legend>Condition</legend>
-          <label class="check">
-            <input type="checkbox" name="weathered" value="1" data-weathered<%= ' checked' if @weathered %>
-                   aria-describedby="note-weathered note-unweathered weathered-error"<%== ' aria-invalid="true"' if @weathered_error %>>
-            <span class="check-title">Weathered</span>
-          </label>
+          <div class="checks">
+            <label class="check">
+              <input type="checkbox" name="weathered" value="1" data-weathered<%= ' checked' if @weathered %>
+                     aria-describedby="note-weathered note-unweathered weathered-error"<%== ' aria-invalid="true"' if @weathered_error %>>
+              <span class="check-title">Weathered</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" name="tally" value="1" data-weathered<%= ' checked' if @tally %>
+                     aria-describedby="note-weathered note-unweathered weathered-error"<%== ' aria-invalid="true"' if @tally_error %>>
+              <span class="check-title">Tally signs</span>
+            </label>
+          </div>
           <div class="choice-notes">
-            <p class="choice-note" id="note-weathered" data-note="weathered">Some strokes are lost to the centuries. Restore them: each pair of signs must balance.</p>
+            <p class="choice-note" id="note-weathered" data-note="weathered">Weathered: some strokes are lost; each pair must balance again. Tally signs: each row and column summed, as on a khipu, so whole signs can be lost.</p>
             <p class="choice-note" id="note-unweathered" data-note="unweathered">A sealed plate cannot weather: with one stroke lost, it would never open again.</p>
-            <p class="choice-note field-error" id="weathered-error" aria-live="polite"><%= @weathered_error %></p>
+            <p class="choice-note field-error" id="weathered-error" aria-live="polite"><%= @weathered_error || @tally_error %></p>
           </div>
         </fieldset>
       </div>

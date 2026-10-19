@@ -536,12 +536,42 @@ class AppTest < Minitest::Test
     assert_equal 10, body.scan('class="bench-digit"').size
   end
 
-  # A lacuna's options differ only in its own place: what the visible strokes allow, nothing more
+  # A lacuna holds only what the file shows: its place, the digits its strokes allow, and
+  # its sign's surviving digits (none in its own place)
   def assert_lacuna_shows_only_the_file(lacuna)
     place = lacuna['place']
     assert_includes [1, 10, 100, 1000], place
-    refute_empty lacuna['options']
-    assert(lacuna['options'].map { |v| v - ((v / place) % 10 * place) }.uniq.one?)
+    refute_empty lacuna['digits']
+    assert_includes lacuna['open'], place
+    assert(lacuna['open'].all? { |open| (lacuna['known'] / open % 10).zero? })
+  end
+
+  def test_a_plate_can_carry_tally_signs
+    post '/generate', message: 'ora et labora', tally: '1'
+
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'class="tally-lines"'
+    assert_match(%r{<dt>Condition</dt><dd>Tally signs</dd>}, last_response.body)
+    refute_includes last_response.body, 'data-bench'
+  end
+
+  def test_a_weathered_plate_with_tallies_checks_them_on_the_bench
+    post '/generate', message: 'the brothers will gather in the chapter house', weathered: '1', tally: '1'
+
+    body = last_response.body
+    assert_match(%r{<dt>Condition</dt><dd>Weathered, with tally signs</dd>}, body)
+    assert_includes body, 'data-tally="'
+    assert_match(/data-bench-tally>Tallies, \w+: row \?, column \?</, body)
+  end
+
+  def test_tally_signs_go_back_to_the_form_when_they_cannot_be_drawn
+    post '/generate', message: 'ora', layout: 'grille', tally: '1'
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, Cistergraphia::Tally::NOT_UNDER_A_GRILLE
+
+    post '/generate', message: 'ora', mode: 'secret', passphrase: 'abbey of molesme', tally: '1'
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, Cistergraphia::Tally::NOT_SEALED
   end
 
   def test_an_intact_plate_has_no_bench

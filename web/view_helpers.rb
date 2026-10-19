@@ -44,56 +44,6 @@ module ViewHelpers
     end)
   end
 
-  # The lacunae of a weathered plate, for the restoration bench in app.js:
-  # where each sits, its place, its lost stroke positions and the values its
-  # visible strokes still allow. All of it can be read off the file: the page
-  # never holds a lost value
-  def lacunae_json(sequence, layout, damage)
-    path = Cistergraphia::Layout.path(Integer.sqrt(sequence.size), layout)
-    JSON.generate(damage.sort.map do |index, lost|
-      row, col, turned = path[index]
-      x, y = Cistergraphia::Layout.origin(row, col, layout)
-      { sign: index, x: x, y: y, turned: turned, place: Cistergraphia::Glyphs::STROKE_PLACES.fetch(lost.first),
-        lost: lost.map { |stroke| stroke.join(',') }, options: lacuna_options(sequence[index], lost) }
-    end)
-  end
-
-  PLACE_NAMES = { 1 => 'units', 10 => 'tens', 100 => 'hundreds', 1000 => 'thousands' }.freeze
-
-  def place_name(place)
-    PLACE_NAMES.fetch(place)
-  end
-
-  # A lacuna's pair as the bench first shows it: "1?34 + 6234 = ?"
-  def bench_sum(sequence, lacuna)
-    sign = lacuna['sign']
-    first = sign - (sign % 2)
-    shown = [first, first + 1].map { |index| index == sign ? open_digits(lacuna) : format('%04d', sequence[index]) }
-    "#{shown.join(' + ')} = ?"
-  end
-
-  # A damaged sign's digits as far as they can be seen: '?' in its lacuna's place
-  def open_digits(lacuna)
-    format('%04d', lacuna['options'].first).tap { |digits| digits[3 - Math.log10(lacuna['place']).round] = '?' }
-  end
-
-  def lacuna_options(value, lost)
-    weathering = Cistergraphia::Weathering
-    weathering.candidates(weathering.surviving(value, lost), lost).sort
-  end
-
-  # The bench's edition before anything is restored, as app.js redraws it:
-  # null pairs (an intact 9999) left out, [.] for a pair a lacuna took part
-  # of, letters for the rest
-  def bench_edition(sequence, damage)
-    sequence.each_slice(2).with_index.filter_map do |(first, second), pair|
-      next if second == Cistergraphia::EVIL_MARKER && !damage.key?((2 * pair) + 1)
-      next '[.]' if damage.key?(2 * pair) || damage.key?((2 * pair) + 1)
-
-      Cistergraphia::CHARACTERS[first + second]
-    end.join
-  end
-
   # A Leiden edition as HTML: [r] restored, [b/l] doubtful, the rest as read
   def leiden_html(text)
     text.split(/(\[[^\]]*\])/).reject(&:empty?).map do |part|

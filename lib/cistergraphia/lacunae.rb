@@ -38,19 +38,30 @@ module Cistergraphia
     # [sequence, svg, damage] for a weathered game plate along a layout. A
     # keyless plate that would also restore along the other layout is drawn
     # again, as Cistergraphia.inscribe does for intact plates
-    def inscribe(message, layout: :phaistos, passphrase: nil, random: Random.new)
-      raise Error, NOT_SEALED if passphrase
-
+    # With tally signs, the plate may lose whole signs, which their row or column gives back.
+    def inscribe(message, layout: :phaistos, passphrase: nil, tally: false, random: Random.new)
+      refuse(passphrase, tally, layout)
       grille = layout.is_a?(Grille)
       100.times do
-        sequence = Cistergraphia.encode(message, even: grille)
-        damage = Weathering.weather(sequence, random: random)
+        sequence, damage = weathered(message, layout, tally, random)
         next if damage.empty? # a very short message may need another draw
 
-        svg = SVG.render(sequence, layout: layout, damage: damage)
+        svg = SVG.render(sequence, layout: layout, damage: damage, tally: tally)
         return [sequence, svg, damage] if grille || unambiguous?(svg, layout)
       end
       raise Error, 'Could not draw an unambiguous plate for this message'
+    end
+
+    def refuse(passphrase, tally, layout)
+      raise Error, NOT_SEALED if passphrase
+      raise Error, Tally::NOT_UNDER_A_GRILLE if tally && layout.is_a?(Grille)
+    end
+
+    # [sequence, damage] for a message: with tally signs, whole signs may be lost
+    def weathered(message, layout, tally, random)
+      sequence = Cistergraphia.encode(message, even: layout.is_a?(Grille))
+      lines = Tally.lines(Integer.sqrt(sequence.size), layout) if tally
+      [sequence, Weathering.weather(sequence, random: random, lines: lines)]
     end
 
     def unambiguous?(svg, layout)
@@ -66,7 +77,7 @@ module Cistergraphia
       raise Error, SEALED if passphrase
 
       errors = (layout ? [layout] : Layout::KEYLESS).map do |candidate|
-        return Weathering::Edition.text(read(svg, candidate))
+        return Weathering::Edition.text(restored(svg, candidate))
       rescue DecodeError => e
         e
       end
@@ -76,6 +87,15 @@ module Cistergraphia
     # Whether a plate has lacunae (a string test first: intact plates are not parsed twice)
     def weathered?(svg)
       svg.to_s.include?(%(class="#{CLASS}")) && SVG.lines(svg, layer: :lacunae).any?
+    end
+
+    # [candidate values, damaged?] of every sign, narrowed by the tally signs if the plate has them
+    def restored(svg, layout)
+      cells = read(svg, layout)
+      tally = Tally::Plate.read(svg, layout)
+      return cells unless tally
+
+      Tally.restore(cells.map(&:first), tally, layout).zip(cells.map(&:last))
     end
 
     # [candidate values, damaged?] of every sign, in reading order

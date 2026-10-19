@@ -30,6 +30,7 @@
 require 'sinatra/base'
 require_relative 'lib/cistergraphia'
 require_relative 'web/view_helpers'
+require_relative 'web/bench_helpers'
 require_relative 'web/form_params'
 require_relative 'web/figures'
 
@@ -42,7 +43,7 @@ class CistergraphiaApp < Sinatra::Base
     "form-action 'self'", "frame-ancestors 'none'"
   ].join('; ')
 
-  helpers ViewHelpers, Figures, FormParams
+  helpers ViewHelpers, BenchHelpers, Figures, FormParams
 
   configure do
     set :root, __dir__
@@ -104,7 +105,8 @@ class CistergraphiaApp < Sinatra::Base
     @passphrase_error = Cistergraphia::Secret.passphrase_problem(passphrase) if @secret
     @decoy = decoy
     @weathered = weathered?
-    halt 422, erb(:index) if @passphrase_error || @grille_error || @decoy_error || @weathered_error
+    @tally = tally?
+    halt 422, erb(:index) if [@passphrase_error, @grille_error, @decoy_error, @weathered_error, @tally_error].any?
     @sequence, @svg_content, grille = inscribe_plate
     @layout = grille.as(:pair) if @decoy
     @symbols = @sequence.size

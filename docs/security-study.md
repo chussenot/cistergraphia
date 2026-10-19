@@ -171,11 +171,8 @@ abbot's key) add a reader, not secrecy. Not measured; what the construction impl
 7. **Weathering changes nothing here.** A weathered plate only loses information: some strokes,
    marked where they were. The pair checksum that lets a reader restore them is the same one
    the attacks above start from. Only a game plate can weather: a sealed plate that loses one
-   stroke fails authentication, by design.
-7. **Weathering changes nothing here.** A weathered plate only loses information: some strokes,
-   marked where they were. The pair checksum that lets a reader restore them is the same one
-   the attacks above start from. Only a game plate can weather: a sealed plate that loses one
-   stroke fails authentication, by design.
+   stroke fails authentication, by design. Tally signs add the sums of what the plate already
+   shows, place by place: nothing an attacker could not compute from the plate itself.
 
 **Why not harden the game instead?** The attacking agent suggested a keyed tablet, a keyed route
 and sums modulo 10,000. These remain classical constructions: a keyed homophonic substitution
