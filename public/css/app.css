@@ -169,7 +169,7 @@ code { font-family: var(--mono); font-size: 0.82em; background: var(--vellum); p
 }
 .brand:hover { color: var(--ink); }
 .brand-mark { width: 1.9rem; height: auto; }
-.brand .brand-mark g { stroke: var(--accent); stroke-width: 8; }
+.brand .brand-mark { color: var(--accent); --weight: 4; }
 .brand-name {
   font-size: 1.45rem;
   font-weight: 600;
@@ -379,7 +379,7 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 }
 .preview-signs li { flex: none; display: grid; justify-items: center; gap: 0.15rem; width: 1.6rem; }
 .preview-signs .glyph { width: 1.25rem; color: var(--ink); }
-.preview-signs .glyph g { stroke-width: 8; }
+.preview-signs .glyph { --weight: 4; }
 .preview-signs span { font-size: 0.85rem; line-height: 1; color: var(--accent); }
 .preview-signs .is-space { width: 1.1rem; }
 .preview-signs .is-space .glyph { color: var(--ink-soft); opacity: 0.55; }
@@ -550,7 +550,7 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 .entry-end > .btn--primary { justify-self: start; min-width: 12rem; font-size: 0.9rem; }
 
 /* ---------- The key (how to read a sign) ---------- */
-.glyph g { fill: none; stroke: currentColor; stroke-width: 5; stroke-linecap: square; }
+.glyph path { fill: currentColor; stroke: currentColor; stroke-width: var(--weight, 0); stroke-linejoin: round; }
 
 .anatomy {
   margin: 0;
@@ -616,7 +616,7 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 }
 .tabula li:hover { background: var(--vellum); }
 .tabula .glyph { width: 100%; max-width: 2.2rem; color: var(--ink); }
-.tabula .glyph g { stroke-width: 7; }
+.tabula .glyph { --weight: 3; }
 .tabula span { font-size: 1.05rem; color: var(--accent); line-height: 1; }
 
 .note { font-size: 1rem; color: var(--ink-soft); margin-top: var(--space-3); }
@@ -707,46 +707,27 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 .plate-reading.is-walking .plate-reading-rest { visibility: hidden; }
 .plate-hint { display: block; font-family: var(--sans); font-style: normal; font-size: 0.78rem; margin-top: var(--space-1); }
 [data-plate-reading] { font-variant-numeric: lining-nums; }
-/* Each stroke is inked in reading order; hidden until its turn (no stray caps) */
+/* An order of reading is drawn along its path */
 @keyframes ink { to { stroke-dashoffset: 0; } }
 
 /* ---------- Ink: the one motion vocabulary (see public/js/ink.js) ---------- */
-/* A stroke is drawn end to end, wet in the mode's colour, then dries to ink */
-line.ink-in {
-  stroke-dasharray: var(--len);
-  animation-name: ink-stroke, ink-dry;
-  animation-duration: var(--dur-stroke), var(--dur-dry);
-  animation-timing-function: var(--ease-ink), ease-out;
-  animation-delay: var(--delay), calc(var(--delay) + var(--dur-stroke));
-  animation-fill-mode: both;
-}
-@keyframes ink-stroke {
-  0% { stroke-dashoffset: var(--len); opacity: 0; }
-  1% { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 1; }
-}
-@keyframes ink-dry {
-  from { stroke: var(--accent); }
-  to { stroke: currentColor; }
-}
-/* A pressed sign (a plate's wedges) is not drawn but pressed: it appears wet, then dries */
+/* A wedge (a stroke of a sign, or a plate's whole sign) is pressed: it appears
+   wet in the mode's colour, then dries to ink. Its colour dries, not its fill,
+   so a wedge's optical weight (its stroke) dries with it. */
 path.ink-press {
-  animation-name: ink-press, ink-dry-fill;
+  animation-name: ink-press, ink-dry;
   animation-duration: var(--dur-stroke), var(--dur-dry);
   animation-timing-function: var(--ease-ink), ease-out;
   animation-delay: var(--delay), calc(var(--delay) + var(--dur-stroke));
   animation-fill-mode: both;
 }
 @keyframes ink-press { from { opacity: 0; } }
-@keyframes ink-dry-fill {
-  from { fill: var(--accent); }
-  to { fill: currentColor; }
-}
-line.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
+@keyframes ink-dry { from { color: var(--accent); } }
+path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 @keyframes ink-lift { to { opacity: 0; } }
 /* A highlighted corner: the strokes of one place, in the mode's colour */
-.glyph line { transition: stroke 0.3s var(--ease); }
-.glyph line.is-lit { stroke: var(--accent); }
+.glyph path { transition: color 0.3s var(--ease); }
+.glyph path.is-lit { color: var(--accent); }
 
 /* ---------- Transcription reveal ---------- */
 .reveal { animation: reveal 0.6s var(--ease) var(--d) both; }
@@ -841,7 +822,7 @@ line.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); max-width: var(--measure); }
 .timeline li { display: grid; grid-template-columns: 2.2rem 1fr; gap: var(--space-4); align-items: start; }
 .timeline .glyph { width: 1.7rem; color: var(--accent); justify-self: center; }
-.timeline .glyph g { stroke-width: 7; }
+.timeline .glyph { --weight: 3; }
 .timeline-mark { justify-self: center; color: var(--ink-soft); }
 .timeline b { display: block; font-variant-numeric: lining-nums; }
 
@@ -882,7 +863,7 @@ input[type="number"] { font-variant-numeric: lining-nums; font-size: 1.3rem; }
   background: var(--paper);
 }
 .tablet .glyph { width: 1.5rem; color: var(--ink); }
-.tablet .glyph g { stroke-width: 7; }
+.tablet .glyph { --weight: 3; }
 .tablet b { font-size: 1.15rem; line-height: 1.1; color: var(--accent); }
 .tablet span { font-family: var(--sans); font-size: 0.7rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
@@ -983,7 +964,7 @@ input[type="number"] { font-variant-numeric: lining-nums; font-size: 1.3rem; }
 
 @media (prefers-reduced-motion: reduce) {
   body { transition: none; }
-  .nav a::after, .plate-focus, .glyph line, .quadrant b, .secret-slot, .preview-stage > *, .segment { transition: none; }
+  .nav a::after, .plate-focus, .glyph path, .quadrant b, .secret-slot, .preview-stage > *, .segment { transition: none; }
 }
 
 /* ---------- Small screens ---------- */

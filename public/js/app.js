@@ -34,9 +34,9 @@
   // thing at a time: lighting dries any wet ink first, so only the lit corner
   // stays in the mode's colour.
   function light(svg, places, on = true) {
-    $$('line', svg).forEach((line) => {
-      if (on) Ink.dry(line);
-      line.classList.toggle('is-lit', on && places.includes(Number(line.dataset.place)));
+    $$('path', svg).forEach((wedge) => {
+      if (on) Ink.dry(wedge);
+      wedge.classList.toggle('is-lit', on && places.includes(Number(wedge.dataset.place)));
     });
   }
 
@@ -134,7 +134,7 @@
     });
   }
 
-  // ---------- Live preview: each new letter is inked as you type ----------
+  // ---------- Live preview: each new letter is pressed as you type ----------
   // The strip has a fixed height and scrolls sideways, keeping the letter at
   // the caret in view: typing never moves anything else on the page.
   function initPreview() {
@@ -582,7 +582,7 @@
     const name = $('[data-file-name]', zone);
     const show = () => {
       name.textContent = input.files[0] ? input.files[0].name : '';
-      if (input.files[0]) $$('svg line', zone).forEach((line, i) => Ink.inkIn(line, i * 70)); // received
+      if (input.files[0]) $$('svg path', zone).forEach((wedge, i) => Ink.press(wedge, i * 70)); // received
     };
 
     ['dragenter', 'dragover'].forEach((type) => zone.addEventListener(type, (event) => {

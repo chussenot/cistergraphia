@@ -29,9 +29,7 @@ end
 def card_html(width, height)
   srand(1098)
   sequence = Cistergraphia.encode('ora et labora')
-  mark = Cistergraphia::Glyphs.strokes(1098).map do |x1, y1, x2, y2|
-    %(<line x1="#{x1}" y1="#{y1}" x2="#{x2}" y2="#{y2}"/>)
-  end.join
+  mark = Cistergraphia::Glyphs.strokes(1098).map { |stroke| %(<path d="#{Cistergraphia::Stylus.press(stroke)}"/>) }.join
   ERB.new(File.read(File.join(__dir__, 'card.html.erb'))).result_with_hash(
     width: width, height: height, fonts: "file://#{ROOT}/public/fonts",
     mark: mark, plate: Cistergraphia.to_svg(sequence)

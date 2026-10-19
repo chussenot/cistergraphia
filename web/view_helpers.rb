@@ -7,23 +7,30 @@ require 'json'
 module ViewHelpers
   GLYPH_VIEWBOX = '-8 -8 116 166'
 
-  # The glyph geometry and tablet as JSON, for the live previews in app.js.
+  # Every stroke a sign can have (the stem and the twenty of the four corners),
+  # pressed as a wedge: "x1,y1,x2,y2" => SVG path data
+  WEDGES = [Cistergraphia::Glyphs::STEM, *Cistergraphia::Glyphs::LINES.values.flatten(1)].uniq.to_h do |stroke|
+    [stroke.join(','), Cistergraphia::Stylus.press(stroke)]
+  end.freeze
+
+  # The glyph geometry, its wedges and the tablet as JSON, for the live previews in app.js.
   # Generated from the library so the browser never holds a second copy of the cipher.
   def glyph_table_json
     @glyph_table_json ||= JSON.generate(
       viewBox: GLYPH_VIEWBOX,
       stem: Cistergraphia::Glyphs::STEM,
       lines: Cistergraphia::Glyphs::LINES,
+      wedges: WEDGES,
       tablet: Cistergraphia::TABLET.to_h { |char, value| [char.to_s, value * 10] }
     )
   end
 
-  # One Cistercian numeral as an inline SVG
+  # One Cistercian numeral as an inline SVG, pressed: one wedge per stroke
   def glyph_svg(num, css: 'glyph', title: nil)
-    lines = Cistergraphia::Glyphs.strokes(num).map { |x1, y1, x2, y2| line_tag(x1, y1, x2, y2) }.join
+    wedges = Cistergraphia::Glyphs.strokes(num).map { |stroke| %(<path d="#{WEDGES.fetch(stroke.join(','))}"/>) }.join
     label = title || num.to_s
     %(<svg class="#{css}" viewBox="#{GLYPH_VIEWBOX}" role="img" aria-label="#{label}">) +
-      %(<title>#{label}</title><g>#{lines}</g></svg>)
+      %(<title>#{label}</title><g>#{wedges}</g></svg>)
   end
 
   ORDER_LABELS = {
@@ -92,10 +99,6 @@ module ViewHelpers
 
   def points(path)
     path.map { |x, y, *| "#{x},#{y}" }.join(' ')
-  end
-
-  def line_tag(x1, y1, x2, y2)
-    %(<line x1="#{x1}" y1="#{y1}" x2="#{x2}" y2="#{y2}"/>)
   end
 
   # Where each sign of a plate sits, in reading order, for walking the plate in

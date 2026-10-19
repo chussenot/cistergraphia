@@ -3,8 +3,9 @@
 <%#
 The lock-up, set like a ruled manuscript leaf:
 - The mark hangs in the margin like an initial. Its stem runs from the
-  wordmark's cap height to its descender (59 + 19 px at 88 px), and its
-  stroke matches the wordmark's stems (~8 px): 18 units at that scale.
+  wordmark's cap height to its descender (59 + 19 px at 88 px). It is
+  pressed like every sign (wedges), weighted so its heads match the
+  wordmark's stems (~8 px).
 - The baseline shares the wordmark's left edge, and both sit on ruled lines
   (the ruling is every 32 px, its lines at y = 31 + 32k): the name, then
   its baseline two rules down, the pair centred on the plate.
@@ -34,7 +35,7 @@ Chromium for the self-hosted EB Garamond cuts.
   .monk { font-size: 32px; font-style: italic; color: #62574a; top: <%= lines[:monk] - 27 %>px; }
   /* The mark: visual box from the cap line to the descender line */
   .mark { position: absolute; left: 76px; top: <%= lines[:name] - 58 %>px; height: 77px; width: auto; overflow: visible; }
-  .mark g { stroke: #a3301c; stroke-width: 18; stroke-linecap: square; fill: none; }
+  .mark g { fill: #a3301c; stroke: #a3301c; stroke-width: 6; stroke-linejoin: round; }
   .plate { position: absolute; right: 76px; top: 50%; transform: translateY(-50%);
            background: #fbf8f2; border: 1px solid #d9cdb6; border-radius: 4px; padding: 26px;
            box-shadow: 0 1px 2px rgb(43 36 28 / 0.06), 0 22px 48px -18px rgb(43 36 28 / 0.28),

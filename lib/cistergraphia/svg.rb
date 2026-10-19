@@ -67,13 +67,8 @@ module Cistergraphia
     # One sign's wedges as path data, in its cell (turned half round if need be)
     def press(num, turned, (x, y), random)
       Glyphs.strokes(num).flat_map { |stroke| Stylus.wedge(stroke, random) }.map do |polygon|
-        outline(turned ? polygon.map { |px, py| [Glyphs::WIDTH - px, Glyphs::HEIGHT - py] } : polygon, x, y)
+        Stylus.outline(turned ? polygon.map { |px, py| [Glyphs::WIDTH - px, Glyphs::HEIGHT - py] } : polygon, x, y)
       end.join
-    end
-
-    # A closed polygon, moved to the cell's origin, with one decimal
-    def outline(points, x, y)
-      "M#{points.map { |px, py| "#{(px + x).round(1)} #{(py + y).round(1)}" }.join('L')}Z"
     end
 
     # Absolute strokes of every symbol in reading order, turned where the path says so

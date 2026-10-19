@@ -24,11 +24,14 @@ Three ideas carry the design:
 3. **Motion shows the reading order.** On the result page each sign is pressed in reading
    order, so the path (the snail, or the turning rows) is visible the first time you see a
    plate. It is off under `prefers-reduced-motion`.
-4. **A plate is pressed by hand.** Its signs are wedges, as a stylus leaves them in clay: a
+4. **Every sign is pressed by hand.** Signs are wedges, as a stylus leaves them in clay: a
    notched head where it bites, a tail that thins as it lifts, pressed left to right and
-   top-down like a cuneiform tablet, with a slight unevenness of the hand. The hand is seeded,
-   so a plate always looks the same. Signs elsewhere (key, preview, Lectio) stay drawn in line,
-   where they are taught.
+   top-down like a cuneiform tablet, with a slight unevenness of the hand. One look
+   everywhere: plates, the key, the preview, the tables, Lectio, the mark and the favicon.
+   The hand is seeded, so nothing changes between visits: on a plate by each sign's place,
+   on the page by each stroke, so a stroke looks the same in every sign that has it and a
+   morphing sign keeps the strokes it shares. Small signs get optical weight (`--weight`, a
+   stroke the colour of the fill) so they stay legible.
 
 ## Tokens
 
@@ -83,10 +86,9 @@ Motion and interaction follow four rules. Anything that breaks one does not ship
 
 1. **Motion only when it carries meaning.** Nothing loops, nothing moves for show; every
    animation either teaches how the cipher works or answers something you did.
-2. **One vocabulary: ink.** A stroke is *inked* (drawn end to end, wet in the mode's colour,
-   then drying to iron-gall ink) or *lifted* (it fades); a plate's wedges are *pressed*
-   (they appear wet, then dry). A sign changes by *morphing*:
-   shared strokes stay, only the difference is written. Never a pop, a bounce or a shake.
+2. **One vocabulary: ink.** A wedge is *pressed* (it appears wet in the mode's colour, then
+   dries to iron-gall ink) or *lifted* (it fades). A sign changes by *morphing*:
+   shared strokes stay, only the difference is pressed. Never a pop, a bounce or a shake.
 3. **The game is reading.** The page invites you to read the signs yourself, at your own
    pace: no timers, no sound, no confetti. Mistakes are shown, not punished.
 4. **Silence by default.** Under `prefers-reduced-motion`, everything is instant and the
@@ -114,7 +116,7 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | Where | Interaction | What it teaches |
 |---|---|---|
 | Whole page | Choosing a mode crossfades the page's ink red ↔ blue | The mode you are in |
-| Inscribe preview | Each new letter's sign is inked as you type; existing signs stay; the strip glides sideways to keep the caret's sign in view | One letter, one sign |
+| Inscribe preview | Each new letter's sign is pressed as you type, stroke by stroke; existing signs stay; the strip glides sideways to keep the caret's sign in view | One letter, one sign |
 | How to read a sign | The four corners are dials (click, or arrow keys up/down); only the changed strokes are rewritten; hovering a corner lights its strokes; some years name themselves (1098, 1115, 1153, this year) | How the places combine |
 | Inscribe | Choosing Secret unfolds the passphrase below the message | What sealing needs |
 | Inscribe key | Choosing a layout re-inks the "Order of reading" path, in place | Where the plate starts and how it runs |
@@ -123,9 +125,9 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | Plate (Rongorongo) | **Turn the plate**: the plate rotates half round, as the readers of Rapa Nui turned their tablets; the turned rows now read upright, and walking follows | Why every other row is upside down |
 | Transcription | The decoded message appears letter by letter after its initial | The payoff of decoding |
 | About · Lectio | Read the sign, type its number. Novice (units) → Monk (tens) → Prior (hundreds) → Abbot (thousands) every three in a row; a misread corner is lit (an empty corner is named as a zero) and you continue when ready; best run kept in the browser | Fluency in the signs |
-| Read | A received file's sign is inked | Your file arrived |
+| Read | A received file's sign is pressed | Your file arrived |
 
-Implementation: `public/js/ink.js` holds the vocabulary (`inkIn`, `dry`, `lift`, `morph`,
+Implementation: `public/js/ink.js` holds the vocabulary (`press`, `dry`, `lift`, `morph`,
 `glyph`), `public/js/app.js` the interactions. The plate's cells and geometry come from
 `ViewHelpers#plate_cells_json` / `#plate_layout_json` (built from `Cistergraphia::SVG.path`, with
 each sign's turned flag), so walking the plate follows the real path. Turning is a class on
@@ -158,10 +160,10 @@ downloaded SVG is unchanged.
   focus, a skip link, `aria-live` feedback, reduced motion respected, and no horizontal scroll at
   390 px. axe-core reports no WCAG 2.1 AA violations on any page, in either theme.
 - **No caching of secrets.** `POST` responses are sent with `Cache-Control: no-store`.
-- **One copy of the cipher.** The live preview and the playground draw from a JSON glyph
-  table the server embeds (`ViewHelpers#glyph_table_json`, built from `Cistergraphia::Glyphs`).
-  A test checks that it equals the library's table, so the browser can never drift from the
-  encoder.
+- **One copy of the cipher, and of the hand.** The live preview and the playground draw from
+  a JSON glyph table the server embeds (`ViewHelpers#glyph_table_json`, built from
+  `Cistergraphia::Glyphs`), with every stroke's wedge already pressed (`Cistergraphia::Stylus.press`).
+  A test checks that it equals the library's, so the browser can never drift from the encoder.
 
 ## Social preview
 

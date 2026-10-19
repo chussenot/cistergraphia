@@ -28,6 +28,12 @@ class StylusTest < Minitest::Test
     refute_equal Stylus.wedge([50, 0, 50, 150], Random.new(7)), Stylus.wedge([50, 0, 50, 150], Random.new(8))
   end
 
+  def test_the_page_hand_presses_a_stroke_the_same_way_every_time_whichever_way_it_was_drawn
+    assert_equal Stylus.press([50, 0, 100, 50]), Stylus.press([100, 50, 50, 0])
+    refute_equal Stylus.press([50, 0, 100, 50]), Stylus.press([50, 50, 100, 0]) # each stroke its own hand
+    assert_match(/\AM[^Z]+ZM[^Z]+Z\z/, Stylus.press(Cistergraphia::Glyphs::STEM)) # a head and a tail
+  end
+
   def test_a_plate_is_pressed_one_path_per_sign_and_keeps_its_strokes_for_the_decoder
     svg = Cistergraphia.to_svg([1, 2, 3, 4])
     doc = REXML::Document.new(svg)

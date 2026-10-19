@@ -9,6 +9,11 @@ module Cistergraphia
   # hand, and the same plate is always pressed the same way.
   #
   # Only the look: plates keep their strokes as lines for the decoder (see SVG).
+  #
+  # A plate's hand is seeded by each sign's place in it. The page's own signs
+  # (the key, the tables, the preview) share another hand, seeded by each
+  # stroke (#press): a stroke always looks the same there, so a sign that
+  # changes keeps the strokes it shares.
   module Stylus
     HEAD = 12         # width of the head's back face, in glyph units (a sign is 100 x 150)
     HEAD_LENGTH = 14  # from the back of the head to its point
@@ -17,6 +22,17 @@ module Cistergraphia
     VARIATION = 6     # the unevenness of the hand: up to ±6 degrees, a few percent
 
     module_function
+
+    # One stroke pressed by the page's hand, as SVG path data
+    def press(stroke)
+      seed = Glyphs::CANONICAL.call(stroke).reduce { |acc, value| (acc * 1000) + value }
+      wedge(stroke, Random.new(seed)).map { |polygon| outline(polygon) }.join
+    end
+
+    # A closed polygon as SVG path data, moved by (x, y), with one decimal
+    def outline(points, x = 0, y = 0)
+      "M#{points.map { |px, py| "#{(px + x).round(1)} #{(py + y).round(1)}" }.join('L')}Z"
+    end
 
     # The outlines of one stroke (x1, y1, x2, y2), pressed: the head and the
     # tail, each a closed polygon of [x, y] points
