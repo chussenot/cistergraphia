@@ -53,6 +53,14 @@ module FormParams
     text
   end
 
+  # The plate's condition asked for: weathered, with tally signs, or broken
+  # (in that order: what may break depends on the others)
+  def read_conditions
+    @weathered = weathered?
+    @tally = tally?
+    @broken = broken?
+  end
+
   # A weathered plate asked for: game mode only, one reader only. What cannot
   # weather (@weathered_error) goes back to the form
   def weathered?
@@ -63,17 +71,59 @@ module FormParams
     true
   end
 
+  # Tally signs asked for: game mode only, not under a grille. What cannot
+  # carry them (@tally_error) goes back to the form
+  def tally?
+    return false unless params[:tally] == '1'
+
+    @tally_error = Cistergraphia::Tally::NOT_SEALED if passphrase
+    @tally_error = Cistergraphia::Tally::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
+    true
+  end
+
+  # A broken plate asked for: game mode only, along the snail, and no other
+  # condition. What cannot break (@broken_error) goes back to the form
+  def broken?
+    return false unless params[:broken] == '1'
+
+    @broken_error = broken_problem
+    true
+  end
+
+  def broken_problem
+    return Cistergraphia::Fragments::NOT_SEALED if passphrase
+    return Cistergraphia::Fragments::ONE_CONDITION if @weathered || @tally
+    return Cistergraphia::Fragments::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
+
+    Cistergraphia::Fragments::NOT_ALONG_THE_ROWS unless @layout == :phaistos
+  end
+
+  # What sends the form back, to explain
+  def form_errors
+    [@passphrase_error, @grille_error, @decoy_error, @weathered_error, @tally_error, @broken_error]
+  end
+
   # [sequence, svg, grille]: a plate for one reader, or for two (the grille is
-  # the abbot's). A weathered plate's lacunae go to @damage
+  # the abbot's). A weathered plate's lacunae go to @damage, a broken plate's
+  # fragments to @pieces
   def inscribe_plate
-    if @weathered
-      sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout)
-      return [sequence, svg, @layout]
+    return damaged_plate if @broken || @weathered
+    unless @decoy
+      return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout, tally: @tally) + [@layout]
     end
-    return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout) + [@layout] unless @decoy
 
     given = @layout unless params[:grille].to_s.strip.empty? # a shared key is kept; a new one may be redrawn
     Cistergraphia::TwoReaders.inscribe(@message, @decoy, passphrase: passphrase, grille: given)
+  end
+
+  # A broken or a weathered game plate: [sequence, svg, layout]
+  def damaged_plate
+    if @broken
+      sequence, svg, @pieces = Cistergraphia::Fragments.inscribe(@message, layout: @layout)
+    else
+      sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout, tally: @tally)
+    end
+    [sequence, svg, @layout]
   end
 
   # What the plate says: under a grille, what its key reads (both messages for
@@ -81,6 +131,7 @@ module FormParams
   def read_plate
     svg = submitted_svg
     @weathered = Cistergraphia::Lacunae.weathered?(svg)
+    @broken = Cistergraphia::Fragments.broken?(svg)
     grille = submitted_grille
     return Cistergraphia::TwoReaders.read(svg, grille, passphrase: passphrase) if grille
 

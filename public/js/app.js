@@ -49,7 +49,7 @@
     if (!form) return;
     const submit = $('[data-submit]', form);
     const passphrase = $('#passphrase', form);
-    const weathered = $('[data-weathered]', form);
+    const conditions = $$('[data-weathered]', form);
 
     const apply = () => {
       const mode = $('input[name="mode"]:checked', form)?.value || 'game';
@@ -59,7 +59,7 @@
         passphrase.disabled = !secret;
         passphrase.required = secret;
       }
-      if (weathered) weathered.disabled = secret; // a sealed plate cannot weather
+      conditions.forEach((box) => { box.disabled = secret; }); // a sealed plate cannot weather
       if (submit) submit.textContent = secret ? 'Seal & inscribe' : 'Inscribe';
       if (!secret) explain('');
     };
@@ -654,6 +654,227 @@
     });
   }
 
+  // ---------- A broken plate: its fragments rejoined on the board ----------
+  // The fragments are the file's own groups, moved by their transform. Each
+  // lies in its own frame, whose box starts where the board does: moved by
+  // whole cells, it lands on the board's cells. The page knows what each
+  // fragment shows (every sign read upright and turned), never where it goes:
+  // once the fragments cover the board, it reads them along both paths and
+  // counts the pairs that balance.
+  function initFragments() {
+    const frame = $('[data-plate]');
+    const panel = $('[data-rejoin]');
+    const svg = plateSvg();
+    if (!frame || !panel || !svg || !frame.dataset.fragments) return;
+    const data = JSON.parse(frame.dataset.fragments);
+    const [cellWidth, cellHeight] = data.cell;
+    const [status, readingEl, turnButton, resetButton] = ['status', 'reading', 'turn', 'reset']
+      .map((name) => $(`[data-rejoin-${name}]`, panel));
+    const pieces = $$('g.fragment', svg).map((group, i) => {
+      const [, x, y, tilt] = group.getAttribute('transform')
+        .match(/translate\(([-\d.]+) ([-\d.]+)\)\s*rotate\(([-\d.]+)/).map(Number);
+      const { rows, cols, signs } = data.fragments[i];
+      const home = { x, y, tilt, row: null, col: null, turned: false };
+      return { group, rows, cols, signs, home, ...home, width: cols * cellWidth, height: rows * cellHeight };
+    });
+    const total = pieces.length;
+    let picked = null;
+
+    const draw = (piece) => {
+      const cx = data.board + (piece.width / 2);
+      const cy = data.board + (piece.height / 2);
+      const turn = piece.tilt + (piece.turned ? 180 : 0);
+      piece.group.setAttribute('transform', `translate(${piece.x} ${piece.y}) rotate(${turn} ${cx} ${cy})`);
+    };
+
+    // To the nearest cell, straight, and never off the sheet
+    const snap = (piece) => {
+      const view = svg.viewBox.baseVal;
+      const lastCol = Math.floor((view.width - data.board - piece.width) / cellWidth);
+      const lastRow = Math.floor((view.height - data.board - piece.height) / cellHeight);
+      piece.col = Math.min(Math.max(Math.round(piece.x / cellWidth), 0), lastCol);
+      piece.row = Math.min(Math.max(Math.round(piece.y / cellHeight), 0), lastRow);
+      piece.x = piece.col * cellWidth;
+      piece.y = piece.row * cellHeight;
+      piece.tilt = 0;
+      draw(piece);
+    };
+
+    const onBoard = (piece) => piece.row !== null
+      && piece.row + piece.rows <= data.size && piece.col + piece.cols <= data.size;
+
+    // Every board cell's sign as it lies there, [upright, turned], or null if the board is not covered once over
+    const laid = () => {
+      if (!pieces.every(onBoard)) return null;
+      const board = Array.from({ length: data.size }, () => Array(data.size).fill(null));
+      for (const piece of pieces) {
+        for (let r = 0; r < piece.rows; r += 1) {
+          for (let c = 0; c < piece.cols; c += 1) {
+            const [upright, half] = piece.signs[(r * piece.cols) + c];
+            const [row, col] = piece.turned ? [piece.rows - 1 - r, piece.cols - 1 - c] : [r, c];
+            const cell = board[piece.row + row];
+            if (cell[piece.col + col]) return null; // two fragments overlap
+            cell[piece.col + col] = piece.turned ? [half, upright] : [upright, half];
+          }
+        }
+      }
+      return board;
+    };
+
+    // How many pairs balance along a path, and the letters they make
+    const weigh = (board, path) => {
+      let balanced = 0;
+      let text = '';
+      for (let i = 0; i + 1 < path.length; i += 2) {
+        const [a, b] = [path[i], path[i + 1]].map(([row, col, turned]) => board[row][col][turned ? 1 : 0]);
+        if (a === null || b === null) continue;
+        if (b === data.null) balanced += 1; // a null pair: noise
+        else if (data.tablet[a + b] !== undefined) {
+          balanced += 1;
+          text += data.tablet[a + b];
+        }
+      }
+      return { balanced, pairs: Math.floor(path.length / 2), text };
+    };
+
+    const update = () => {
+      const board = laid();
+      readingEl.textContent = '';
+      frame.classList.remove('is-whole');
+      if (!board) {
+        const on = pieces.filter(onBoard).length;
+        status.textContent = on === total ? 'All on the board, but two overlap.' : `On the board: ${on} of ${total} fragments.`;
+        return;
+      }
+      const best = Object.values(data.paths).map((path) => weigh(board, path))
+        .reduce((a, b) => (b.balanced > a.balanced ? b : a));
+      if (best.balanced === best.pairs && best.text) {
+        status.textContent = 'Whole again: every pair balances.';
+        readingEl.textContent = `It reads: ${best.text}`;
+        frame.classList.add('is-whole');
+        return;
+      }
+      status.textContent = `Covered: ${best.balanced} of ${best.pairs} pairs balance.`;
+    };
+
+    const pick = (piece) => {
+      picked = piece;
+      pieces.forEach((other) => {
+        other.group.classList.toggle('is-picked', other === piece);
+        other.group.setAttribute('aria-pressed', String(other === piece));
+      });
+      turnButton.disabled = !piece;
+    };
+
+    const turn = (piece) => {
+      piece.turned = !piece.turned;
+      draw(piece);
+      update();
+    };
+
+    // Uppermost while it moves; focus survives the move in the document
+    const raise = (piece) => {
+      if (svg.lastElementChild === piece.group) return;
+      const focused = document.activeElement === piece.group;
+      svg.appendChild(piece.group);
+      if (focused) piece.group.focus();
+    };
+
+    const toSvg = (event) => {
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      return point.matrixTransform(svg.getScreenCTM().inverse());
+    };
+
+    let drag = null;
+    pieces.forEach((piece, i) => {
+      const { group } = piece;
+      group.setAttribute('tabindex', '0');
+      group.setAttribute('role', 'button');
+      group.setAttribute('aria-pressed', 'false');
+      group.setAttribute('aria-label', `Fragment ${i + 1} of ${total}: ${piece.rows} rows of ${piece.cols} signs`);
+
+      group.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        raise(piece);
+        group.focus({ preventScroll: true });
+        group.setPointerCapture(event.pointerId);
+        drag = { piece, from: toSvg(event), x: piece.x, y: piece.y, moved: false };
+      });
+      group.addEventListener('pointermove', (event) => {
+        if (!drag || drag.piece !== piece) return;
+        const at = toSvg(event);
+        const [dx, dy] = [at.x - drag.from.x, at.y - drag.from.y];
+        if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+        drag.moved = true;
+        piece.x = drag.x + dx;
+        piece.y = drag.y + dy;
+        piece.tilt = 0;
+        draw(piece);
+      });
+      const drop = () => {
+        if (!drag || drag.piece !== piece) return;
+        const { moved } = drag;
+        drag = null;
+        if (moved) {
+          snap(piece);
+          pick(piece);
+          update();
+        } else pick(picked === piece ? null : piece);
+      };
+      group.addEventListener('pointerup', drop);
+      group.addEventListener('pointercancel', drop);
+      group.addEventListener('dblclick', () => turn(piece));
+      group.addEventListener('keydown', (event) => {
+        const steps = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] };
+        if (event.key in steps) {
+          event.preventDefault();
+          if (piece.row === null) snap(piece);
+          const [dr, dc] = steps[event.key];
+          piece.x = (piece.col + dc) * cellWidth;
+          piece.y = (piece.row + dr) * cellHeight;
+          snap(piece);
+          pick(piece);
+          update();
+        } else if (event.key === 't' || event.key === 'T') {
+          event.preventDefault();
+          turn(piece);
+        } else if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          pick(picked === piece ? null : piece);
+        } else if (event.key === 'Escape') pick(null);
+      });
+    });
+
+    // A fragment picked, then a cell: its top-left corner goes there
+    svg.addEventListener('click', (event) => {
+      if (!picked || event.target.closest('g.fragment')) return;
+      const at = toSvg(event);
+      picked.x = Math.floor((at.x - data.board) / cellWidth) * cellWidth;
+      picked.y = Math.floor((at.y - data.board) / cellHeight) * cellHeight;
+      raise(picked);
+      snap(picked);
+      picked.group.focus({ preventScroll: true }); // the keys go on moving and turning it
+      update();
+    });
+
+    turnButton.addEventListener('click', () => { if (picked) turn(picked); });
+    resetButton.addEventListener('click', () => {
+      pieces.forEach((piece) => {
+        Object.assign(piece, piece.home);
+        draw(piece);
+      });
+      pick(null);
+      update();
+    });
+
+    frame.classList.add('is-rejoining');
+    panel.classList.remove('awaits-script');
+    $('[data-plate-hint]').classList.remove('awaits-script');
+  }
+
   // ---------- Transcription: the message is read off, letter by letter ----------
   function initTranscription() {
     const el = $('[data-transcription]');
@@ -710,8 +931,10 @@
   // ---------- The restoration bench: a weathered plate, restored pair by pair ----------
   // Choose a lacuna (on the plate, or step through them), press a digit back
   // in: its strokes are pressed in rubric where the surface is lost, and the
-  // pair is weighed. The page knows only what the file shows: it says whether
-  // a pair balances, never whether a restoration is right.
+  // pair is weighed (and, with tally signs, the lacuna's row and column). A
+  // sign wholly lost is four lacunae, one per place. The page knows only what
+  // the file shows: it says whether things balance, never whether a
+  // restoration is right.
   function initBench() {
     const bench = $('[data-bench]');
     const frame = $('[data-plate]');
@@ -719,15 +942,16 @@
     if (!bench || !frame || !svg || !Ink.glyphTable()) return;
     const lacunae = JSON.parse(bench.dataset.lacunae);
     if (!lacunae.length) return;
-    const values = JSON.parse(frame.dataset.plateCells).map(([, , value]) => value);
+    const tally = bench.dataset.tally ? JSON.parse(bench.dataset.tally) : null;
+    const cells = JSON.parse(frame.dataset.plateCells); // [row, col, value (null when worn), turned]
     const letters = Object.fromEntries(Object.entries(Ink.glyphTable().tablet).map(([char, value]) => [value, char]));
     const NULL_MARK = 9999;
-    const bySign = new Map(lacunae.map((lacuna) => [lacuna.sign, lacuna]));
-    const chosen = new Map(); // sign => the value pressed into it
-    const which = $('[data-bench-which]', bench);
-    const sumEl = $('[data-bench-sum]', bench);
-    const verdict = $('[data-bench-verdict]', bench);
-    const edition = $('[data-bench-edition]', bench);
+    const bySign = new Map();
+    lacunae.forEach((lacuna) => bySign.set(lacuna.sign, [...(bySign.get(lacuna.sign) || []), lacuna]));
+    const chosen = new Map(); // "sign:place" => the digit pressed in
+    const key = (lacuna) => `${lacuna.sign}:${lacuna.place}`;
+    const [which, sumEl, verdict, tallyEl, edition] = ['which', 'sum', 'verdict', 'tally', 'edition']
+      .map((name) => $(`[data-bench-${name}]`, bench));
     const digits = $$('[data-digit]', bench);
     const digitOf = (value, place) => Math.floor(value / place) % 10;
     const canonical = (coords) => {
@@ -743,8 +967,8 @@
     lacunae.forEach((lacuna, i) => {
       const g = document.createElementNS(SVG_NS, 'g');
       g.setAttribute('transform', `translate(${lacuna.x} ${lacuna.y})${lacuna.turned ? ' rotate(180 50 75)' : ''}`);
-      const points = lacuna.lost.flatMap((key) => {
-        const n = key.split(',').map(Number);
+      const points = lacuna.lost.flatMap((stroke) => {
+        const n = stroke.split(',').map(Number);
         return [[n[0], n[1]], [n[2], n[3]]];
       });
       const xs = points.map(([x]) => x);
@@ -763,65 +987,89 @@
       lacuna.view = { target, pressed };
     });
 
-    // A sign's value as far as the reader knows it: '?' where its lacuna is still open
+    // A sign's value as far as the reader knows it: undefined while a place is open
+    const valueOf = (sign) => {
+      const open = bySign.get(sign);
+      if (!open) return cells[sign][2];
+      if (!open.every((l) => chosen.has(key(l)))) return undefined;
+      return open.reduce((sum, l) => sum + chosen.get(key(l)) * l.place, open[0].known);
+    };
+    // Its digits as shown: '?' in each place still open
     const shown = (sign) => {
-      const lacuna = bySign.get(sign);
-      if (!lacuna) return String(values[sign]).padStart(4, '0');
-      const value = chosen.has(sign) ? chosen.get(sign) : lacuna.options[0];
-      const text = String(value).padStart(4, '0').split('');
-      text[3 - Math.log10(lacuna.place)] = chosen.has(sign) ? String(digitOf(value, lacuna.place)) : '?';
+      const open = bySign.get(sign);
+      const known = open ? open[0].known : cells[sign][2];
+      const text = String(known).padStart(4, '0').split('');
+      (open || []).forEach((l) => { text[3 - Math.log10(l.place)] = chosen.has(key(l)) ? String(chosen.get(key(l))) : '?'; });
       return text.join('');
     };
-    const known = (sign) => (bySign.has(sign) ? chosen.get(sign) : values[sign]);
+    // A digit of a sign as far as it is known (undefined while open)
+    const digitAt = (sign, place) => {
+      const lacuna = (bySign.get(sign) || []).find((l) => l.place === place);
+      if (lacuna) return chosen.get(key(lacuna));
+      const open = bySign.get(sign);
+      return digitOf(open ? open[0].known : cells[sign][2], place);
+    };
     // What a pair reads as: a letter, null (an empty pair), false (no balance) or undefined (still open)
     const weigh = (first) => {
-      const [a, b] = [known(first), known(first + 1)];
+      const [a, b] = [valueOf(first), valueOf(first + 1)];
       if (b === NULL_MARK) return null;
       if (a === undefined || b === undefined) return undefined;
       return letters[a + b] ?? false;
     };
+    // A line's tally in a place: '✓', '✗', or '?' while a digit on it is open
+    const lineCheck = (kind, index, place) => {
+      const on = cells.map((cell, sign) => [cell, sign]).filter(([cell]) => cell[kind === 'row' ? 0 : 1] === index);
+      const found = on.map(([, sign]) => digitAt(sign, place));
+      if (found.includes(undefined)) return '?';
+      const sum = found.reduce((a, b) => a + b, 0) % 10;
+      return sum === digitOf(tally[kind === 'row' ? 'rows' : 'cols'][index], place) ? '✓' : '✗';
+    };
 
     function drawEdition() {
       const out = [];
-      for (let first = 0; first < values.length; first += 2) {
-        const open = bySign.has(first) || bySign.has(first + 1);
+      for (let first = 0; first < cells.length; first += 2) {
         const reading = weigh(first);
         // A null pair is left out when its 9999 can be seen (as the server does);
         // one whose 9999 was lost and pressed back keeps the three characters
         // its [.] took ([·], nothing written here), so the line never rewraps
         if (reading === null && !bySign.has(first + 1)) continue;
         if (reading === null) { out.push('[·]'); continue; }
+        const open = bySign.has(first) || bySign.has(first + 1);
         if (reading === undefined) out.push('[.]');
         else if (reading === false) out.push('[?]');
-        else if (!open) out.push(reading);
-        else out.push(`[${reading === ' ' ? '\u00a0' : reading}]`); // a restored space: brackets, and no new break
+        else out.push(open ? `[${reading === ' ' ? '\u00a0' : reading}]` : reading); // a restored space: brackets, and no new break
       }
       edition.textContent = out.join('');
     }
 
-    // Two short lines that never wrap, even on the smallest phone: the sum, and its verdict
+    // Short lines that never wrap, even on the smallest phone: the sum, its verdict, the tallies
     function drawBalance() {
       const lacuna = lacunae[current];
       const first = lacuna.sign - (lacuna.sign % 2);
       const reading = weigh(first);
       let total = '?';
-      if (reading === null && chosen.has(lacuna.sign)) total = 'null';
-      else if (reading !== undefined && reading !== null) total = known(first) + known(first + 1);
+      if (reading === null && valueOf(lacuna.sign) !== undefined) total = 'null';
+      else if (reading !== undefined && reading !== null) total = valueOf(first) + valueOf(first + 1);
       sumEl.textContent = `${shown(first)} + ${shown(first + 1)} = ${total}`;
-      const done = lacunae.every((l) => chosen.has(l.sign))
-        && Array.from({ length: values.length / 2 }, (_, k) => weigh(2 * k)).every((r) => r !== false);
+      const done = lacunae.every((l) => chosen.has(key(l)))
+        && Array.from({ length: cells.length / 2 }, (_, k) => weigh(2 * k)).every((r) => r !== false);
       if (done) verdict.textContent = 'Every pair balances.';
       else if (reading === null) verdict.textContent = 'A null pair: any digit.';
       else if (reading === undefined) verdict.textContent = 'Press a digit to balance it.';
       else if (reading === false) verdict.textContent = 'Not on the tablet.';
       else verdict.textContent = `“${reading === ' ' ? 'space' : reading}”: it balances.`;
+      if (tally && tallyEl) {
+        const [row, col] = cells[lacuna.sign];
+        tallyEl.textContent = `Tallies, ${PLACE_NAMES[lacuna.place]}: row ${lineCheck('row', row, lacuna.place)}, column ${lineCheck('col', col, lacuna.place)}`;
+      }
     }
 
-    function press(lacuna, value) {
+    function press(lacuna) {
       lacuna.view.pressed.replaceChildren();
-      if (value === undefined) return;
+      if (!chosen.has(key(lacuna))) return;
       const lost = new Set(lacuna.lost);
-      Ink.strokesOf(value).filter(({ place, coords }) => place === lacuna.place && lost.has(canonical(coords)))
+      Ink.strokesOf(chosen.get(key(lacuna)) * lacuna.place)
+        .filter(({ place, coords }) => place === lacuna.place && lost.has(canonical(coords)))
         .forEach((stroke, i) => {
           const wedge = document.createElementNS(SVG_NS, 'path');
           wedge.setAttribute('d', Ink.glyphTable().wedges[stroke.coords.join(',')]);
@@ -838,9 +1086,8 @@
       which.textContent = `Lacuna ${current + 1} of ${lacunae.length}: the ${PLACE_NAMES[lacuna.place]}`;
       digits.forEach((button) => {
         const digit = Number(button.dataset.digit);
-        const value = lacuna.options.find((v) => digitOf(v, lacuna.place) === digit);
-        button.disabled = value === undefined;
-        button.setAttribute('aria-pressed', String(chosen.has(lacuna.sign) && digitOf(chosen.get(lacuna.sign), lacuna.place) === digit));
+        button.disabled = !lacuna.digits.includes(digit);
+        button.setAttribute('aria-pressed', String(chosen.get(key(lacuna)) === digit));
         Ink.adopt($('svg', button), digit * lacuna.place);
       });
       drawBalance();
@@ -849,10 +1096,9 @@
     digits.forEach((button) => button.addEventListener('click', () => {
       const lacuna = lacunae[current];
       const digit = Number(button.dataset.digit);
-      const value = lacuna.options.find((v) => digitOf(v, lacuna.place) === digit);
-      if (chosen.get(lacuna.sign) === value) chosen.delete(lacuna.sign);
-      else chosen.set(lacuna.sign, value);
-      press(lacuna, chosen.get(lacuna.sign));
+      if (chosen.get(key(lacuna)) === digit) chosen.delete(key(lacuna));
+      else chosen.set(key(lacuna), digit);
+      press(lacuna);
       select(current);
       drawEdition();
     }));
@@ -880,6 +1126,7 @@
     initPlateWalk();
     initGrille();
     initBench();
+    initFragments();
     initTranscription();
   });
 })();

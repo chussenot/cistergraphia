@@ -1,20 +1,24 @@
 1. Random damage, 4000 sites per row (messages.txt, game plates)
-  one quadrant lost                            restored  70.4%  letters that balance: mean 2.54, max 10
+  one quadrant lost                            restored  70.9%  letters that balance: mean 2.52, max 10
     ...the 1s quadrant                         restored 100.0%  letters that balance: mean 1.00, max 1
-    ...the 10s quadrant                        restored  45.1%  letters that balance: mean 5.30, max 10
+    ...the 10s quadrant                        restored  45.3%  letters that balance: mean 5.30, max 10
     ...the 100s quadrant                       restored  62.1%  letters that balance: mean 1.38, max 2
-    ...the 1000s quadrant                      restored  73.8%  letters that balance: mean 2.55, max 9
-  1 of 5 stroke positions lost                 restored  88.2%  letters that balance: mean 1.12, max 2
-  2 of 5 stroke positions lost                 restored  81.7%  letters that balance: mean 1.31, max 4
-  3 of 5 stroke positions lost                 restored  76.6%  letters that balance: mean 1.60, max 7
-  two quadrants of one sign lost               restored  45.7%  letters that balance: mean 4.63, max 19
-  a quadrant lost in each sign of a pair       restored  49.3%  letters that balance: mean 4.37, max 19
-  whole sign lost (all four quadrants)         restored   9.7%  letters that balance: mean 15.43, max 28
+    ...the 1000s quadrant                      restored  72.6%  letters that balance: mean 2.64, max 9
+  1 of 5 stroke positions lost                 restored  88.0%  letters that balance: mean 1.12, max 2
+  2 of 5 stroke positions lost                 restored  81.3%  letters that balance: mean 1.31, max 4
+  3 of 5 stroke positions lost                 restored  76.4%  letters that balance: mean 1.60, max 7
+  two quadrants of one sign lost               restored  45.8%  letters that balance: mean 4.72, max 19
+  a quadrant lost in each sign of a pair       restored  48.1%  letters that balance: mean 4.52, max 19
+  whole sign lost (all four quadrants)         restored  10.2%  letters that balance: mean 15.75, max 28
 
 2. What the generator lays (Lacunae.inscribe), 400 plates
-  10496 lacunae on 31712 pairs (one pair in 3.0)
-  restored by the balance alone: 88.7%; left to the words: 11.3%
-  letters that balance, per lacuna: 1: 9313, 2: 1022, 3: 161
+  10568 lacunae on 31946 pairs (one pair in 3.0)
+  restored by the balance alone: 88.5%; left to the words: 11.5%
+  letters that balance, per lacuna: 1: 9356, 2: 1050, 3: 162
+
+3. With tally signs (Lacunae.inscribe tally: true), 200 plates
+  6910 lacunae on 16038 pairs (one pair in 2.3), 1808 of them whole signs (26.2%)
+  editions with no doubt left: 200 of 200
 
 # tally.rb
 12 x 12 plate (144 signs + 25 tally signs), 2000 trials each

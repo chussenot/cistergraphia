@@ -12,6 +12,8 @@
 #   detects the first two, and a grille's plate asks for its key
 # - A game plate can be weathered (some strokes lost); decoding one restores
 #   what the pairs decide, as an edition in the Leiden conventions
+# - A game plate can be broken (two to four fragments in a tray); decoding
+#   one rejoins it by its sums
 #
 # Design Decisions:
 # - Modular Sinatra app (sinatra/base), no classic top-level DSL
@@ -30,6 +32,8 @@
 require 'sinatra/base'
 require_relative 'lib/cistergraphia'
 require_relative 'web/view_helpers'
+require_relative 'web/bench_helpers'
+require_relative 'web/tray_helpers'
 require_relative 'web/form_params'
 require_relative 'web/figures'
 
@@ -42,7 +46,7 @@ class CistergraphiaApp < Sinatra::Base
     "form-action 'self'", "frame-ancestors 'none'"
   ].join('; ')
 
-  helpers ViewHelpers, Figures, FormParams
+  helpers ViewHelpers, BenchHelpers, TrayHelpers, Figures, FormParams
 
   configure do
     set :root, __dir__
@@ -103,8 +107,8 @@ class CistergraphiaApp < Sinatra::Base
     # the form, with what was written
     @passphrase_error = Cistergraphia::Secret.passphrase_problem(passphrase) if @secret
     @decoy = decoy
-    @weathered = weathered?
-    halt 422, erb(:index) if @passphrase_error || @grille_error || @decoy_error || @weathered_error
+    read_conditions
+    halt 422, erb(:index) if form_errors.any?
     @sequence, @svg_content, grille = inscribe_plate
     @layout = grille.as(:pair) if @decoy
     @symbols = @sequence.size

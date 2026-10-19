@@ -17,6 +17,8 @@
 # - --weathered writes a game plate that has lost some strokes; decoding a
 #   weathered plate restores what the pairs decide and prints the edition in
 #   the Leiden conventions: [r] restored, [b/l] for the reader to settle
+# - --broken writes a game plate in two to four fragments, laid in a tray
+#   under an empty board; decoding a broken plate rejoins it by its sums
 #
 # Design Decisions:
 # - Uses OptionParser for command-line argument parsing
@@ -46,17 +48,11 @@ parser = OptionParser.new do |opts|
     options[:message] = m
   end
 
-  opts.on('-o', '--output FILE', 'The output file path for the SVG') do |o|
-    options[:output] = o
-  end
+  opts.on('-o', '--output FILE', 'The output file path for the SVG') { |o| options[:output] = o }
 
-  opts.on('-p', '--png FILE', 'The output file path for the PNG') do |p|
-    options[:png] = p
-  end
+  opts.on('-p', '--png FILE', 'The output file path for the PNG') { |p| options[:png] = p }
 
-  opts.on('-d', '--decode FILE', 'Decode a Cistergraphia SVG and print its message') do |d|
-    options[:decode] = d
-  end
+  opts.on('-d', '--decode FILE', 'Decode a Cistergraphia SVG and print its message') { |d| options[:decode] = d }
 
   opts.on('-l', '--layout LAYOUT', [*Cistergraphia::Layout::KEYLESS.map(&:to_s), 'grille'],
           'Reading path: phaistos (the snail, default), rongorongo (turned rows) or grille') do |l|
@@ -67,6 +63,10 @@ parser = OptionParser.new do |opts|
   opts.on('--stencil FILE', 'Also write the grille as a stencil to print and cut') { |f| options[:stencil] = f }
   opts.on('--decoy MESSAGE', "A second message, for a novice's grille (implies a grille)") { |d| options[:decoy] = d }
   opts.on('-w', '--weathered', 'Game mode: some strokes lost, to restore') { options[:weathered] = true }
+  opts.on('-b', '--broken', 'Game mode: the plate in fragments, to rejoin (the snail only)') { options[:broken] = true }
+  opts.on('-t', '--tally', 'Game mode: row and column sums (with -w, whole signs may be lost)') do
+    options[:tally] = true
+  end
 
   opts.on('-s', '--secret', 'Secret mode: encrypt/decrypt with a passphrase (prompted, ' \
                             'or taken from CISTERGRAPHIA_PASSPHRASE)') do
@@ -157,10 +157,16 @@ begin
     abort '--stencil needs a grille: add --layout grille or --grille KEY'
   end
   abort Cistergraphia::Lacunae::NOT_SEALED if options[:weathered] && options[:secret]
+  abort Cistergraphia::Tally::NOT_SEALED if options[:tally] && options[:secret]
   abort Cistergraphia::Lacunae::NOT_TWO_READERS if options[:weathered] && options[:decoy]
+  abort Cistergraphia::Fragments::NOT_SEALED if options[:broken] && options[:secret]
+  abort Cistergraphia::Fragments::ONE_CONDITION if options[:broken] && (options[:weathered] || options[:tally])
   passphrase = ask_passphrase(confirm: true) if options[:secret]
-  if options[:weathered]
-    sequence, svg, damage = Cistergraphia::Lacunae.inscribe(message, layout: layout)
+  if options[:broken]
+    sequence, svg, pieces = Cistergraphia::Fragments.inscribe(message, layout: layout)
+    puts "Broken: #{pieces.size} fragments. Rejoin them on the board: every pair must balance (-d rejoins them)"
+  elsif options[:weathered]
+    sequence, svg, damage = Cistergraphia::Lacunae.inscribe(message, layout: layout, tally: options[:tally])
     lacunae = damage.size == 1 ? '1 lacuna' : "#{damage.size} lacunae"
     puts "Weathered: #{lacunae}. Restore them by balancing the pairs (-d shows the edition)"
   elsif options[:decoy]
@@ -168,7 +174,7 @@ begin
     sequence, svg, layout = Cistergraphia::TwoReaders.inscribe(message, options[:decoy], passphrase: passphrase,
                                                                                          grille: given)
   else
-    sequence, svg = Cistergraphia.inscribe(message, passphrase: passphrase, layout: layout)
+    sequence, svg = Cistergraphia.inscribe(message, passphrase: passphrase, layout: layout, tally: options[:tally])
   end
 rescue Cistergraphia::Error => e
   abort e.message

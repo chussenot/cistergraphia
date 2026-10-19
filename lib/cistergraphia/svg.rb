@@ -19,8 +19,8 @@ module Cistergraphia
 
     # Renders the sequence as a standalone SVG document along a layout's path
     # (with the strokes lost to weathering taken away: damage is Weathering's)
-    def render(sequence, layout: :phaistos, damage: {})
-      width, height, cols, _rows = Layout.dimensions(sequence, layout)
+    def render(sequence, layout: :phaistos, damage: {}, tally: false)
+      width, height, cols, _rows = Layout.dimensions(sequence, layout, tally: tally)
 
       <<~SVG
         <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}">
@@ -33,6 +33,7 @@ module Cistergraphia
         #{strokes(sequence, cols, layout, damage).map { |line| line_tag(line) }.join("\n")}
           </g>
         #{Lacunae.hidden(cols, layout, damage)}
+        #{Tally::Plate.layer(sequence, cols, layout) if tally}
         </svg>
       SVG
     end
@@ -141,8 +142,9 @@ module Cistergraphia
       lines
     end
 
+    # Strokes are lines in no named layer; lacunae and tally signs have their own
     def in_layer?(node, layer)
-      node.name == 'line' && (node.parent.attributes['class'] == Lacunae::CLASS) == (layer == :lacunae)
+      node.name == 'line' && node.parent.attributes['class'] == { lacunae: Lacunae::CLASS, tally: Tally::CLASS }[layer]
     end
 
     def parse(svg)

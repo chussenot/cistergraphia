@@ -536,12 +536,42 @@ class AppTest < Minitest::Test
     assert_equal 10, body.scan('class="bench-digit"').size
   end
 
-  # A lacuna's options differ only in its own place: what the visible strokes allow, nothing more
+  # A lacuna holds only what the file shows: its place, the digits its strokes allow, and
+  # its sign's surviving digits (none in its own place)
   def assert_lacuna_shows_only_the_file(lacuna)
     place = lacuna['place']
     assert_includes [1, 10, 100, 1000], place
-    refute_empty lacuna['options']
-    assert(lacuna['options'].map { |v| v - ((v / place) % 10 * place) }.uniq.one?)
+    refute_empty lacuna['digits']
+    assert_includes lacuna['open'], place
+    assert(lacuna['open'].all? { |open| (lacuna['known'] / open % 10).zero? })
+  end
+
+  def test_a_plate_can_carry_tally_signs
+    post '/generate', message: 'ora et labora', tally: '1'
+
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'class="tally-lines"'
+    assert_match(%r{<dt>Condition</dt><dd>Tally signs</dd>}, last_response.body)
+    refute_includes last_response.body, 'data-bench'
+  end
+
+  def test_a_weathered_plate_with_tallies_checks_them_on_the_bench
+    post '/generate', message: 'the brothers will gather in the chapter house', weathered: '1', tally: '1'
+
+    body = last_response.body
+    assert_match(%r{<dt>Condition</dt><dd>Weathered, with tally signs</dd>}, body)
+    assert_includes body, 'data-tally="'
+    assert_match(/data-bench-tally>Tallies, \w+: row \?, column \?</, body)
+  end
+
+  def test_tally_signs_go_back_to_the_form_when_they_cannot_be_drawn
+    post '/generate', message: 'ora', layout: 'grille', tally: '1'
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, Cistergraphia::Tally::NOT_UNDER_A_GRILLE
+
+    post '/generate', message: 'ora', mode: 'secret', passphrase: 'abbey of molesme', tally: '1'
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, Cistergraphia::Tally::NOT_SEALED
   end
 
   def test_an_intact_plate_has_no_bench
@@ -581,5 +611,53 @@ class AppTest < Minitest::Test
     post '/decode', svg: svg, grille: grille.to_s
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'leiden-'
+  end
+
+  def test_a_broken_plate_lays_its_fragments_in_a_tray
+    post '/generate', message: 'the brothers will gather in the chapter house', broken: '1'
+
+    assert_predicate last_response, :ok?
+    body = last_response.body
+    data = JSON.parse(CGI.unescapeHTML(body[/data-fragments="([^"]*)"/, 1]))
+    count = body.scan('<g class="fragment"').size
+    assert_includes 2..Cistergraphia::Fragments::MAX_PIECES, count
+    assert_match(%r{<dt>Condition</dt><dd>Broken, in #{count} fragments</dd>}, body)
+    assert_equal count, data['fragments'].size
+    assert_includes body, 'data-rejoin-status'
+    refute_includes body, 'data-plate-cells' # no walking a plate in pieces
+  end
+
+  # The page holds what each fragment shows, read both ways, never where it goes
+  def test_a_broken_plate_page_never_says_where_a_fragment_goes
+    post '/generate', message: 'ora et labora', broken: '1'
+
+    data = JSON.parse(CGI.unescapeHTML(last_response.body[/data-fragments="([^"]*)"/, 1]))
+    assert_equal 6, data['size']
+    data['fragments'].each do |fragment|
+      assert_equal %w[cols rows signs], fragment.keys.sort
+      assert_equal fragment['rows'] * fragment['cols'], fragment['signs'].size
+    end
+  end
+
+  def test_a_broken_plate_goes_back_to_the_form_when_it_cannot_break
+    { { layout: 'rongorongo' } => Cistergraphia::Fragments::NOT_ALONG_THE_ROWS,
+      { layout: 'grille' } => Cistergraphia::Fragments::NOT_UNDER_A_GRILLE,
+      { weathered: '1' } => Cistergraphia::Fragments::ONE_CONDITION,
+      { mode: 'secret', passphrase: 'abbey of molesme' } => Cistergraphia::Fragments::NOT_SEALED }.each do |form, error|
+      post '/generate', { message: 'ora et labora', broken: '1' }.merge(form)
+
+      assert_equal 422, last_response.status, form.inspect
+      assert_includes last_response.body, CGI.escapeHTML(error)
+      assert_match(/name="broken" value="1" data-weathered checked/, last_response.body)
+    end
+  end
+
+  def test_a_broken_plate_is_read_back_rejoined
+    _, svg, = Cistergraphia::Fragments.inscribe('ora et labora', random: Random.new(3))
+
+    post '/decode', svg: svg
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'Rejoined from a broken plate'
+    assert_includes last_response.body, 'ora et labora'
   end
 end
