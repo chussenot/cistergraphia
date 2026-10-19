@@ -8,7 +8,7 @@ modes. Conclusions and sources: [docs/security-study.md](../../docs/security-stu
 | [`blind-llm/`](blind-llm/) | An LLM agent with a shell, given only 10 SVGs | 10/10 messages in ~2.5 min | not run (nothing to reason about) |
 | [`crack.py`](crack.py) | A script: public Cistercian glyphs + word lists | 100% from **one** SVG; 10/10 | stops at step 2; 0% |
 | [`blind-llm-grille/`](blind-llm-grille/) | The same agent, 10 SVGs under the Grille layout | 10/10 messages in ~26 min | not run |
-| [`crack_grille.py`](crack_grille.py) | A script that knows the scheme (Kerckhoffs) but not the grille's key | 10/10 from single SVGs; plates up to 18 × 18 | 0%: every branch dies at once |
+| [`crack_grille.py`](crack_grille.py) | A script that knows the scheme (Kerckhoffs) but not the grille's key | 10/10 from single SVGs; plates up to 16 × 16, sometimes 18 × 18; shared keys fall | 0%: every branch dies at once |
 
 ## Scripted attack
 
@@ -38,7 +38,8 @@ start that reads as the most words is kept. `--words` also prunes with the word 
 letters come; `--shared-key` takes the plates to share one grille and searches them together. It
 never enumerates keys.
 
-Short plates fall in seconds; from 20 × 20 (about 190 characters) the search runs out of steps.
+Short plates fall in seconds; from 18 × 18 (about 150 characters) the search may run out of steps,
+from 20 × 20 it does, unless several plates share one key.
 That bounds this search, not the grille: see [the study](../../docs/security-study.md#experiment-3-the-grille).
 [`results/grille-attack.log`](results/grille-attack.log) holds the runs it quotes:
 

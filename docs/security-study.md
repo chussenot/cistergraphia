@@ -7,7 +7,7 @@
 | Mode | Who can read a message | Evidence |
 |---|---|---|
 | **Game** (no passphrase) | Anyone. An LLM agent recovered 10/10 messages from the SVGs alone in about 2.5 minutes, and a 300-line script recovers a message from **a single** SVG. | [blind LLM](../experiments/cryptanalysis/blind-llm/PROTOCOL.md), [scripted attack](../experiments/cryptanalysis/results/scripted-attack.log) |
-| **Game under a Grille** (50-bit key) | Anyone, for short messages. An LLM agent recovered 10/10 from the SVGs alone in about 26 minutes; a script that knows the scheme but not the key reads plates up to 18 × 18 (about 150 characters) from a single SVG, in seconds. Longer plates resisted that script; nothing says they resist a better one. | [blind LLM](../experiments/cryptanalysis/blind-llm-grille/PROTOCOL.md), [scripted attack](../experiments/cryptanalysis/results/grille-attack.log) |
+| **Game under a Grille** (50-bit key) | Anyone, for short messages. An LLM agent recovered 10/10 from the SVGs alone in about 26 minutes; a script that knows the scheme but not the key reads plates up to 16 × 16 (about 120 characters) from a single SVG, in seconds, and sometimes 18 × 18. Longer plates resisted that script, unless several shared one key; nothing says they resist a better one. | [blind LLM](../experiments/cryptanalysis/blind-llm-grille/PROTOCOL.md), [scripted attack](../experiments/cryptanalysis/results/grille-attack.log) |
 | **Secret** (passphrase) | Only someone with the passphrase, unless it is weak enough to guess. | The scripted attack finds no structure (pair test at chance level). The construction is standard authenticated encryption. |
 
 The game mode is a puzzle, not encryption. It has no key, so by
@@ -102,16 +102,22 @@ touches the key space ([log](../experiments/cryptanalysis/results/grille-attack.
 | Plate | Message | Result |
 |---|---|---|
 | 12 × 12 and 14 × 14 (the 10 messages of Experiment 2, 7 fresh corpora) | 53 to 81 characters | **70/70**; most in under a second, the slowest in 1.5 min |
-| 16 × 16 | 119 characters | recovered, 0.6 s |
-| 18 × 18 | 157 characters | recovered, 22 s |
-| 20 × 20 to 30 × 30 | 195 to 416 characters | no grille within 400 million steps (6 to 9 min each) |
-| 3 plates of 20 × 20 under **one** key | 171 to 177 characters each | no grille within 300 million steps (12 min) |
+| 16 × 16 | 119 characters | recovered in both runs, in under 3 s |
+| 18 × 18 | 157 characters | recovered in one run (22 s), not in the other (400 million steps) |
+| 20 × 20 to 30 × 30 | 195 to 428 characters | no grille within 400 million steps (6 to 11 min each) |
+| 3 plates of 20 × 20 under **one** key | 171 to 177 characters each | **recovered in 2 runs of 4**, in 16 s and in 3 min |
+| The first of those plates, alone | 177 characters | no grille within 400 million steps |
 
-The wall at 20 × 20 is **this search's, not the grille's.** In row order, each row opens up to
+The wall at 18 to 20 signs a side is **this search's, not the grille's.** In row order, each row opens up to
 n new orbits (4 choices each) but completes only about n/2 pairs to check them, so the cost grows
 exponentially with the side. A search that orders the orbits by the constraints they share, the
 blind agent's annealing, or more compute would likely go further; none was tried at that size.
-Do not count on a long message for secrecy. Two more reasons:
+Do not count on a long message for secrecy. Three more reasons:
+
+- **A key used twice is much weaker.** Plates under one grille must all read as letters through
+  the same holes, so each plate prunes the search for the others. Three 20 × 20 plates under one
+  key fell in seconds or minutes, where each of them alone held out. Draw a new grille for each
+  plate (the default); share a key only for a game.
 
 - **The key is 50 bits.** With the code, trying every key is about 10¹⁵ grilles, each checked by
   its first few pairs. Out of reach for a laptop, within reach of dedicated hardware.
@@ -208,7 +214,7 @@ payload bytes ──base 10,000──▶ glyph values ──▶ [length, length,
 - No one attempted a passphrase-guessing attack on secret mode. Its strength there is scrypt's
   cost times the passphrase's entropy.
 - The Grille was measured on short plates by both attackers, and on long ones by the script
-  only. That the script stalls at 20 × 20 bounds this search, not the grille.
+  only. That the script stalls from 18 × 18 bounds this search, not the grille.
 
 ## Reproduce
 
