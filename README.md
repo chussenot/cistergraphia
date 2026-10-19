@@ -61,8 +61,9 @@ leaves, reads the other.
 Old records reach us damaged, and arithmetic outlives the damage: the Inka khipus repeat their
 cords' values as sums on higher cords, and in 2024 two fragments of a broken one were rejoined
 by that arithmetic alone. A weathered plate has lost some strokes. Each pair must still add up
-to a value on the tablet, so the restoration is the puzzle, and the decoder prints its edition
-the way epigraphers do: `[r]` restored, `[b/l]` for the words to decide.
+to a value on the tablet, so the restoration is the puzzle: on the plate page, press the lost
+digits back in and each pair is weighed. The decoder prints the edition the way epigraphers
+do: `[r]` restored, `[b/l]` for the words to decide.
 
 Why two ways to send it?
 ------------------------

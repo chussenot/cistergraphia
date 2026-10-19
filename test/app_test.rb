@@ -524,6 +524,32 @@ class AppTest < Minitest::Test
     refute_match(/ style="/, body)
   end
 
+  def test_a_weathered_plate_has_a_bench_that_never_holds_a_lost_value
+    post '/generate', message: 'the brothers will gather in the chapter house', weathered: '1'
+
+    body = last_response.body
+    lacunae = JSON.parse(CGI.unescapeHTML(body[/data-lacunae="([^"]*)"/, 1]))
+    refute_empty lacunae
+    lacunae.each { |lacuna| assert_lacuna_shows_only_the_file(lacuna) }
+    assert_match(/data-bench-sum>[\d?]{4} \+ [\d?]{4} = \?</, body)
+    assert_match(/data-bench-edition>[^<]*\[\.\]/, body)
+    assert_equal 10, body.scan('class="bench-digit"').size
+  end
+
+  # A lacuna's options differ only in its own place: what the visible strokes allow, nothing more
+  def assert_lacuna_shows_only_the_file(lacuna)
+    place = lacuna['place']
+    assert_includes [1, 10, 100, 1000], place
+    refute_empty lacuna['options']
+    assert(lacuna['options'].map { |v| v - ((v / place) % 10 * place) }.uniq.one?)
+  end
+
+  def test_an_intact_plate_has_no_bench
+    post '/generate', message: 'ora et labora'
+
+    refute_includes last_response.body, 'data-bench'
+  end
+
   def test_a_sealed_plate_cannot_weather
     post '/generate', message: 'relics', mode: 'secret', passphrase: 'abbey of molesme', weathered: '1'
 

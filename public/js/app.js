@@ -707,6 +707,164 @@
     input.addEventListener('change', show);
   }
 
+  // ---------- The restoration bench: a weathered plate, restored pair by pair ----------
+  // Choose a lacuna (on the plate, or step through them), press a digit back
+  // in: its strokes are pressed in rubric where the surface is lost, and the
+  // pair is weighed. The page knows only what the file shows: it says whether
+  // a pair balances, never whether a restoration is right.
+  function initBench() {
+    const bench = $('[data-bench]');
+    const frame = $('[data-plate]');
+    const svg = plateSvg();
+    if (!bench || !frame || !svg || !Ink.glyphTable()) return;
+    const lacunae = JSON.parse(bench.dataset.lacunae);
+    if (!lacunae.length) return;
+    const values = JSON.parse(frame.dataset.plateCells).map(([, , value]) => value);
+    const letters = Object.fromEntries(Object.entries(Ink.glyphTable().tablet).map(([char, value]) => [value, char]));
+    const NULL_MARK = 9999;
+    const bySign = new Map(lacunae.map((lacuna) => [lacuna.sign, lacuna]));
+    const chosen = new Map(); // sign => the value pressed into it
+    const which = $('[data-bench-which]', bench);
+    const sumEl = $('[data-bench-sum]', bench);
+    const verdict = $('[data-bench-verdict]', bench);
+    const edition = $('[data-bench-edition]', bench);
+    const digits = $$('[data-digit]', bench);
+    const digitOf = (value, place) => Math.floor(value / place) % 10;
+    const canonical = (coords) => {
+      const [a, b] = [coords.slice(0, 2), coords.slice(2)];
+      return (a[0] < b[0] || (a[0] === b[0] && a[1] <= b[1]) ? [...a, ...b] : [...b, ...a]).join(',');
+    };
+    let current = 0;
+
+    // A layer over each lacuna: the strokes pressed back, and a target to choose it by
+    const layer = document.createElementNS(SVG_NS, 'g');
+    layer.setAttribute('class', 'bench-layer');
+    svg.appendChild(layer);
+    lacunae.forEach((lacuna, i) => {
+      const g = document.createElementNS(SVG_NS, 'g');
+      g.setAttribute('transform', `translate(${lacuna.x} ${lacuna.y})${lacuna.turned ? ' rotate(180 50 75)' : ''}`);
+      const points = lacuna.lost.flatMap((key) => {
+        const n = key.split(',').map(Number);
+        return [[n[0], n[1]], [n[2], n[3]]];
+      });
+      const xs = points.map(([x]) => x);
+      const ys = points.map(([, y]) => y);
+      const target = document.createElementNS(SVG_NS, 'rect');
+      target.setAttribute('class', 'bench-target');
+      target.setAttribute('x', Math.min(...xs) - 10);
+      target.setAttribute('y', Math.min(...ys) - 10);
+      target.setAttribute('width', Math.max(...xs) - Math.min(...xs) + 20);
+      target.setAttribute('height', Math.max(...ys) - Math.min(...ys) + 20);
+      target.setAttribute('rx', 6);
+      target.addEventListener('click', () => select(i));
+      const pressed = document.createElementNS(SVG_NS, 'g');
+      g.append(pressed, target);
+      layer.appendChild(g);
+      lacuna.view = { target, pressed };
+    });
+
+    // A sign's value as far as the reader knows it: '?' where its lacuna is still open
+    const shown = (sign) => {
+      const lacuna = bySign.get(sign);
+      if (!lacuna) return String(values[sign]).padStart(4, '0');
+      const value = chosen.has(sign) ? chosen.get(sign) : lacuna.options[0];
+      const text = String(value).padStart(4, '0').split('');
+      text[3 - Math.log10(lacuna.place)] = chosen.has(sign) ? String(digitOf(value, lacuna.place)) : '?';
+      return text.join('');
+    };
+    const known = (sign) => (bySign.has(sign) ? chosen.get(sign) : values[sign]);
+    // What a pair reads as: a letter, null (an empty pair), false (no balance) or undefined (still open)
+    const weigh = (first) => {
+      const [a, b] = [known(first), known(first + 1)];
+      if (b === NULL_MARK) return null;
+      if (a === undefined || b === undefined) return undefined;
+      return letters[a + b] ?? false;
+    };
+
+    function drawEdition() {
+      const out = [];
+      for (let first = 0; first < values.length; first += 2) {
+        const open = bySign.has(first) || bySign.has(first + 1);
+        const reading = weigh(first);
+        // A null pair is left out when its 9999 can be seen (as the server does);
+        // one whose 9999 was lost and pressed back keeps the three characters
+        // its [.] took ([·], nothing written here), so the line never rewraps
+        if (reading === null && !bySign.has(first + 1)) continue;
+        if (reading === null) { out.push('[·]'); continue; }
+        if (reading === undefined) out.push('[.]');
+        else if (reading === false) out.push('[?]');
+        else if (!open) out.push(reading);
+        else out.push(`[${reading === ' ' ? '\u00a0' : reading}]`); // a restored space: brackets, and no new break
+      }
+      edition.textContent = out.join('');
+    }
+
+    // Two short lines that never wrap, even on the smallest phone: the sum, and its verdict
+    function drawBalance() {
+      const lacuna = lacunae[current];
+      const first = lacuna.sign - (lacuna.sign % 2);
+      const reading = weigh(first);
+      let total = '?';
+      if (reading === null && chosen.has(lacuna.sign)) total = 'null';
+      else if (reading !== undefined && reading !== null) total = known(first) + known(first + 1);
+      sumEl.textContent = `${shown(first)} + ${shown(first + 1)} = ${total}`;
+      const done = lacunae.every((l) => chosen.has(l.sign))
+        && Array.from({ length: values.length / 2 }, (_, k) => weigh(2 * k)).every((r) => r !== false);
+      if (done) verdict.textContent = 'Every pair balances.';
+      else if (reading === null) verdict.textContent = 'A null pair: any digit.';
+      else if (reading === undefined) verdict.textContent = 'Press a digit to balance it.';
+      else if (reading === false) verdict.textContent = 'Not on the tablet.';
+      else verdict.textContent = `“${reading === ' ' ? 'space' : reading}”: it balances.`;
+    }
+
+    function press(lacuna, value) {
+      lacuna.view.pressed.replaceChildren();
+      if (value === undefined) return;
+      const lost = new Set(lacuna.lost);
+      Ink.strokesOf(value).filter(({ place, coords }) => place === lacuna.place && lost.has(canonical(coords)))
+        .forEach((stroke, i) => {
+          const wedge = document.createElementNS(SVG_NS, 'path');
+          wedge.setAttribute('d', Ink.glyphTable().wedges[stroke.coords.join(',')]);
+          wedge.setAttribute('class', 'restored');
+          lacuna.view.pressed.appendChild(wedge);
+          Ink.press(wedge, i * 70);
+        });
+    }
+
+    function select(i) {
+      current = (i + lacunae.length) % lacunae.length;
+      const lacuna = lacunae[current];
+      lacunae.forEach((l, k) => l.view.target.classList.toggle('is-current', k === current));
+      which.textContent = `Lacuna ${current + 1} of ${lacunae.length}: the ${PLACE_NAMES[lacuna.place]}`;
+      digits.forEach((button) => {
+        const digit = Number(button.dataset.digit);
+        const value = lacuna.options.find((v) => digitOf(v, lacuna.place) === digit);
+        button.disabled = value === undefined;
+        button.setAttribute('aria-pressed', String(chosen.has(lacuna.sign) && digitOf(chosen.get(lacuna.sign), lacuna.place) === digit));
+        Ink.adopt($('svg', button), digit * lacuna.place);
+      });
+      drawBalance();
+    }
+
+    digits.forEach((button) => button.addEventListener('click', () => {
+      const lacuna = lacunae[current];
+      const digit = Number(button.dataset.digit);
+      const value = lacuna.options.find((v) => digitOf(v, lacuna.place) === digit);
+      if (chosen.get(lacuna.sign) === value) chosen.delete(lacuna.sign);
+      else chosen.set(lacuna.sign, value);
+      press(lacuna, chosen.get(lacuna.sign));
+      select(current);
+      drawEdition();
+    }));
+    $$('[data-bench-step]', bench).forEach((button) => button.addEventListener('click', () => {
+      select(current + Number(button.dataset.benchStep));
+    }));
+
+    bench.classList.remove('awaits-script');
+    select(0);
+    drawEdition();
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     initModes();
     initLayouts();
@@ -721,6 +879,7 @@
     inkPlate();
     initPlateWalk();
     initGrille();
+    initBench();
     initTranscription();
   });
 })();

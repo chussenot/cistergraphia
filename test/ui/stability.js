@@ -129,6 +129,20 @@ const openWeatheredPlate = async (page) => {
   await page.waitForSelector('[data-plate] svg');
 };
 
+// One weathered plate page for both the JS-on and JS-off runs: two random
+// plates would differ in their editions, which is not what the comparison is about
+const pageOnce = new Map();
+const openSamePlate = (form) => async (page) => {
+  const key = JSON.stringify(form);
+  if (!pageOnce.has(key)) {
+    const response = await page.request.post(`${baseUrl}/generate`, { form });
+    pageOnce.set(key, await response.text());
+  }
+  await page.goto(`${baseUrl}/`);
+  await page.setContent(pageOnce.get(key), { waitUntil: 'load' });
+  await page.waitForSelector('[data-plate] svg');
+};
+
 // The number a Lectio sign shows, read from its strokes with the page's own table
 const lectioTarget = (page) => page.evaluate(() => {
   const key = (coords) => coords.join(',');
@@ -217,7 +231,11 @@ const FLOWS = [
     open: openWeatheredPlate,
     steps: [
       { name: 'walk the worn signs', act: async (p) => { await p.focus('[data-plate]'); for (let i = 0; i < 12; i += 1) await p.keyboard.press('ArrowRight'); await p.keyboard.press('End'); } },
-      { name: 'point at signs', act: hoverPlate }
+      { name: 'point at signs', act: hoverPlate },
+      { name: 'choose a lacuna on the plate', act: (p) => p.click('.bench-target >> nth=2', { force: true }) },
+      { name: 'press every digit', act: async (p) => { for (const button of await p.locator('[data-digit]:not([disabled])').all()) await button.click(); } },
+      { name: 'take a digit back', act: async (p) => { const pressed = p.locator('[data-digit][aria-pressed="true"]'); if (await pressed.count()) await pressed.click(); } },
+      { name: 'step through the lacunae', act: async (p) => { for (let i = 0; i < 4; i += 1) await p.click('[data-bench-step="1"]'); await p.click('[data-bench-step="-1"]'); } }
     ]
   },
   {
@@ -299,7 +317,7 @@ const PAGES = [
       await page.waitForSelector('[data-plate] svg');
     }
   },
-  { page: 'weathered', open: openWeatheredPlate },
+  { page: 'weathered', open: openSamePlate({ message: MESSAGE, weathered: '1' }) },
   {
     page: 'edition',
     open: async (page) => {
