@@ -612,4 +612,52 @@ class AppTest < Minitest::Test
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'leiden-'
   end
+
+  def test_a_broken_plate_lays_its_fragments_in_a_tray
+    post '/generate', message: 'the brothers will gather in the chapter house', broken: '1'
+
+    assert_predicate last_response, :ok?
+    body = last_response.body
+    data = JSON.parse(CGI.unescapeHTML(body[/data-fragments="([^"]*)"/, 1]))
+    count = body.scan('<g class="fragment"').size
+    assert_includes 2..Cistergraphia::Fragments::MAX_PIECES, count
+    assert_match(%r{<dt>Condition</dt><dd>Broken, in #{count} fragments</dd>}, body)
+    assert_equal count, data['fragments'].size
+    assert_includes body, 'data-rejoin-status'
+    refute_includes body, 'data-plate-cells' # no walking a plate in pieces
+  end
+
+  # The page holds what each fragment shows, read both ways, never where it goes
+  def test_a_broken_plate_page_never_says_where_a_fragment_goes
+    post '/generate', message: 'ora et labora', broken: '1'
+
+    data = JSON.parse(CGI.unescapeHTML(last_response.body[/data-fragments="([^"]*)"/, 1]))
+    assert_equal 6, data['size']
+    data['fragments'].each do |fragment|
+      assert_equal %w[cols rows signs], fragment.keys.sort
+      assert_equal fragment['rows'] * fragment['cols'], fragment['signs'].size
+    end
+  end
+
+  def test_a_broken_plate_goes_back_to_the_form_when_it_cannot_break
+    { { layout: 'rongorongo' } => Cistergraphia::Fragments::NOT_ALONG_THE_ROWS,
+      { layout: 'grille' } => Cistergraphia::Fragments::NOT_UNDER_A_GRILLE,
+      { weathered: '1' } => Cistergraphia::Fragments::ONE_CONDITION,
+      { mode: 'secret', passphrase: 'abbey of molesme' } => Cistergraphia::Fragments::NOT_SEALED }.each do |form, error|
+      post '/generate', { message: 'ora et labora', broken: '1' }.merge(form)
+
+      assert_equal 422, last_response.status, form.inspect
+      assert_includes last_response.body, CGI.escapeHTML(error)
+      assert_match(/name="broken" value="1" data-weathered checked/, last_response.body)
+    end
+  end
+
+  def test_a_broken_plate_is_read_back_rejoined
+    _, svg, = Cistergraphia::Fragments.inscribe('ora et labora', random: Random.new(3))
+
+    post '/decode', svg: svg
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'Rejoined from a broken plate'
+    assert_includes last_response.body, 'ora et labora'
+  end
 end

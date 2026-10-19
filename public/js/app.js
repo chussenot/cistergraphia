@@ -570,18 +570,12 @@
     }));
   }
 
-  // The exported file must be the plain SVG the decoder reads: drop
-  // everything added for display (ink, highlight, classes, styles)
-  function cleanSvgSource() {
-    const svg = plateSvg();
-    if (!svg) return null;
-    const clone = svg.cloneNode(true);
-    $$('.plate-focus', clone).forEach((el) => el.remove());
-    [clone, ...$$('*', clone)].forEach((el) => {
-      el.removeAttribute('class');
-      el.removeAttribute('style');
-    });
-    return new XMLSerializer().serializeToString(clone);
+  // The exported file is the plain SVG the decoder reads: the server's own,
+  // as Read it back sends it, never the shown plate (ink, highlight and walk
+  // are added to it for display). Its classes are part of the file: a
+  // weathered plate's lacunae, read without theirs, would be taken for strokes
+  function plainSvgSource() {
+    return $('.readback input[name="svg"]')?.value ?? null;
   }
 
   function download(blob, filename) {
@@ -652,12 +646,233 @@
         });
         return;
       }
-      const source = cleanSvgSource();
+      const source = plainSvgSource();
       if (!source) return;
       if (action === 'download-svg') download(new Blob([source], { type: 'image/svg+xml' }), 'cistergraphia.svg');
       if (action === 'download-png') downloadPng(source);
       if (action === 'copy-svg') copy(source, 'SVG code copied');
     });
+  }
+
+  // ---------- A broken plate: its fragments rejoined on the board ----------
+  // The fragments are the file's own groups, moved by their transform. Each
+  // lies in its own frame, whose box starts where the board does: moved by
+  // whole cells, it lands on the board's cells. The page knows what each
+  // fragment shows (every sign read upright and turned), never where it goes:
+  // once the fragments cover the board, it reads them along both paths and
+  // counts the pairs that balance.
+  function initFragments() {
+    const frame = $('[data-plate]');
+    const panel = $('[data-rejoin]');
+    const svg = plateSvg();
+    if (!frame || !panel || !svg || !frame.dataset.fragments) return;
+    const data = JSON.parse(frame.dataset.fragments);
+    const [cellWidth, cellHeight] = data.cell;
+    const [status, readingEl, turnButton, resetButton] = ['status', 'reading', 'turn', 'reset']
+      .map((name) => $(`[data-rejoin-${name}]`, panel));
+    const pieces = $$('g.fragment', svg).map((group, i) => {
+      const [, x, y, tilt] = group.getAttribute('transform')
+        .match(/translate\(([-\d.]+) ([-\d.]+)\)\s*rotate\(([-\d.]+)/).map(Number);
+      const { rows, cols, signs } = data.fragments[i];
+      const home = { x, y, tilt, row: null, col: null, turned: false };
+      return { group, rows, cols, signs, home, ...home, width: cols * cellWidth, height: rows * cellHeight };
+    });
+    const total = pieces.length;
+    let picked = null;
+
+    const draw = (piece) => {
+      const cx = data.board + (piece.width / 2);
+      const cy = data.board + (piece.height / 2);
+      const turn = piece.tilt + (piece.turned ? 180 : 0);
+      piece.group.setAttribute('transform', `translate(${piece.x} ${piece.y}) rotate(${turn} ${cx} ${cy})`);
+    };
+
+    // To the nearest cell, straight, and never off the sheet
+    const snap = (piece) => {
+      const view = svg.viewBox.baseVal;
+      const lastCol = Math.floor((view.width - data.board - piece.width) / cellWidth);
+      const lastRow = Math.floor((view.height - data.board - piece.height) / cellHeight);
+      piece.col = Math.min(Math.max(Math.round(piece.x / cellWidth), 0), lastCol);
+      piece.row = Math.min(Math.max(Math.round(piece.y / cellHeight), 0), lastRow);
+      piece.x = piece.col * cellWidth;
+      piece.y = piece.row * cellHeight;
+      piece.tilt = 0;
+      draw(piece);
+    };
+
+    const onBoard = (piece) => piece.row !== null
+      && piece.row + piece.rows <= data.size && piece.col + piece.cols <= data.size;
+
+    // Every board cell's sign as it lies there, [upright, turned], or null if the board is not covered once over
+    const laid = () => {
+      if (!pieces.every(onBoard)) return null;
+      const board = Array.from({ length: data.size }, () => Array(data.size).fill(null));
+      for (const piece of pieces) {
+        for (let r = 0; r < piece.rows; r += 1) {
+          for (let c = 0; c < piece.cols; c += 1) {
+            const [upright, half] = piece.signs[(r * piece.cols) + c];
+            const [row, col] = piece.turned ? [piece.rows - 1 - r, piece.cols - 1 - c] : [r, c];
+            const cell = board[piece.row + row];
+            if (cell[piece.col + col]) return null; // two fragments overlap
+            cell[piece.col + col] = piece.turned ? [half, upright] : [upright, half];
+          }
+        }
+      }
+      return board;
+    };
+
+    // How many pairs balance along a path, and the letters they make
+    const weigh = (board, path) => {
+      let balanced = 0;
+      let text = '';
+      for (let i = 0; i + 1 < path.length; i += 2) {
+        const [a, b] = [path[i], path[i + 1]].map(([row, col, turned]) => board[row][col][turned ? 1 : 0]);
+        if (a === null || b === null) continue;
+        if (b === data.null) balanced += 1; // a null pair: noise
+        else if (data.tablet[a + b] !== undefined) {
+          balanced += 1;
+          text += data.tablet[a + b];
+        }
+      }
+      return { balanced, pairs: Math.floor(path.length / 2), text };
+    };
+
+    const update = () => {
+      const board = laid();
+      readingEl.textContent = '';
+      frame.classList.remove('is-whole');
+      if (!board) {
+        const on = pieces.filter(onBoard).length;
+        status.textContent = on === total ? 'All on the board, but two overlap.' : `On the board: ${on} of ${total} fragments.`;
+        return;
+      }
+      const best = Object.values(data.paths).map((path) => weigh(board, path))
+        .reduce((a, b) => (b.balanced > a.balanced ? b : a));
+      if (best.balanced === best.pairs && best.text) {
+        status.textContent = 'Whole again: every pair balances.';
+        readingEl.textContent = `It reads: ${best.text}`;
+        frame.classList.add('is-whole');
+        return;
+      }
+      status.textContent = `Covered: ${best.balanced} of ${best.pairs} pairs balance.`;
+    };
+
+    const pick = (piece) => {
+      picked = piece;
+      pieces.forEach((other) => {
+        other.group.classList.toggle('is-picked', other === piece);
+        other.group.setAttribute('aria-pressed', String(other === piece));
+      });
+      turnButton.disabled = !piece;
+    };
+
+    const turn = (piece) => {
+      piece.turned = !piece.turned;
+      draw(piece);
+      update();
+    };
+
+    // Uppermost while it moves; focus survives the move in the document
+    const raise = (piece) => {
+      if (svg.lastElementChild === piece.group) return;
+      const focused = document.activeElement === piece.group;
+      svg.appendChild(piece.group);
+      if (focused) piece.group.focus();
+    };
+
+    const toSvg = (event) => {
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      return point.matrixTransform(svg.getScreenCTM().inverse());
+    };
+
+    let drag = null;
+    pieces.forEach((piece, i) => {
+      const { group } = piece;
+      group.setAttribute('tabindex', '0');
+      group.setAttribute('role', 'button');
+      group.setAttribute('aria-pressed', 'false');
+      group.setAttribute('aria-label', `Fragment ${i + 1} of ${total}: ${piece.rows} rows of ${piece.cols} signs`);
+
+      group.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        raise(piece);
+        group.focus({ preventScroll: true });
+        group.setPointerCapture(event.pointerId);
+        drag = { piece, from: toSvg(event), x: piece.x, y: piece.y, moved: false };
+      });
+      group.addEventListener('pointermove', (event) => {
+        if (!drag || drag.piece !== piece) return;
+        const at = toSvg(event);
+        const [dx, dy] = [at.x - drag.from.x, at.y - drag.from.y];
+        if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+        drag.moved = true;
+        piece.x = drag.x + dx;
+        piece.y = drag.y + dy;
+        piece.tilt = 0;
+        draw(piece);
+      });
+      const drop = () => {
+        if (!drag || drag.piece !== piece) return;
+        const { moved } = drag;
+        drag = null;
+        if (moved) {
+          snap(piece);
+          pick(piece);
+          update();
+        } else pick(picked === piece ? null : piece);
+      };
+      group.addEventListener('pointerup', drop);
+      group.addEventListener('pointercancel', drop);
+      group.addEventListener('dblclick', () => turn(piece));
+      group.addEventListener('keydown', (event) => {
+        const steps = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] };
+        if (event.key in steps) {
+          event.preventDefault();
+          if (piece.row === null) snap(piece);
+          const [dr, dc] = steps[event.key];
+          piece.x = (piece.col + dc) * cellWidth;
+          piece.y = (piece.row + dr) * cellHeight;
+          snap(piece);
+          pick(piece);
+          update();
+        } else if (event.key === 't' || event.key === 'T') {
+          event.preventDefault();
+          turn(piece);
+        } else if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          pick(picked === piece ? null : piece);
+        } else if (event.key === 'Escape') pick(null);
+      });
+    });
+
+    // A fragment picked, then a cell: its top-left corner goes there
+    svg.addEventListener('click', (event) => {
+      if (!picked || event.target.closest('g.fragment')) return;
+      const at = toSvg(event);
+      picked.x = Math.floor((at.x - data.board) / cellWidth) * cellWidth;
+      picked.y = Math.floor((at.y - data.board) / cellHeight) * cellHeight;
+      raise(picked);
+      snap(picked);
+      picked.group.focus({ preventScroll: true }); // the keys go on moving and turning it
+      update();
+    });
+
+    turnButton.addEventListener('click', () => { if (picked) turn(picked); });
+    resetButton.addEventListener('click', () => {
+      pieces.forEach((piece) => {
+        Object.assign(piece, piece.home);
+        draw(piece);
+      });
+      pick(null);
+      update();
+    });
+
+    frame.classList.add('is-rejoining');
+    panel.classList.remove('awaits-script');
+    $('[data-plate-hint]').classList.remove('awaits-script');
   }
 
   // ---------- Transcription: the message is read off, letter by letter ----------
@@ -911,6 +1126,7 @@
     initPlateWalk();
     initGrille();
     initBench();
+    initFragments();
     initTranscription();
   });
 })();

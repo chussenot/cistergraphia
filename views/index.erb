@@ -26,8 +26,9 @@ Design Decisions:
   plate unless the key of one already shared is given: that field unfolds
   below the message, like the passphrase, and keeps its value on a 422
 - Condition: a weathered plate loses some strokes (game only: a sealed plate
-  would never open). One checkbox under the layouts, with one reserved line
-  whose note says why it is off in secret mode
+  would never open), tally signs sum its rows and columns, a broken plate
+  comes in fragments to rejoin. Checkboxes under the layouts, with one
+  reserved note that says why they are off in secret mode
 
 Constraints:
 - Posts to /generate; message limited to 500 characters
@@ -94,11 +95,16 @@ Constraints:
                      aria-describedby="note-weathered note-unweathered weathered-error"<%== ' aria-invalid="true"' if @tally_error %>>
               <span class="check-title">Tally signs</span>
             </label>
+            <label class="check">
+              <input type="checkbox" name="broken" value="1" data-weathered<%= ' checked' if @broken %>
+                     aria-describedby="note-weathered note-unweathered weathered-error"<%== ' aria-invalid="true"' if @broken_error %>>
+              <span class="check-title">Broken</span>
+            </label>
           </div>
           <div class="choice-notes">
-            <p class="choice-note" id="note-weathered" data-note="weathered">Weathered: some strokes are lost; each pair must balance again. Tally signs: each row and column summed, as on a khipu, so whole signs can be lost.</p>
-            <p class="choice-note" id="note-unweathered" data-note="unweathered">A sealed plate cannot weather: with one stroke lost, it would never open again.</p>
-            <p class="choice-note field-error" id="weathered-error" aria-live="polite"><%= @weathered_error || @tally_error %></p>
+            <p class="choice-note" id="note-weathered" data-note="weathered">Weathered: some strokes are lost; each pair must balance again. Tally signs: each row and column summed, as on a khipu, so whole signs can be lost. Broken: the plate in fragments, to rejoin by its sums (Phaistos only).</p>
+            <p class="choice-note" id="note-unweathered" data-note="unweathered">A sealed plate cannot weather or break: with one stroke lost, it would never open again.</p>
+            <p class="choice-note field-error" id="weathered-error" aria-live="polite"><%= @weathered_error || @tally_error || @broken_error %></p>
           </div>
         </fieldset>
       </div>

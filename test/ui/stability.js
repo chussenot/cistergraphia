@@ -139,6 +139,18 @@ const openTalliedPlate = async (page) => {
   await page.waitForSelector('[data-plate] svg');
 };
 
+// A broken plate: its fragments in a tray, below an empty board
+const openBrokenPlate = async (page) => {
+  await page.goto(`${baseUrl}/`);
+  await page.fill('#message', MESSAGE);
+  await page.check('input[name="broken"]');
+  await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
+  await page.waitForSelector('[data-plate] svg');
+};
+
+// Lays the fragment picked on a board cell (its top-left corner), as a tap would
+const layOnBoard = (page, x, y) => page.locator('[data-plate] svg rect.board').click({ position: { x, y } });
+
 // One weathered plate page for both the JS-on and JS-off runs: two random
 // plates would differ in their editions, which is not what the comparison is about
 const pageOnce = new Map();
@@ -184,6 +196,7 @@ const FLOWS = [
       { name: 'delete', act: async (p) => { await p.keyboard.press('Control+End'); for (let i = 0; i < 30; i += 1) await p.keyboard.press('Backspace'); } },
       { name: 'weather the plate', act: (p) => p.click('label.check >> nth=0') },
       { name: 'add tally signs', act: (p) => p.click('label.check >> nth=1') },
+      { name: 'break the plate', act: (p) => p.click('label.check >> nth=2') },
       { name: 'choose secret', anchor: '.entry-end', act: (p) => p.click('label.segment--secret') },
       { name: 'type a sealed message', act: async (p) => { await p.click('#message'); await p.keyboard.type(' and a seal'); } },
       { name: 'seal with too short a passphrase', act: async (p) => { await p.fill('#passphrase', 'short'); await p.click('[data-submit]'); } },
@@ -255,6 +268,27 @@ const FLOWS = [
     steps: [
       { name: 'press digits into a whole sign', act: async (p) => { for (let i = 0; i < 4; i += 1) { const free = p.locator('[data-digit]:not([disabled])'); await free.nth(i % (await free.count())).click(); await p.click('[data-bench-step="1"]'); } } },
       { name: 'step back', act: (p) => p.click('[data-bench-step="-1"]') }
+    ]
+  },
+  {
+    page: 'broken',
+    open: openBrokenPlate,
+    steps: [
+      { name: 'pick a fragment', act: (p) => p.click('[data-plate] svg g.fragment >> nth=0', { position: { x: 12, y: 12 } }) },
+      { name: 'lay it on the board', act: (p) => layOnBoard(p, 4, 4) },
+      { name: 'move it with the keys', act: async (p) => { for (const key of ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp']) await p.keyboard.press(key); } },
+      { name: 'turn it', act: async (p) => { await p.keyboard.press('t'); await p.click('[data-rejoin-turn]'); } },
+      {
+        name: 'lay them all with the keys',
+        act: async (p) => {
+          const count = await p.locator('[data-plate] svg g.fragment').count();
+          for (let i = 0; i < count; i += 1) { // picked, then up the sheet cell by cell, onto the board
+            await p.locator(`[data-plate] svg g.fragment[aria-label^="Fragment ${i + 1} "]`).click({ position: { x: 12, y: 12 } });
+            for (let k = 0; k < 16; k += 1) await p.keyboard.press('ArrowUp');
+          }
+        }
+      },
+      { name: 'back to the tray', act: (p) => p.click('[data-rejoin-reset]') }
     ]
   },
   {
@@ -338,6 +372,7 @@ const PAGES = [
   },
   { page: 'weathered', open: openSamePlate({ message: MESSAGE, weathered: '1' }) },
   { page: 'tallied', open: openSamePlate({ message: MESSAGE, weathered: '1', tally: '1' }) },
+  { page: 'broken', open: openSamePlate({ message: MESSAGE, broken: '1' }) },
   {
     page: 'edition',
     open: async (page) => {
