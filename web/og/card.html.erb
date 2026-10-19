@@ -20,15 +20,15 @@
     align-items: center;
     padding: 0 76px;
   }
-  .card { display: grid; gap: 26px; }
+  .card { display: grid; gap: 22px; }
   .mark { width: 62px; }
   .mark g { stroke: #a3301c; stroke-width: 8; stroke-linecap: square; fill: none; }
-  h1 { font-size: 100px; font-weight: 600; line-height: 0.95; letter-spacing: -0.005em; }
-  p { font-size: 38px; font-style: italic; color: #62574a; line-height: 1.25; max-width: 15em; }
-  .modes { display: flex; gap: 34px; font-family: system-ui, sans-serif; font-size: 22px; font-weight: 600;
-           letter-spacing: 0.16em; text-transform: uppercase; color: #62574a; }
-  .modes span::before { content: ""; display: inline-block; width: 14px; height: 14px; border-radius: 50%;
-                        margin-right: 12px; vertical-align: 1px; background: var(--c); }
+  h1 { font-size: 88px; font-weight: 600; line-height: 0.95; letter-spacing: -0.005em; }
+  .tagline { font-size: 44px; font-weight: 600; line-height: 1.15; max-width: 13em; }
+  .tagline > span { display: block; text-wrap: balance; }
+  .tagline em { font-style: normal; color: #a3301c; }  /* the game's red: spiral, flip */
+  .tagline strong { font-weight: 600; color: #2b4a74; } /* the secret's blue: seal */
+  .sub { font-size: 34px; font-style: italic; color: #62574a; line-height: 1.25; }
   .plate { background: #fbf8f2; border: 1px solid #d9cdb6; border-radius: 4px; padding: 26px;
            box-shadow: 0 1px 2px rgb(43 36 28 / 0.06), 0 22px 48px -18px rgb(43 36 28 / 0.28),
                        inset 0 0 0 6px #fbf8f2, inset 0 0 0 7px #d9cdb6; }
@@ -41,8 +41,8 @@
   <div class="card">
     <svg class="mark" viewBox="-8 -8 116 166"><g><%= mark %></g></svg>
     <h1>Cistergraphia</h1>
-    <p>Messages written as the ciphers of the Cistercian monks, coiled like a snail.</p>
-    <div class="modes"><span style="--c:#a3301c">Game</span><span style="--c:#2b4a74">Secret</span></div>
+    <p class="tagline"><span><em>Spiral it. Flip it.</em></span><span><strong>Seal it</strong> like a spy with your passphrase!</span></p>
+    <p class="sub">Your secrets, in a monk’s handwriting.</p>
   </div>
   <div class="plate"><%= plate %></div>
 </body>

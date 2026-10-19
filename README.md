@@ -1,6 +1,9 @@
 Cistergraphia
 =============
 
+**Spiral it. Flip it. Seal it like a spy with your passphrase!**
+*Your secrets, in a monk's handwriting.*
+
 About
 -----
 
