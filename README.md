@@ -88,7 +88,7 @@ upside down. Learn the signs the way a novice did, one corner at a time, until t
 read themselves. Mistakes are shown, never punished. Here, as in the cloister, literacy is an
 initiation: from novice to abbot.
 
-![Inscribing a message](docs/web-ui-inscribe.png)
+![A plate pressed by hand, wedge by wedge: "Meet me at the old abbey after vespers"](docs/web-ui-pressed.png)
 
 Try it
 ------
