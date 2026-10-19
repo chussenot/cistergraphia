@@ -208,7 +208,7 @@ class AppTest < Minitest::Test
     assert_includes body, '<dd>Grille</dd>'
     assert_includes body, '<code class="grille-key">K7Q2M-ZXB4P</code>'
     assert_includes body, 'data-action="lay-grille"'
-    assert_includes body, '<template data-stencil><svg'
+    assert_includes body, '<template data-stencil="whole"'
     assert_includes body, '<input type="hidden" name="grille" value="K7Q2M-ZXB4P">' # read it back with its grille
   end
 
@@ -258,6 +258,48 @@ class AppTest < Minitest::Test
     post '/decode', svg: svg, grille: '00000-00000'
     assert_includes last_response.body, Cistergraphia::Grille::WRONG_KEY
     refute_includes last_response.body, 'secret mode' # the key is the problem here, not a passphrase
+  end
+
+  def test_a_plate_for_two_readers_shows_both_keys_and_both_stencils
+    post '/generate', message: 'Relics lie under the third pillar', decoy: 'Vespers at six', layout: 'grille',
+                      grille: 'K7Q2M-ZXB4P'
+    body = last_response.body
+    novice = Cistergraphia::Grille.new('K7Q2M-ZXB4P').novice
+
+    assert_includes body, '<dd>Grille, two readers</dd>'
+    assert_includes body, '<code class="grille-key">K7Q2M-ZXB4P</code>'
+    assert_includes body, %(<code class="grille-key">#{novice}</code>)
+    assert_includes body, '<template data-stencil="abbot"'
+    assert_includes body, '<template data-stencil="novice"'
+    assert_match(/class="decoy-echo".*Vespers at six/m, body)
+    assert_includes body, '<input type="hidden" name="grille" value="K7Q2M-ZXB4P">' # the abbot reads it back
+  end
+
+  def test_the_abbot_reads_both_messages_and_the_novice_one
+    _, svg, abbot = Cistergraphia::TwoReaders.inscribe('Relics lie here', 'Vespers at six', grille: Cistergraphia::Grille.new('K7Q2M-ZXB4P'))
+
+    post '/decode', svg: svg, grille: abbot.to_s
+    assert_includes last_response.body, 'relics lie here'
+    assert_match(/The novice’s grille reads.*vespers at six/m, last_response.body)
+
+    post '/decode', svg: svg, grille: abbot.novice.to_s
+    assert_includes last_response.body, 'vespers at six'
+    refute_includes last_response.body, 'relics'
+  end
+
+  def test_too_long_a_pair_returns_to_the_form
+    post '/generate', message: 'x' * 300, decoy: 'Vespers', layout: 'grille'
+
+    assert_equal 422, last_response.status
+    assert_match(/id="decoy-error"[^>]*>With two readers, each message is limited to 250 characters/,
+                 last_response.body)
+  end
+
+  def test_largest_sealed_pair_fits_the_upload_limit
+    message = '🙏' * CistergraphiaApp::MAX_PAIR_LENGTH
+    _, svg, = Cistergraphia::TwoReaders.inscribe(message, message, passphrase: 'abbey of molesme')
+
+    assert_operator svg.bytesize, :<, CistergraphiaApp::MAX_SVG_BYTES
   end
 
   def test_largest_sealed_grille_plate_fits_the_upload_limit

@@ -724,6 +724,12 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 .plate-frame .grille-sheet .stencil-key { fill: var(--ink-soft); font-family: var(--serif); }
 .grille-key { font-family: var(--mono); font-size: 0.95em; letter-spacing: 0.08em; }
 .grille-actions { margin-bottom: var(--space-4); }
+/* Two readers: the novice's message under the abbot's, and a choice of grille */
+.decoy-echo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); color: var(--ink-soft); margin-bottom: var(--space-3); overflow-wrap: anywhere; }
+.decoy-echo q { quotes: "“" "”"; font-size: 1.15rem; }
+.grille-choice { display: inline-grid; min-width: 12rem; }
+.grille-choice .segment { border: 0; background: transparent; font: inherit; padding: 0 var(--space-4); }
+.grille-choice .segment[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), inset 0 -2px 0 var(--accent); }
 @media (prefers-reduced-motion: no-preference) {
   .plate-frame svg { transition: transform var(--dur-turn) var(--ease-ink); }
 }
@@ -856,6 +862,8 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 @supports (initial-letter: 2) {
   .transcription::first-letter { float: none; font-size: inherit; line-height: inherit; padding: 0 0.1em 0 0; initial-letter: 2; }
 }
+/* The novice's message, read with the abbot's key: the same hand, a step smaller */
+.transcription--second { font-size: clamp(1.2rem, 1.05rem + 0.6vw, 1.45rem); color: var(--ink-soft); }
 
 /* ---------- About ---------- */
 @media (min-width: 60rem) {

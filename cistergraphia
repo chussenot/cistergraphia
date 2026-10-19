@@ -12,7 +12,8 @@
 # - --layout picks the reading path (phaistos, the default, rongorongo or
 #   grille); decoding detects the first two. A grille plate needs its key
 #   (--grille): writing without one draws a new grille and prints its key, and
-#   --stencil writes the grille to print and cut
+#   --stencil writes the grille to print and cut. --decoy adds a second message
+#   for a second reader: the novice's grille, drawn from the abbot's key
 #
 # Design Decisions:
 # - Uses OptionParser for command-line argument parsing
@@ -61,6 +62,7 @@ parser = OptionParser.new do |opts|
 
   opts.on('-g', '--grille KEY', "The grille's key (#{Cistergraphia::Grille::EXAMPLE}): writes or reads under it") { |g| options[:grille] = g }
   opts.on('--stencil FILE', 'Also write the grille as a stencil to print and cut') { |f| options[:stencil] = f }
+  opts.on('--decoy MESSAGE', "A second message, for a novice's grille (implies a grille)") { |d| options[:decoy] = d }
 
   opts.on('-s', '--secret', 'Secret mode: encrypt/decrypt with a passphrase (prompted, ' \
                             'or taken from CISTERGRAPHIA_PASSPHRASE)') do
@@ -112,7 +114,7 @@ end
 # The layout to write or read with: a Grille when a key is given or a grille asked for
 def layout_for(options, writing:)
   return Cistergraphia::Grille.new(options[:grille]) if options[:grille]
-  return Cistergraphia::Grille.generate if writing && options[:layout] == :grille
+  return Cistergraphia::Grille.generate if writing && (options[:layout] == :grille || options[:decoy])
 
   writing ? options.fetch(:layout, :phaistos) : nil
 end
@@ -121,7 +123,14 @@ if options[:decode]
   begin
     svg = File.read(options[:decode])
     passphrase = ask_passphrase(confirm: false) if options[:secret]
-    puts Cistergraphia.decode(svg, passphrase: passphrase, layout: layout_for(options, writing: false))
+    grille = layout_for(options, writing: false)
+    unless grille
+      puts Cistergraphia.decode(svg, passphrase: passphrase)
+      exit
+    end
+    reading = Cistergraphia::TwoReaders.read(svg, grille, passphrase: passphrase)
+    puts reading.message
+    puts "The novice's grille reads: #{reading.decoy}" if reading.decoy
   rescue Cistergraphia::GrilleKeyNeededError => e
     abort "#{e.message}. Add --grille KEY."
   rescue Cistergraphia::DecodeError => e
@@ -144,17 +153,35 @@ begin
     abort '--stencil needs a grille: add --layout grille or --grille KEY'
   end
   passphrase = ask_passphrase(confirm: true) if options[:secret]
-  sequence, svg = Cistergraphia.inscribe(message, passphrase: passphrase, layout: layout)
+  if options[:decoy]
+    given = layout if options[:grille]
+    sequence, svg, layout = Cistergraphia::TwoReaders.inscribe(message, options[:decoy], passphrase: passphrase,
+                                                                                         grille: given)
+  else
+    sequence, svg = Cistergraphia.inscribe(message, passphrase: passphrase, layout: layout)
+  end
 rescue Cistergraphia::Error => e
   abort e.message
 end
 
-if layout.is_a?(Cistergraphia::Grille)
-  puts "Grille key: #{layout} (the plate cannot be read without it)"
-  if options[:stencil]
-    FileUtils.mkdir_p(File.dirname(options[:stencil]))
-    File.write(options[:stencil], Cistergraphia::SVG.stencil(Integer.sqrt(sequence.size), layout))
+# The stencils to print and cut: the grille's, or the abbot's and the novice's
+def write_stencils(path, size, grilles)
+  FileUtils.mkdir_p(File.dirname(path))
+  grilles.each_with_index do |grille, i|
+    file = i.zero? ? path : path.sub(/(\.svg)?\z/, '-novice.svg')
+    File.write(file, Cistergraphia::SVG.stencil(size, grille))
   end
+end
+
+if layout.is_a?(Cistergraphia::Grille)
+  grilles = options[:decoy] ? [layout.as(:abbot), layout.novice] : [layout]
+  if options[:decoy]
+    puts "Abbot's key: #{layout} (reads both messages; keep it)"
+    puts "Novice's key: #{layout.novice} (reads the decoy only)"
+  else
+    puts "Grille key: #{layout} (the plate cannot be read without it)"
+  end
+  write_stencils(options[:stencil], Integer.sqrt(sequence.size), grilles) if options[:stencil]
 end
 
 svg_path = options[:output] || File.join(DEFAULT_DIR, 'inline.svg')

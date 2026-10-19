@@ -109,11 +109,12 @@ const settle = (page) => page.evaluate(() => new Promise((resolve) => {
 }));
 
 // A plate written under a known grille
-const openGrillePlate = async (page) => {
+const openGrillePlate = async (page, decoy = '') => {
   await page.goto(`${baseUrl}/`);
   await page.fill('#message', MESSAGE);
   await page.click('label.segment:has(input[value="grille"])');
   await page.fill('#grille', 'k7q2m-zxb4p');
+  if (decoy) await page.fill('#decoy', decoy);
   await page.click('[data-submit]');
   await page.waitForSelector('[data-plate] svg');
 };
@@ -155,6 +156,7 @@ const FLOWS = [
       { name: 'choose rongorongo', act: (p) => p.click('label.segment:has(input[value="rongorongo"])') },
       { name: 'choose grille', anchor: '.entry-end', act: (p) => p.click('label.segment:has(input[value="grille"])') },
       { name: 'type a grille key', act: (p) => p.fill('#grille', 'k7q2m-zxb4p') },
+      { name: "type a novice's message", act: async (p) => { await p.click('#decoy'); await p.keyboard.type('Vespers at six'); } },
       { name: 'back to phaistos', anchor: '.entry-end', act: (p) => p.click('label.segment:has(input[value="phaistos"])') },
       { name: 'turn the dials', act: async (p) => { for (const q of ['tens', 'units', 'hundreds', 'thousands']) await p.click(`.quadrant--${q}`); await p.keyboard.press('ArrowUp'); } }
     ]
@@ -185,6 +187,18 @@ const FLOWS = [
       { name: 'walk under the grille', act: async (p) => { await p.focus('[data-plate]'); await p.keyboard.press('Home'); await p.keyboard.press('ArrowRight'); } },
       { name: 'lift the grille', act: (p) => p.click('[data-action="lay-grille"]') },
       { name: 'copy the key', act: (p) => p.click('[data-action="copy-key"]') }
+    ]
+  },
+  {
+    page: 'two readers',
+    open: async (page) => {
+      await openGrillePlate(page, 'Vespers at six in the choir');
+    },
+    steps: [
+      { name: "lay the abbot's grille", act: (p) => p.click('[data-action="lay-grille"]') },
+      { name: "choose the novice's grille", act: (p) => p.click('[data-grille-choice="novice"]') },
+      { name: "lay and turn the novice's", act: async (p) => { for (let i = 0; i < 3; i += 1) await p.click('[data-action="lay-grille"]'); } },
+      { name: "copy the novice's key", act: (p) => p.click('[data-action="copy-key"] >> nth=1') }
     ]
   },
   {

@@ -61,7 +61,22 @@ module ViewHelpers
   LAYOUT_NAMES = { phaistos: 'Phaistos', rongorongo: 'Rongorongo' }.freeze
 
   def layout_name(layout)
-    layout.is_a?(Cistergraphia::Grille) ? 'Grille' : LAYOUT_NAMES.fetch(layout)
+    return LAYOUT_NAMES.fetch(layout) unless layout.is_a?(Cistergraphia::Grille)
+
+    layout.part == :pair ? 'Grille, two readers' : 'Grille'
+  end
+
+  STENCIL_LABELS = { whole: 'the grille', abbot: 'the abbot’s grille', novice: 'the novice’s grille' }.freeze
+
+  # The grilles of a plate, each with its stencil and its reading path: the
+  # grille, or the abbot's and the novice's
+  def plate_grilles
+    grilles = @layout.part == :pair ? [@layout.as(:abbot), @layout.novice] : [@layout]
+    size = Integer.sqrt(@symbols)
+    grilles.map do |grille|
+      { part: grille.part, label: STENCIL_LABELS.fetch(grille.part), key: grille.to_s,
+        stencil: Cistergraphia::SVG.stencil(size, grille), path: JSON.generate(grille.path(size)) }
+    end
   end
 
   def grille?

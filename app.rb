@@ -33,6 +33,7 @@ require_relative 'web/figures'
 
 class CistergraphiaApp < Sinatra::Base
   MAX_MESSAGE_LENGTH = 500 # ~1000 symbols, a 32x32 grid
+  MAX_PAIR_LENGTH = 250 # each message of a plate with two readers: the largest, sealed, is ~1.4 MB
   MAX_SVG_BYTES = 2 * 1024 * 1024 # The largest plate (500 four-byte characters, sealed) is ~1.4 MB
   CONTENT_SECURITY_POLICY = [
     "default-src 'self'", "img-src 'self' data: blob:", "object-src 'none'", "base-uri 'none'",
@@ -99,8 +100,10 @@ class CistergraphiaApp < Sinatra::Base
     # A passphrase that cannot seal, or a grille key that is not one: back to
     # the form, with what was written
     @passphrase_error = Cistergraphia::Secret.passphrase_problem(passphrase) if @secret
-    halt 422, erb(:index) if @passphrase_error || @grille_error
-    @sequence, @svg_content = Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout)
+    @decoy = decoy
+    halt 422, erb(:index) if @passphrase_error || @grille_error || @decoy_error
+    @sequence, @svg_content, grille = inscribe_plate
+    @layout = grille.as(:pair) if @decoy
     @symbols = @sequence.size
     @normalized = Cistergraphia.normalize(@message)
     erb :result
@@ -121,7 +124,8 @@ class CistergraphiaApp < Sinatra::Base
 
   post '/decode' do
     @page = :read
-    @message = Cistergraphia.decode(submitted_svg, passphrase: passphrase, layout: submitted_grille)
+    reading = read_plate
+    @message, @decoy, @reader = reading.to_a
     @secret = !passphrase.nil?
     erb :decoded
   rescue Cistergraphia::GrilleKeyNeededError => e
