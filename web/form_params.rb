@@ -103,6 +103,20 @@ module FormParams
     [@passphrase_error, @grille_error, @decoy_error, @weathered_error, @tally_error, @broken_error]
   end
 
+  # The conditions share one note: the error it shows, as [checkbox name, message], or nil
+  def condition_error
+    { weathered: @weathered_error, tally: @tally_error, broken: @broken_error }.find { |_, error| error }
+  end
+
+  # A condition checkbox sent back with an error: invalid, and focused when its
+  # error is the form's first (as the other fields are), so it is never missed
+  def condition_invalid(name, error)
+    return '' unless error
+
+    first = condition_error&.first == name && form_errors.compact.first == error
+    first ? ' aria-invalid="true" autofocus' : ' aria-invalid="true"'
+  end
+
   # [sequence, svg, grille]: a plate for one reader, or for two (the grille is
   # the abbot's). A weathered plate's lacunae go to @damage, a broken plate's
   # fragments to @pieces
