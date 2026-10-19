@@ -7,8 +7,9 @@
 # - Provides a web interface for the Cistergraphia cipher system
 # - Handles message encryption (SVG generation) and decryption (SVG upload)
 # - Game mode without a passphrase, secret mode (AES-256-GCM) with one
-# - Two layouts (reading paths): Phaistos (the snail, default) or Rongorongo;
-#   decoding detects the layout on its own
+# - Three layouts (reading paths): Phaistos (the snail, default), Rongorongo,
+#   or a turning Grille with its key (a new one unless one is given); decoding
+#   detects the first two, and a grille's plate asks for its key
 #
 # Design Decisions:
 # - Modular Sinatra app (sinatra/base), no classic top-level DSL
@@ -27,6 +28,8 @@
 require 'sinatra/base'
 require_relative 'lib/cistergraphia'
 require_relative 'web/view_helpers'
+require_relative 'web/form_params'
+require_relative 'web/figures'
 
 class CistergraphiaApp < Sinatra::Base
   MAX_MESSAGE_LENGTH = 500 # ~1000 symbols, a 32x32 grid
@@ -36,7 +39,7 @@ class CistergraphiaApp < Sinatra::Base
     "form-action 'self'", "frame-ancestors 'none'"
   ].join('; ')
 
-  helpers ViewHelpers
+  helpers ViewHelpers, Figures, FormParams
 
   configure do
     set :root, __dir__
@@ -92,10 +95,11 @@ class CistergraphiaApp < Sinatra::Base
     halt_with 413, "Message is limited to #{MAX_MESSAGE_LENGTH} characters" if @message.length > MAX_MESSAGE_LENGTH
 
     @secret = !passphrase.nil?
-    @layout = params[:layout] == 'rongorongo' ? :rongorongo : :phaistos # anything else: the snail
-    # A passphrase that cannot seal: back to the form, with what was written
+    @layout = chosen_layout
+    # A passphrase that cannot seal, or a grille key that is not one: back to
+    # the form, with what was written
     @passphrase_error = Cistergraphia::Secret.passphrase_problem(passphrase) if @secret
-    halt 422, erb(:index) if @passphrase_error
+    halt 422, erb(:index) if @passphrase_error || @grille_error
     @sequence, @svg_content = Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout)
     @symbols = @sequence.size
     @normalized = Cistergraphia.normalize(@message)
@@ -117,25 +121,18 @@ class CistergraphiaApp < Sinatra::Base
 
   post '/decode' do
     @page = :read
-    @message = Cistergraphia.decode(submitted_svg, passphrase: passphrase)
+    @message = Cistergraphia.decode(submitted_svg, passphrase: passphrase, layout: submitted_grille)
     @secret = !passphrase.nil?
     erb :decoded
+  rescue Cistergraphia::GrilleKeyNeededError => e
+    raise Cistergraphia::DecodeError, "#{e.message}. Enter it under “Grille key”, with the passphrase if it was sealed."
   rescue Cistergraphia::DecodeError => e
-    raise if passphrase
+    raise if passphrase || submitted_grille
 
     raise Cistergraphia::DecodeError, "#{e.message}. If this image was made in secret mode, enter its passphrase."
   end
 
   private
-
-  # The mode switch wins when present; otherwise a non-blank passphrase means
-  # secret mode. Secret mode with a blank one gives '' (for the form to explain).
-  def passphrase
-    return nil if params[:mode] == 'game'
-
-    value = params[:passphrase].to_s
-    value.empty? && params[:mode] != 'secret' ? nil : value
-  end
 
   # SVG from the file upload when one was chosen, otherwise from the textarea
   def submitted_svg

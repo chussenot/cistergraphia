@@ -50,6 +50,12 @@ Their meanings are lost; their movements are not. A Cistergraphia plate keeps th
 lends it to your words: it coils inward like the disc, or climbs and turns like the tablets. The
 hand remembers what the alphabet forgot.
 
+A third gesture belongs to the cipher-makers. In 1550 Girolamo Cardano laid a pierced sheet on
+a letter and wrote his secret through the holes; three centuries later the sheet learned to
+turn, a quarter at a time, until every cell of the page had passed under a hole. Jules Verne hid
+a whole novel's plot under one. A Grille plate is written like a page and read like a secret:
+without its parchment, it is an anagram of itself.
+
 Why two ways to send it?
 ------------------------
 
@@ -97,6 +103,8 @@ Try it
 bundle install
 bundle exec rackup                                      # then open http://localhost:9292
 ./cistergraphia -m "Meet me at the old abbey after vespers"
+./cistergraphia -m "Vespers at six" -g K7Q2M-ZXB4P --stencil grille.svg  # -l grille draws a new key
+./cistergraphia -d tmp/inline.svg -g K7Q2M-ZXB4P                          # read it under its grille
 ```
 
 A web server sees what you seal on it: serve it over HTTPS, or use the command line, which keeps
@@ -128,6 +136,7 @@ Further reading
 - [Cistercian Numbers: Magic of the Boy Scouts](https://glossographia.wordpress.com/2013/07/09/cistercian-number-magic-of-the-boy-scouts/)
 - [Cistercian Numerals: Ciphers of Monks](http://luxoccultapress.blogspot.fr/2013/01/cistercian-numerals-ciphers-of-monks.html)
 - [Rongorongo](https://en.wikipedia.org/wiki/Rongorongo), [Phaistos Disc](https://en.wikipedia.org/wiki/Phaistos_Disc)
+- [Cardan grille](https://en.wikipedia.org/wiki/Cardan_grille), [Grille (cryptography)](https://en.wikipedia.org/wiki/Grille_(cryptography))
   and the sources they cite
 - [History of Cryptography](https://en.wikipedia.org/wiki/History_of_cryptography)
 - [dCode: Cistercian numbers](https://www.dcode.fr/cistercian-numbers)

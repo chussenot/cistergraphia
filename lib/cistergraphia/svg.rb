@@ -10,36 +10,15 @@ module Cistergraphia
   # A plate shows its signs pressed in wedges (Stylus), one path per stroke in
   # reading order, and keeps every stroke as a hidden <line>: what the decoder
   # reads. Plates drawn before the wedges (visible lines only) read the same.
+  # Where each sign goes is the Layout's business.
   module SVG
-    SPACE = 20
-    PADDING = 50 # Padding around the content
-    CELL_WIDTH = Glyphs::WIDTH + SPACE
-    CELL_HEIGHT = Glyphs::HEIGHT + SPACE
-    LAYOUTS = %i[phaistos rongorongo].freeze
+    HOLE_MARGIN = 8 # between a stencil's hole and the edge of its cell
 
     module_function
 
-    # Calculates the dimensions needed to display the sequence in a square grid
-    def dimensions(sequence)
-      cols = Integer.sqrt(sequence.size)
-      raise EmptyMessageError, 'Cannot lay out an empty sequence' if cols.zero?
-
-      rows = sequence.size.ceildiv(cols)
-      [(CELL_WIDTH * cols) + (PADDING * 2), (CELL_HEIGHT * rows) + (PADDING * 2), cols, rows]
-    end
-
-    # [row, col, turned] of every sign, in reading order
-    def path(size, layout = :phaistos)
-      case layout
-      when :phaistos then Cistergraphia.spiral_coordinates(size).map { |row, col| [row, col, false] }
-      when :rongorongo then Cistergraphia.boustrophedon_coordinates(size)
-      else raise Error, "Unknown layout #{layout.inspect}: use #{LAYOUTS.join(' or ')}"
-      end
-    end
-
     # Renders the sequence as a standalone SVG document along a layout's path
     def render(sequence, layout: :phaistos)
-      width, height, cols, _rows = dimensions(sequence)
+      width, height, cols, _rows = Layout.dimensions(sequence, layout)
 
       <<~SVG
         <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}">
@@ -60,8 +39,8 @@ module Cistergraphia
     # seeded by the sign's place in the reading order, so the same plate is
     # always pressed the same way.
     def pressed(sequence, cols, layout)
-      path(cols, layout).zip(sequence).each_with_index.flat_map do |((row, col, turned), num), index|
-        press(num, turned, origin(row, col), Random.new(index))
+      Layout.path(cols, layout).zip(sequence).each_with_index.flat_map do |((row, col, turned), num), index|
+        press(num, turned, Layout.origin(row, col, layout), Random.new(index))
       end
     end
 
@@ -76,8 +55,8 @@ module Cistergraphia
 
     # Absolute strokes of every symbol in reading order, turned where the path says so
     def strokes(sequence, cols, layout)
-      path(cols, layout).zip(sequence).flat_map do |(row, col, turned), num|
-        x, y = origin(row, col)
+      Layout.path(cols, layout).zip(sequence).flat_map do |(row, col, turned), num|
+        x, y = Layout.origin(row, col, layout)
         Glyphs.strokes(num).map { |stroke| relative(turned ? Glyphs.turn(stroke) : stroke, -x, -y) }
       end
     end
@@ -88,16 +67,45 @@ module Cistergraphia
 
     # Recovers the sequence from an SVG rendered by #render with that layout
     def read(svg, layout: :phaistos)
-      cells = lines(svg).group_by { |line| cell_of(line) }
+      cells = lines(svg).group_by { |line| Layout.cell_of(line, layout) }
 
-      path(grid_size(cells), layout).map { |row, col, turned| read_cell(cells, row, col, turned) }
+      Layout.path(grid_size(cells), layout).map { |row, col, turned| read_cell(cells, [row, col], turned, layout) }
     end
 
-    # The number in one cell, its strokes made relative to the cell and turned back upright
-    def read_cell(cells, row, col, turned)
+    # The number in one cell, its strokes made relative to the sign and turned back upright
+    def read_cell(cells, (row, col), turned, layout)
       strokes = cells.fetch([row, col]) { raise DecodeError, "Missing symbol at row #{row}, column #{col}" }
-      local = strokes.map { |line| relative(line, *origin(row, col)) }
+      local = strokes.map { |line| relative(line, *Layout.origin(row, col, layout)) }
       Glyphs.read(turned ? local.map { |stroke| Glyphs.turn(stroke) } : local)
+    end
+
+    # True for a plate written under a grille: only those are square
+    def square?(svg)
+      root = parse(svg).root
+      width = root&.attributes&.[]('width').to_s
+      root&.name == 'svg' && !width.empty? && width == root.attributes['height'].to_s
+    end
+
+    # The grille as a stencil to print and cut, at the scale of its n x n plate:
+    # laid on the printed plate with N at the top, it shows the first quarter of
+    # the signs; turned a quarter clockwise, the next
+    def stencil(size, grille)
+      side = (Layout::SQUARE_CELL * size) + (Layout::PADDING * 2)
+      <<~SVG
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{side}" height="#{side}" viewBox="0 0 #{side} #{side}">
+          <path class="stencil-sheet" d="M0 0H#{side}V#{side}H0Z#{stencil_holes(size, grille)}" fill="#efe6d4" fill-rule="evenodd" stroke="#2b241c" stroke-width="2"/>
+          <text class="stencil-north" x="#{side / 2}" y="38" text-anchor="middle" font-family="Georgia, serif" font-size="32" fill="#a3301c">N</text>
+          <text class="stencil-key" x="#{side / 2}" y="#{side - 17}" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#62574a">Grille #{grille} · turn clockwise</text>
+        </svg>
+      SVG
+    end
+
+    def stencil_holes(size, grille)
+      hole = Layout::SQUARE_CELL - (2 * HOLE_MARGIN)
+      grille.holes(size).map do |row, col|
+        x, y = Layout.cell_origin(row, col, grille)
+        "M#{x + HOLE_MARGIN} #{y + HOLE_MARGIN}h#{hole}v#{hole}h-#{hole}Z"
+      end.join
     end
 
     # Side of the square grid the cells form
@@ -108,17 +116,6 @@ module Cistergraphia
       raise DecodeError, "#{cells.size} symbols do not form a square grid" unless size**2 == cells.size
 
       size
-    end
-
-    # Top-left corner of a grid cell
-    def origin(row, col)
-      [PADDING + (CELL_WIDTH * col), PADDING + (CELL_HEIGHT * row)]
-    end
-
-    # Grid [row, col] a line belongs to, from its top-left-most point
-    def cell_of(line)
-      x1, y1, x2, y2 = line
-      [([y1, y2].min - PADDING).div(CELL_HEIGHT), ([x1, x2].min - PADDING).div(CELL_WIDTH)]
     end
 
     def relative(line, x, y)

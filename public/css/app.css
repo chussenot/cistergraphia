@@ -41,6 +41,8 @@
   --rule-faint: rgb(160 132 92 / 0.09);
   --rubric: #a3301c;      /* minium red: the game */
   --woad: #2b4a74;        /* woad blue: the secret */
+  --parchment: #e4d8c1;   /* the grille laid on a plate */
+  --parchment-edge: #c4b08c;
   --on-accent: #fbf8f2;
   --accent: var(--rubric);  /* the current mode's colour */
   --accent-ring: rgb(163 48 28 / 0.15);
@@ -89,6 +91,8 @@
     --rule-faint: rgb(236 228 212 / 0.035);
     --rubric: #e8826b;
     --woad: #93b3e3;
+    --parchment: #3a3229;
+    --parchment-edge: #5a4b3b;
     --on-accent: #191714;
     --accent-ring: rgb(232 130 107 / 0.2);
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -16px rgb(0 0 0 / 0.6);
@@ -398,15 +402,16 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 .entry:has(input[name="mode"][value="secret"]:checked) .preview-note--secret { opacity: 1; visibility: visible; }
 
 /* Mode and layout: segmented controls (native radios) over one reserved
-   line of description each; the notes swap in place, never resize */
+   line of description each; the notes swap in place, never resize. One above
+   the other: three layouts need the leaf's width */
 .entry { container-type: inline-size; }
 .choices { display: grid; gap: var(--space-5); }
-@container (min-width: 32rem) { .choices { grid-template-columns: 1fr 1fr; } }
 .choice { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: var(--space-2); }
 .choice legend { padding: 0; margin-bottom: var(--space-2); }
 .segments {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 3px;
   padding: 3px;
   border: 1px solid var(--rule);
@@ -437,25 +442,29 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .choice:has(input[value="game"]:checked) [data-note="game"],
   .choice:has(input[value="secret"]:checked) [data-note="secret"],
   .choice:has(input[value="phaistos"]:checked) [data-note="phaistos"],
-  .choice:has(input[value="rongorongo"]:checked) [data-note="rongorongo"] { visibility: visible; }
+  .choice:has(input[value="rongorongo"]:checked) [data-note="rongorongo"],
+  .choice:has(input[value="grille"]:checked) [data-note="grille"] { visibility: visible; }
 }
 
 .field-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
 .field-head .counter { font-family: var(--sans); font-size: 0.78rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
-/* The passphrase unfolds in secret mode (CSS only: no reflow when JS
-   arrives). It sits below the message, so only the button moves. The slot
-   and the button share a gapless wrapper; the space above the button lives
-   inside the part that folds away. */
+/* The grille key unfolds with the grille, the passphrase in secret mode (CSS
+   only: no reflow when JS arrives). They sit below the message, so only the
+   button moves. The slots and the button share a gapless wrapper; the space
+   above the button lives inside the parts that fold away. */
 .entry-end { display: grid; }
-.secret-slot { display: grid; grid-template-rows: 1fr; }
-.secret-slot-inner { min-height: 0; overflow: hidden; padding: 4px; margin: -4px; } /* room for focus rings */
-.secret-slot .field { margin-bottom: var(--space-5); }
+.slot { display: grid; grid-template-rows: 1fr; }
+.slot-inner { min-height: 0; overflow: hidden; padding: 4px; margin: -4px; } /* room for focus rings */
+.slot .field { margin-bottom: var(--space-5); }
+.key-input { font-family: var(--mono); letter-spacing: 0.12em; text-transform: uppercase; max-width: 16rem; }
+.key-input::placeholder { text-transform: none; letter-spacing: 0.12em; }
 @supports selector(:has(*)) {
-  .secret-slot {
+  .slot {
     transition: grid-template-rows var(--dur-mode) var(--ease-ink), opacity var(--dur-mode) var(--ease), visibility 0s linear 0s;
   }
-  .entry:has(input[name="mode"][value="game"]:checked) .secret-slot {
+  .entry:has(input[name="mode"][value="game"]:checked) .secret-slot,
+  .entry:not(:has(input[name="layout"][value="grille"]:checked)) .grille-slot {
     grid-template-rows: 0fr;
     opacity: 0;
     visibility: hidden;
@@ -631,9 +640,17 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 .orders { display: grid; }
 .orders > .order { grid-area: 1 / 1; align-self: start; }
 @supports selector(:has(*)) {
-  body:has(input[name="layout"][value="rongorongo"]:checked) [data-layout-note="phaistos"],
-  body:not(:has(input[name="layout"][value="rongorongo"]:checked)) [data-layout-note="rongorongo"] { visibility: hidden; }
+  body:has(input[name="layout"]:not([value="phaistos"]):checked) [data-layout-note="phaistos"],
+  body:not(:has(input[name="layout"][value="rongorongo"]:checked)) [data-layout-note="rongorongo"],
+  body:not(:has(input[name="layout"][value="grille"]:checked)) [data-layout-note="grille"] { visibility: hidden; }
 }
+/* The grille over a 4 x 4 grid: its holes (paper) at N, each other cell
+   lettered with the turn that brings a hole over it */
+.grille-order { width: 5.5rem; }
+.grille-order rect { fill: var(--vellum); stroke: var(--rule); stroke-width: 1; }
+.grille-order text { font-family: var(--sans); font-size: 8px; text-anchor: middle; fill: var(--ink-soft); }
+.grille-order .grille-hole rect { fill: var(--paper); stroke: var(--accent); stroke-width: 1.4; }
+.grille-order .grille-hole text { fill: var(--accent); font-weight: 600; }
 @supports not selector(:has(*)) { .orders > .order + .order { grid-area: auto; margin-top: var(--space-4); } }
 
 /* ---------- The plate (result) ---------- */
@@ -686,6 +703,27 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 .plate-frame svg path { fill: currentColor; stroke: none; } /* the pressed signs */
 .plate-frame:focus-visible { outline-offset: 4px; }
 .plate-frame.is-turned svg { transform: rotate(180deg); }
+.plate-frame svg path { transition: color 0.3s var(--ease); }
+.plate-frame svg path.is-lit { color: var(--accent); }
+
+/* The grille: the stencil laid exactly over the plate (same viewBox; ink.js
+   gives it the plate's box), turned a quarter at a time. It never takes the
+   pointer, so the plate can still be walked through it */
+.plate-frame { position: relative; }
+.plate-frame .grille-sheet {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transform: rotate(calc(var(--turn, 0) * 90deg));
+  transition: transform var(--dur-turn) var(--ease-ink), opacity 0.3s var(--ease);
+  filter: drop-shadow(0 4px 10px rgb(43 36 28 / 0.25));
+}
+.plate-frame .grille-sheet.is-laid { opacity: 1; }
+.plate-frame .grille-sheet .stencil-sheet { fill: var(--parchment); stroke: var(--parchment-edge); stroke-width: 3; }
+.plate-frame .grille-sheet .stencil-north { fill: var(--accent); font-family: var(--serif); font-weight: 600; }
+.plate-frame .grille-sheet .stencil-key { fill: var(--ink-soft); font-family: var(--serif); }
+.grille-key { font-family: var(--mono); font-size: 0.95em; letter-spacing: 0.08em; }
+.grille-actions { margin-bottom: var(--space-4); }
 @media (prefers-reduced-motion: no-preference) {
   .plate-frame svg { transition: transform var(--dur-turn) var(--ease-ink); }
 }
@@ -899,6 +937,8 @@ input[type="number"] { font-variant-numeric: lining-nums; font-size: 1.3rem; }
 .turning rect, .turning > circle:first-child { fill: none; stroke: var(--rule); stroke-width: 1.2; }
 .turning polyline { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
 .turning-glyphs path { fill: none; stroke: var(--ink-soft); stroke-width: 1.2; }
+.turning .aperture { stroke: var(--accent); stroke-width: 1.4; }
+.turnings .grille-order { max-width: 7rem; }
 .turning .snail-start { fill: var(--accent); }
 @media (prefers-reduced-motion: no-preference) {
   .turning polyline { stroke-dashoffset: 1; animation: ink 3s var(--ease-ink) 0.3s forwards; }
@@ -974,7 +1014,7 @@ input[type="number"] { font-variant-numeric: lining-nums; font-size: 1.3rem; }
 
 @media (prefers-reduced-motion: reduce) {
   body { transition: none; }
-  .nav a::after, .plate-focus, .glyph path, .quadrant b, .secret-slot, .preview-stage > *, .segment { transition: none; }
+  .nav a::after, .plate-focus, .glyph path, .quadrant b, .slot, .preview-stage > *, .segment, .plate-frame .grille-sheet, .plate-frame svg path { transition: none; }
 }
 
 /* ---------- Small screens ---------- */
@@ -998,4 +1038,5 @@ input[type="number"] { font-variant-numeric: lining-nums; font-size: 1.3rem; }
   .leaf::before { display: none; }
   .plate-frame { border: 0; box-shadow: none; max-height: none; overflow: visible; }
   .plate-frame svg path { fill: #000; }
+  .plate-frame .grille-sheet { display: none; }
 }

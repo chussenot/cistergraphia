@@ -20,9 +20,11 @@ Design Decisions:
 - A passphrase that cannot seal comes back here (422) with the message, mode
   and layout kept, never the passphrase; its error takes the hint's place.
   JS says the same before sending, with the library's own words
-- Layout: Phaistos (the snail) by default, or Rongorongo; the key's "Order of
-  reading" follows it in the same reserved space. The decoder detects the
-  layout, so it is never asked
+- Layout: Phaistos (the snail) by default, Rongorongo, or Grille; the key's
+  "Order of reading" follows it in the same reserved space. The decoder
+  detects the first two, so they are never asked. A grille is drawn for each
+  plate unless the key of one already shared is given: that field unfolds
+  below the message, like the passphrase, and keeps its value on a 422
 
 Constraints:
 - Posts to /generate; message limited to 500 characters
@@ -31,7 +33,7 @@ Constraints:
   <section class="leaf" aria-labelledby="inscribe-title">
     <p class="folio-mark" aria-hidden="true">fol. 1<sup>r</sup></p>
     <h1 id="inscribe-title" class="rubric">Inscribe a message</h1>
-    <p class="lede">Each letter becomes a number, each number a monk’s sign, and the signs coil inward like a snail, or turn like a tablet.</p>
+    <p class="lede">Each letter becomes a number, each number a monk’s sign, and the signs coil inward like a snail, turn like a tablet, or hide under a grille.</p>
 
     <form class="entry" method="post" action="/generate" data-entry>
       <div class="choices">
@@ -57,17 +59,22 @@ Constraints:
           <legend>Layout</legend>
           <div class="segments">
             <label class="segment">
-              <input type="radio" name="layout" value="phaistos"<%= ' checked' unless @layout == :rongorongo %> aria-describedby="note-phaistos">
+              <input type="radio" name="layout" value="phaistos"<%= ' checked' unless @layout == :rongorongo || grille_chosen? %> aria-describedby="note-phaistos">
               <span class="segment-title">Phaistos</span>
             </label>
             <label class="segment">
               <input type="radio" name="layout" value="rongorongo"<%= ' checked' if @layout == :rongorongo %> aria-describedby="note-rongorongo">
               <span class="segment-title">Rongorongo</span>
             </label>
+            <label class="segment">
+              <input type="radio" name="layout" value="grille"<%= ' checked' if grille_chosen? %> aria-describedby="note-grille">
+              <span class="segment-title">Grille</span>
+            </label>
           </div>
           <div class="choice-notes">
             <p class="choice-note" id="note-phaistos" data-note="phaistos">The snail: clockwise from the top-left corner, coiling to the centre.</p>
             <p class="choice-note" id="note-rongorongo" data-note="rongorongo">From the bottom up, turning the plate half round at every line.</p>
+            <p class="choice-note" id="note-grille" data-note="grille">Row by row, as on a page, through a pierced parchment turned four times.</p>
           </div>
         </fieldset>
       </div>
@@ -90,8 +97,22 @@ Constraints:
       </div>
 
       <div class="entry-end">
-        <div class="secret-slot">
-          <div class="secret-slot-inner">
+        <div class="slot grille-slot">
+          <div class="slot-inner">
+            <div class="field">
+              <label for="grille">Grille key <span class="label-note">· optional: a grille you already share</span></label>
+              <input type="text" id="grille" name="grille" value="<%= @grille_key %>" class="key-input"
+                     placeholder="<%= Cistergraphia::Grille::EXAMPLE %>" autocomplete="off" autocapitalize="characters" spellcheck="false"
+                     aria-describedby="grille-error grille-hint"<%== ' aria-invalid="true" autofocus' if @grille_error %>>
+              <div class="field-notes">
+                <p class="field-meta" id="grille-hint">Leave it empty and a new grille is drawn for this plate.</p>
+                <p class="field-error" id="grille-error" aria-live="polite"><%= @grille_error %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slot secret-slot">
+          <div class="slot-inner">
             <div class="field">
               <label for="passphrase">Passphrase <span class="label-note">· secret mode only</span></label>
               <div class="passphrase">
@@ -146,7 +167,12 @@ Constraints:
         <figcaption><b>Rongorongo.</b> From the bottom left, then turn the plate half round for each next line.
           Hollow points are signs written upside down.</figcaption>
       </figure>
+      <figure class="order" data-layout-note="grille">
+        <%== grille_order_svg %>
+        <figcaption><b>Grille.</b> Read the signs under the holes row by row, then turn the grille a quarter clockwise:
+          N, E, S, W. Its key decides where the holes are.</figcaption>
+      </figure>
     </div>
-    <p class="note"><a href="/about#two-layouts">Where do they come from?</a></p>
+    <p class="note"><a href="/about#layouts">Where do they come from?</a></p>
   </aside>
 </div>

@@ -66,7 +66,7 @@ and the passphrase.
 | Leaf (`.leaf`) | Paper card with the double vertical bounding lines of a ruled writing area; folio mark (`fol. 1r`…) top right, hidden on phones |
 | Rubric (`.rubric`) | Page title in the mode colour |
 | Index heading (`.index-heading`) | Small capitals followed by a hairline rule |
-| Choices (`.choice`, `.segment`) | First on the form, above the message: **Mode** (Game, Secret; red and blue initials) and **Layout** (Phaistos, Rongorongo) as segmented controls over native radios. Each has one reserved line of description; the notes swap in place. Side by side when the form is wide enough (container query), stacked on phones. The key's "Order of reading" shows the chosen path; hollow points mark signs written upside down |
+| Choices (`.choice`, `.segment`) | First on the form, above the message: **Mode** (Game, Secret; red and blue initials) and **Layout** (Phaistos, Rongorongo, Grille) as segmented controls over native radios, one above the other (three layouts need the leaf's width). Each has one reserved line of description; the notes swap in place. The key's "Order of reading" shows the chosen path; hollow points mark signs written upside down, and the grille's figure letters each cell with the turn that reads it |
 | Mode cards (`.mode`, About) | Native radios styled as two index cards; the first letter is a red or blue initial |
 | Fields | Labels in small capitals; vellum-filled inputs; a focus ring in the mode colour |
 | Buttons | Primary uses the mode colour; secondary is outlined; quiet is link-like; all are at least 48 px tall |
@@ -75,7 +75,8 @@ and the passphrase.
 | Transcription | The decoded text with a plain two-line initial (`initial-letter`, with a float fallback) |
 | Toast | A polite live region, instead of `alert()` |
 | Live preview (`.preview`) | Under the message, a strip of fixed height: each letter as one sign while typing, before the split and the layout. It scrolls sideways and follows the caret. Its three states (empty, signs, sealed) share one cell, so it never changes size |
-| Passphrase (`.secret-slot`) | Below the message, unfolded by CSS (`:has`) in secret mode: only the button below it moves, over `--dur-mode` |
+| Passphrase, grille key (`.slot`) | Below the message, unfolded by CSS (`:has`): the grille key when Grille is chosen (optional: a grille already shared; empty draws a new one), the passphrase in secret mode. Only the button below them moves, over `--dur-mode` |
+| Grille (`.grille-sheet`) | The plate's stencil (`Cistergraphia::SVG.stencil`, the same file as Download the stencil) laid exactly over the plate, in parchment colours; its N turns with it. Grille plates have square cells (170 × 170, the sign centred) so that a quarter turn lands on the grid again |
 | Playground (About) | Any number from 0 to 9,999 drawn as a sign, with its reading ("1 thousand · 0 hundreds · …") and preset years |
 | Index of dates (About) | A timeline whose exact years are written as signs; centuries get an em dash |
 | Tablet (About) | The 27 letters as index cards: sign, letter in the mode colour, value |
@@ -105,7 +106,7 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | `--dur-dry` | 1100 ms | wet rubric ink drying to iron-gall |
 | `--dur-lift` | 260 ms | a stroke lifted away |
 | `--dur-mode` | 700 ms | the page changing ink, red ↔ blue (a registered `@property`) |
-| `--dur-turn` | 900 ms | a Rongorongo plate turned half round |
+| `--dur-turn` | 900 ms | a Rongorongo plate turned half round, or the grille a quarter |
 | stroke gap | 70 ms | between two strokes of one sign, like a scribe's hand |
 | `--ease-ink` | `cubic-bezier(0.3, 0.6, 0.2, 1)` | quick to start, slow to settle |
 
@@ -123,6 +124,7 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | Plate | Pressed stroke by stroke in reading order, each wedge running from its head to its tip, the wet rubric front visibly coiling inward (or climbing the rows). Past 1,200 wedges (about 85 letters in a game) the signs are too small to see a stroke run: the plate is there at once and only its ink dries along the path, which keeps 60 fps | The reading order |
 | Plate | Walk it: point at a sign, or focus the plate and use the arrow keys / Home / End; a soft field glides along the path; "Sign 12 of 36 · 4127", with "upside down: turn the plate to read it" on turned signs | Reading the numerals, the first step of solving a game plate |
 | Plate (Rongorongo) | **Turn the plate**: the plate rotates half round, as the readers of Rapa Nui turned their tablets; the turned rows now read upright, and walking follows | Why every other row is upside down |
+| Plate (Grille) | **Lay the grille**, then **Turn it to E, S, W**: the parchment turns a quarter at a time and the signs under its holes are lit, "The grille at E: signs 26 to 50 of 100, row by row"; walking says which turn reads a sign. **Download the stencil** to print and cut, **Copy the key** | How a turning grille reads every cell once, and that without it the plate is an anagram |
 | Transcription | The decoded message appears letter by letter after its initial | The payoff of decoding |
 | About · Lectio | Read the sign, type its number. Novice (units) → Monk (tens) → Prior (hundreds) → Abbot (thousands) every three in a row; a misread corner is lit (an empty corner is named as a zero) and you continue when ready; best run kept in the browser | Fluency in the signs |
 | Read | A received file's sign is pressed | Your file arrived |
@@ -133,8 +135,9 @@ tail runs) and is a stretch along the stroke from there; drawing and drying are 
 in turn, never at once, because animating shape and colour together on thousands of SVG paths
 drops the frame rate several times over. `public/js/app.js` holds the interactions.
 The plate's cells and geometry come from
-`ViewHelpers#plate_cells_json` / `#plate_layout_json` (built from `Cistergraphia::SVG.path`, with
-each sign's turned flag), so walking the plate follows the real path. Turning is a class on
+`ViewHelpers#plate_cells_json` / `#plate_layout_json` (built from `Cistergraphia::Layout.path`, with
+each sign's turned flag, and the cell's size), so walking the plate follows the real path.
+Under a grille, a wedge's cell is read from where it bites, to light the signs under the holes. Turning is a class on
 the frame, never on the SVG, and exports strip every class, style and the walking field: the
 downloaded SVG is unchanged.
 
@@ -183,6 +186,6 @@ headless Chromium:
 
 ## Screens
 
-| Inscribe (secret selected) | Plate (game) | Plate (Rongorongo) | Plate (dark) | About |
+| Inscribe (secret selected) | Plate (game) | Plate (Rongorongo) | Plate (grille, at E) | Plate (dark) | About |
 |---|---|---|---|---|
-| ![](web-ui-inscribe.png) | ![](web-ui-plate.png) | ![](web-ui-rongorongo.png) | ![](web-ui-dark.png) | ![](web-ui-about.png) |
+| ![](web-ui-inscribe.png) | ![](web-ui-plate.png) | ![](web-ui-rongorongo.png) | ![](web-ui-grille.png) | ![](web-ui-dark.png) | ![](web-ui-about.png) |

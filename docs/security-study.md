@@ -82,6 +82,12 @@ breakable (< 90%) or secret mode starts leaking (> 10%).
    which is a fixed, public transformation. Choose a layout for its look, not for security.
    (On very short messages the pair test can pass along both routes, about 1 two-letter plate
    in 100; the encoder redraws those, so the test always names one.)
+   The **Grille** layout is the one route with a key: a turning grille, set by a code of 50
+   bits. It hides exactly what the attacks above start from, which cells are neighbours in
+   reading order. But a turning grille is a transposition cipher of the 19th century: the pair
+   test gives an attacker a score to climb, one hole at a time, and the German army withdrew its
+   grilles in 1916 after four months. It has not been measured here yet (see the limits below);
+   until it is, count it as a puzzle with a key, not as secrecy.
 6. **Images instead of SVG would not help.** The glyphs are regular and documented: dCode
    converts them, and a vision model or a small classifier reads them. Pressing the signs in
    wedges does not change this either: the file still carries every stroke as a line (the
@@ -117,7 +123,8 @@ payload bytes ──base 10,000──▶ glyph values ──▶ [length, length,
 - **Agility:** the version byte selects the KDF and cipher parameters, so they can be raised
   later and old images still decode.
 - **Exact text:** no normalisation, so capitals, digits, accents and emoji survive.
-- **Layout:** the decoder tries both layouts. The wrong one fails the length frame before any
+- **Layout:** the decoder tries both keyless layouts (a grille's plate, square, asks for its
+  key instead). The wrong one fails the length frame before any
   scrypt work (in 200 of 200 random plates), or else the GCM tag, so it never yields a false
   message. It is not
   secret and adds no security.
@@ -145,6 +152,7 @@ payload bytes ──base 10,000──▶ glyph values ──▶ [length, length,
   committed with the experiment, only touch the corpus.
 - No one attempted a passphrase-guessing attack on secret mode. Its strength there is scrypt's
   cost times the passphrase's entropy.
+- The Grille layout is not measured yet: neither experiment above was run on grille plates.
 
 ## Reproduce
 

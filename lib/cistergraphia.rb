@@ -18,11 +18,13 @@
 #   different picture every time)
 # - 'Evil' pairs [noise, 9999] pad the sequence to a perfect square; 9999 can
 #   never come from a character, so the decoder can drop them reliably
-# - The sequence is laid out along one of two reading paths (layouts):
-#   Phaistos, a clockwise spiral from the top-left to the centre (default), or
+# - The sequence is laid out along one of three reading paths (layouts):
+#   Phaistos, a clockwise spiral from the top-left to the centre (default),
 #   Rongorongo, reverse boustrophedon: rows from the bottom, every other row
-#   running back with its signs turned half round. The decoder tries both;
-#   #inscribe redraws any game plate that would read along both
+#   running back with its signs turned half round, or a turning Grille (with a
+#   key: see Cistergraphia::Grille). Without a key the decoder tries the first
+#   two; #inscribe redraws any game plate that would read along both. A grille's
+#   plate has square cells, so it is never mistaken for the others
 #
 # Constraints:
 # - Limited to the characters defined in TABLET; anything else is a separator
@@ -42,6 +44,12 @@ module Cistergraphia
 
   # Raised when a secret plate does not open with the passphrase given
   class WrongPassphraseError < DecodeError; end
+
+  # Raised when a plate written under a grille is read without its key
+  class GrilleKeyNeededError < DecodeError; end
+
+  # Raised when a grille does not read a plate written under a grille
+  class WrongGrilleError < DecodeError; end
 
   EVIL_MARKER = 9999 # Never produced by a character (max value is 9000)
 
@@ -64,8 +72,10 @@ module Cistergraphia
 
   # Full pipeline: message => sequence padded to a perfect square.
   # With a passphrase the message is encrypted (secret mode), otherwise enciphered (game).
-  def encode(message, passphrase: nil)
-    return Secret.encrypt(message, passphrase) if passphrase
+  # even: a square with an even side, as a grille needs. Game sequences always
+  # have one: they are made of pairs, and an even square has an even side.
+  def encode(message, passphrase: nil, even: false)
+    return Secret.encrypt(message, passphrase, even: even) if passphrase
 
     sequence = cister(message)
     inject_evil_symbols(sequence) until perfect_square?(sequence.size)
@@ -73,16 +83,26 @@ module Cistergraphia
   end
 
   # Full pipeline: SVG rendered by #to_svg => message (normalized in game mode).
-  # Without a layout, both are tried: only the right one yields letters (game)
-  # or passes authentication (secret).
+  # Without a layout, Phaistos and Rongorongo are tried: only the right one
+  # yields letters (game) or passes authentication (secret). A grille's plate
+  # (square) can only be read with its grille.
   def decode(svg, passphrase: nil, layout: nil)
-    errors = (layout ? [layout] : SVG::LAYOUTS).map do |candidate|
+    Grille.check(svg, layout)
+    errors = (layout ? [layout] : Layout::KEYLESS).map do |candidate|
       sequence = SVG.read(svg, layout: candidate)
       return passphrase ? Secret.decrypt(sequence, passphrase) : decipher(sequence)
     rescue DecodeError => e
       e
     end
-    raise errors.find { |e| e.is_a?(WrongPassphraseError) } || errors.first
+    raise failure(errors, layout, passphrase)
+  end
+
+  # The error worth showing. Under a grille the reader only learns that the
+  # key (or the passphrase) does not open the plate: a wrong key scrambles it.
+  def failure(errors, layout, passphrase)
+    return errors.find { |e| e.is_a?(WrongPassphraseError) } || errors.first unless layout.is_a?(Grille)
+
+    WrongGrilleError.new(passphrase ? Grille::WRONG_KEY_OR_PASSPHRASE : Grille::WRONG_KEY)
   end
 
   # Message => [sequence, SVG plate] along a layout. In game mode, a plate that
@@ -91,17 +111,18 @@ module Cistergraphia
   # decoder's layout detection is never wrong. Secret plates need no check: the
   # wrong layout fails authentication instead of yielding a false message.
   def inscribe(message, passphrase: nil, layout: :phaistos)
+    grille = layout.is_a?(Grille)
     100.times do
-      sequence = encode(message, passphrase: passphrase)
+      sequence = encode(message, passphrase: passphrase, even: grille)
       svg = to_svg(sequence, layout: layout)
-      return [sequence, svg] if passphrase || unambiguous?(svg, layout)
+      return [sequence, svg] if passphrase || grille || unambiguous?(svg, layout)
     end
     raise Error, 'Could not draw an unambiguous plate for this message'
   end
 
   # True when the plate reads as letters along its own layout only
   def unambiguous?(svg, layout)
-    (SVG::LAYOUTS - [layout]).none? do |other|
+    (Layout::KEYLESS - [layout]).none? do |other|
       decipher(SVG.read(svg, layout: other))
     rescue DecodeError
       false
@@ -185,5 +206,7 @@ end
 
 require_relative 'cistergraphia/glyphs'
 require_relative 'cistergraphia/stylus'
+require_relative 'cistergraphia/grille'
+require_relative 'cistergraphia/layout'
 require_relative 'cistergraphia/svg'
 require_relative 'cistergraphia/secret'

@@ -152,7 +152,7 @@ class CistergraphiaTest < Minitest::Test
 
   def test_decode_detects_the_layout
     alphabet = [*'a'..'z', ' ']
-    Cistergraphia::SVG::LAYOUTS.each do |layout|
+    Cistergraphia::Layout::KEYLESS.each do |layout|
       50.times do
         message = [*'a'..'z'].sample + Array.new(rand(0..40)) { alphabet.sample }.join
         _sequence, svg = Cistergraphia.inscribe(message, layout: layout)

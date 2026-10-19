@@ -13,6 +13,10 @@ Design Decisions:
 - "Read it back" posts the same SVG to /decode: a one-click round trip
 - Rongorongo plates can be turned half round (JS, CSS only): the turned rows
   then read upright, as the readers of Rapa Nui turned their tablets
+- A grille's plate shows its key, and its grille: the stencil (the server's,
+  embedded once) is laid over the plate and turned N, E, S, W, lighting the
+  signs under its holes; the same file downloads, to print and cut. The key
+  goes along with "Read it back"
 - Nothing moves while you walk or turn the plate: the live reading takes the
   resting caption's place, and the script-only controls have their space from
   the first paint
@@ -37,19 +41,24 @@ Constraints:
     <div><dt>Mode</dt><dd><%= @secret ? 'Secret' : 'Game' %></dd></div>
     <div><dt>Signs</dt><dd><%= @symbols %></dd></div>
     <div><dt>Grid</dt><dd><%= Integer.sqrt(@symbols) %> × <%= Integer.sqrt(@symbols) %></dd></div>
-    <div><dt>Layout</dt><dd><%= @layout == :rongorongo ? 'Rongorongo' : 'Phaistos' %></dd></div>
+    <div><dt>Layout</dt><dd><%= layout_name(@layout) %></dd></div>
+    <% if grille? %>
+      <div><dt>Grille key</dt><dd><code class="grille-key"><%= @layout %></code></dd></div>
+    <% end %>
   </dl>
 
   <figure class="plate">
     <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
          aria-label="The plate. Use the arrow keys to walk its signs in reading order."
-         data-plate-cells="<%= plate_cells_json(@sequence, @layout) %>" data-plate-layout="<%= plate_layout_json(@sequence) %>">
+         data-plate-cells="<%= plate_cells_json(@sequence, @layout) %>" data-plate-layout="<%= plate_layout_json(@sequence, @layout) %>">
       <%== @svg_content %>
     </div>
     <figcaption>
       <span class="plate-reading">
         <% if @layout == :rongorongo %>
           <span class="plate-reading-rest">Read from the bottom left, left to right; turn the plate half round for each next line.</span>
+        <% elsif grille? %>
+          <span class="plate-reading-rest">Read through the grille: N at the top, the holes row by row, then a quarter turn clockwise. Without it, the plate is an anagram of itself.</span>
         <% else %>
           <span class="plate-reading-rest">Read clockwise from the top-left corner, coiling inward.</span>
         <% end %>
@@ -58,6 +67,15 @@ Constraints:
       <span class="plate-hint awaits-script" data-plate-hint>Point at a sign, or focus the plate and use the arrow keys, to walk it in reading order.</span>
     </figcaption>
   </figure>
+
+  <% if grille? %>
+    <div class="actions grille-actions">
+      <button type="button" class="btn btn--primary awaits-script" data-action="lay-grille" aria-pressed="false">Lay the grille</button>
+      <button type="button" class="btn awaits-script" data-action="download-stencil">Download the stencil</button>
+      <button type="button" class="btn awaits-script" data-action="copy-key" data-key="<%= @layout %>">Copy the key</button>
+    </div>
+    <template data-stencil><%== Cistergraphia::SVG.stencil(Integer.sqrt(@symbols), @layout) %></template>
+  <% end %>
 
   <div class="actions">
     <button type="button" class="btn btn--primary" data-action="download-svg">Download SVG</button>
@@ -72,6 +90,7 @@ Constraints:
   <form class="readback" method="post" action="/decode">
     <h2 class="index-heading">Read it back</h2>
     <input type="hidden" name="svg" value="<%= @svg_content %>">
+    <% if grille? %><input type="hidden" name="grille" value="<%= @layout %>"><% end %>
     <div class="readback-row">
       <% if @secret %>
         <div class="field">
