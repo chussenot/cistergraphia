@@ -876,6 +876,35 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 @supports (initial-letter: 2) {
   .transcription::first-letter { float: none; font-size: inherit; line-height: inherit; padding: 0 0.1em 0 0; initial-letter: 2; }
 }
+/* The restoration bench, under a weathered plate: a lacuna to choose, ten
+   digits to press, the pair weighed in two short lines, the edition so far.
+   Every part keeps its size whatever is chosen, so nothing moves */
+.bench { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--rule); }
+.bench-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.bench-head .index-heading { margin: 0; }
+.bench-nav { display: flex; align-items: center; gap: var(--space-3); }
+.bench-which { font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); min-width: 13rem; text-align: center; font-variant-numeric: tabular-nums; }
+.bench-palette { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: var(--space-2); max-width: 36rem; }
+@media (max-width: 30rem) { .bench-palette { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.bench-digit {
+  display: grid; justify-items: center; gap: 2px; padding: var(--space-2) 0 var(--space-1);
+  border: 1px solid var(--rule); border-radius: var(--radius); background: var(--vellum); color: var(--ink);
+  font-family: var(--mono); font-size: 0.75rem; cursor: pointer;
+}
+.bench-digit .bench-glyph { width: 1.6rem; height: 2.4rem; }
+.bench-digit .bench-glyph path { fill: currentColor; }
+.bench-digit[aria-pressed="true"] { border-color: var(--rubric); color: var(--rubric); box-shadow: inset 0 0 0 1px var(--rubric); }
+.bench-digit:disabled { opacity: 0.3; cursor: not-allowed; }
+.bench-digit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bench-balance { display: grid; gap: 2px; margin: 0; }
+.bench-sum { font-family: var(--mono); font-size: 0.95rem; white-space: nowrap; }
+.bench-verdict { font-family: var(--sans); font-size: 0.9rem; color: var(--ink-soft); white-space: nowrap; }
+.bench-edition { margin: 0; font-family: var(--mono); font-size: 0.95rem; overflow-wrap: anywhere; color: var(--ink); }
+.plate-frame svg .bench-target { fill: transparent; stroke: transparent; stroke-width: 3; cursor: pointer; }
+.plate-frame svg .bench-target:hover { stroke: var(--parchment-edge); }
+.plate-frame svg .bench-target.is-current { stroke: var(--rubric); }
+.plate-frame svg path.restored { color: var(--rubric); }
+
 /* A weathered plate's edition: restorations in rubric, doubts dotted under */
 .leiden-restored, .leiden-doubt { color: var(--rubric); }
 .leiden-doubt { text-decoration: underline dotted; text-underline-offset: 0.2em; }

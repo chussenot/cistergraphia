@@ -217,7 +217,11 @@ const FLOWS = [
     open: openWeatheredPlate,
     steps: [
       { name: 'walk the worn signs', act: async (p) => { await p.focus('[data-plate]'); for (let i = 0; i < 12; i += 1) await p.keyboard.press('ArrowRight'); await p.keyboard.press('End'); } },
-      { name: 'point at signs', act: hoverPlate }
+      { name: 'point at signs', act: hoverPlate },
+      { name: 'choose a lacuna on the plate', act: (p) => p.click('.bench-target >> nth=2', { force: true }) },
+      { name: 'press every digit', act: async (p) => { for (const button of await p.locator('[data-digit]:not([disabled])').all()) await button.click(); } },
+      { name: 'take a digit back', act: async (p) => { const pressed = p.locator('[data-digit][aria-pressed="true"]'); if (await pressed.count()) await pressed.click(); } },
+      { name: 'step through the lacunae', act: async (p) => { for (let i = 0; i < 4; i += 1) await p.click('[data-bench-step="1"]'); await p.click('[data-bench-step="-1"]'); } }
     ]
   },
   {
