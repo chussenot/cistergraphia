@@ -15,7 +15,7 @@ Design Decisions:
   (Phaistos: the disc's clockwise inward spiral; Rongorongo: reverse
   boustrophedon, the tablet turned at every line; Grille: Cardano's pierced
   sheet and the turning grille), and what the grille is worth (a puzzle with a
-  key, not a seal)
+  key, not a seal, as measured in docs/security-study.md)
 - The playground and the tablet are drawn from the real cipher geometry
 - Lectio: a reading game, novice to abbot as the signs grow. Its first sign
   is drawn here and its controls are enabled by JS (like the dials), so it is
@@ -125,7 +125,10 @@ Design Decisions:
       <p>A Grille plate is written row by row, like a page, in the order its grille reads it: without the grille
         it is an anagram of its own message. Each plate gets a grille from a key of ten letters and digits, shown
         with the plate, and a stencil to print and cut. Lay it on the printed plate with N at the top, read
-        the holes, and turn it. It is a puzzle with a key, not a seal: secrecy is the Secret mode’s.</p>
+        the holes, and turn it. It is a puzzle with a key, not a seal: given only the images, a model read ten
+        short Grille plates in about twenty-six minutes, ten times longer than without a grille, and a script
+        that knows the rules but not the key reads a short one in seconds, and long ones once a key is used twice (<a href="https://github.com/chussenot/cistergraphia/blob/master/docs/security-study.md#experiment-3-the-grille">the experiment</a>).
+        Secrecy is the Secret mode’s.</p>
 
       <p>You choose the layout when you inscribe. The decoder recognises the first two on its own, and asks
         for a grille’s key.</p>

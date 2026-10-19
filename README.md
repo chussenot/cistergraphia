@@ -65,7 +65,8 @@ honest about both.
 **The riddle.** Without a passphrase, a plate is a puzzle, the oldest gift between people who
 enjoy each other's minds. It assumes the reader can solve it, and they can. So, given patience,
 can a machine: a model given nothing but the images read ten messages out of ten in a few minutes.
-Send a riddle to be found out.
+A grille only makes it work harder: ten out of ten again, in twenty-six minutes. Send a riddle to
+be found out.
 
 **The seal.** With a passphrase, the same signs carry something else: your exact words, locked with
 a modern, standard cipher (AES-256-GCM). Without the passphrase, a sealed plate gives away nothing
