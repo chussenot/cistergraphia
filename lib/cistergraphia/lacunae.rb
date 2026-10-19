@@ -123,13 +123,19 @@ module Cistergraphia
     def patches(cols, layout, damage)
       return '' if damage.empty?
 
-      polygons = signs(cols, layout, damage).flat_map do |index, lost, turned, origin|
+      %(#{PATTERN}\n#{worn(signs(cols, layout, damage))})
+    end
+
+    # The worn patches of some signs ([index, lost strokes, turned, sign origin]
+    # each), filled with the PATTERN the document defines once
+    def worn(signs)
+      polygons = signs.flat_map do |index, lost, turned, origin|
         random = Random.new(index)
         Outline.shapes(lost).map do |shape|
           Outline.polygon(Outline.rough(shape, random).map { |point| Outline.place(point, turned, origin) })
         end
       end
-      %(#{PATTERN}\n  <g class="weathering" fill="url(#worn)" stroke="#{HATCH}" stroke-width="1.5">\n) +
+      %(  <g class="weathering" fill="url(#worn)" stroke="#{HATCH}" stroke-width="1.5">\n) +
         %(#{polygons.join("\n")}\n  </g>)
     end
 
@@ -137,7 +143,12 @@ module Cistergraphia
     def hidden(cols, layout, damage)
       return '' if damage.empty?
 
-      lines = signs(cols, layout, damage).flat_map do |_, lost, turned, (x, y)|
+      lost_lines(signs(cols, layout, damage))
+    end
+
+    # The lost stroke positions of some signs as hidden lines, in their own layer
+    def lost_lines(signs)
+      lines = signs.flat_map do |_, lost, turned, (x, y)|
         lost.map { |stroke| SVG.line_tag(SVG.relative(turned ? Glyphs.turn(stroke) : stroke, -x, -y)) }
       end
       %(  <g class="#{CLASS}" stroke="black" stroke-width="2" display="none">\n#{lines.join("\n")}\n  </g>)

@@ -64,7 +64,7 @@ class FragmentsTest < Minitest::Test
       fragment = fragments[index]
       fragment.readings.each do |(r, c), readings|
         r, c = fragment.opposite(r, c) if turned
-        board[[row + r, col + c]] = readings[turned ? 1 : 0]
+        board[[row + r, col + c]] = readings[turned ? 1 : 0].first
       end
     end
   end
@@ -109,16 +109,70 @@ class FragmentsTest < Minitest::Test
   def test_a_hostile_plate_where_every_pair_balances_is_still_read_quickly
     side = 16 # four fragments of 16 x 16 signs: a 32 x 32 board, the largest a message makes
     cells = (0...side).to_a.product((0...side).to_a)
-    null = Fragments::Fragment.new(side, side, cells.to_h { |cell| [cell, [9999, 9999]] })
+    null = Fragments::Fragment.new(side, side, cells.to_h { |cell| [cell, [[9999], [9999], false]] })
 
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    assert_empty Fragments::Join.all([null] * 4, C::Layout::KEYLESS) # all null pairs: no letters
-    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 5
+    error = assert_raises(C::DecodeError) { Fragments::Join.all([null] * 4, C::Layout::KEYLESS) }
+    assert_match(/too many ways/, error.message)
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 1
   end
 
   def test_an_intact_plate_is_not_broken
     _, svg = C.inscribe('ora et labora')
 
     refute Fragments.broken?(svg)
+  end
+
+  # Whether an edition can be the message: every letter read is right, and
+  # every restoration allows the true letter (as in WeatheringTest)
+  def faithful?(edition, message)
+    expected = C.normalize(message).chars
+    edition.scan(/\[([^\]]*)\]|(.)/).all? do |bracket, plain|
+      truth = expected.shift
+      plain ? plain == truth : bracket.split('/', -1).include?(truth)
+    end && expected.empty?
+  end
+
+  def test_a_weathered_broken_plate_rejoins_into_its_edition
+    MESSAGES.first(3).each_with_index do |message, seed|
+      _, svg, pieces, damage = Fragments.inscribe(message, weathered: true, random: Random.new(seed))
+      edition = C.decode(svg)
+
+      refute_empty damage
+      assert C::Lacunae.weathered?(svg)
+      assert_equal 1, Fragments::Join.all(Fragments.read(svg), C::Layout::KEYLESS).size
+      assert_includes 1..pieces.size, svg.scan('class="lacunae"').size, 'a lacunae layer in each worn fragment'
+      assert_match(/\[/, edition)
+      assert faithful?(edition, message), "#{edition.inspect} is not #{message.inspect}"
+    end
+  end
+
+  def test_a_weathered_fragment_never_carries_what_was_lost
+    sequence, svg, _, damage = Fragments.inscribe('the brothers will gather', weathered: true, random: Random.new(4))
+    lost = svg.scan(%r{<g class="lacunae".*?</g>}m).sum { |layer| layer.scan('<line').size }
+    strokes = sequence.sum { |num| C::Glyphs.strokes(num).size }
+    taken = damage.sum { |index, gone| (C::Glyphs.strokes(sequence[index]).map(&C::Glyphs::CANONICAL) & gone).size }
+
+    assert_equal damage.values.sum(&:size), lost
+    assert_equal strokes - taken + lost, svg.scan('<line').size
+  end
+
+  def test_a_worn_sign_reads_as_its_candidates_both_ways
+    _, svg, = Fragments.inscribe('ora et labora', weathered: true, random: Random.new(3))
+    worn = Fragments.read(svg).flat_map { |fragment| fragment.readings.values }.select(&:last)
+
+    refute_empty worn
+    assert(worn.all? { |upright, turned, _| [upright, turned].compact.any? })
+    assert(worn.any? { |upright, turned, _| [upright, turned].compact.any? { |values| values.size > 1 } })
+  end
+
+  def test_a_sign_worn_past_one_corner_is_refused
+    x, y = C::Layout.origin(0, 0)
+    stem = C::SVG.relative(C::Glyphs::STEM, -x, -y)
+    everywhere = C::Weathering::POSITIONS.values.flatten(1).map { |stroke| C::SVG.relative(stroke, -x, -y) }
+
+    assert_equal 10, Fragments::Reading.readings([stem], everywhere.first(5), 0, 0).first.size # one corner
+    error = assert_raises(C::DecodeError) { Fragments::Reading.readings([stem], everywhere, 0, 0) }
+    assert_match(/past one corner/, error.message)
   end
 end

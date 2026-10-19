@@ -67,7 +67,9 @@ do: `[r]` restored, `[b/l]` for the words to decide. With tally signs, the sums 
 column on a higher cord, a plate can lose whole signs and still be restored. A broken plate comes
 in two to four fragments, some turned half round, in a tray under an empty board: their edges are
 worn, so only the sums show where each one goes. Rejoin them on the page, or let the decoder try
-every arrangement and keep the one whose pairs all balance.
+every arrangement and keep the one whose pairs all balance. A broken plate can be weathered too:
+a worn sign is weighed by every digit it may have held, and the plate, whole again, reads as an
+edition.
 
 Why two ways to send it?
 ------------------------
@@ -124,6 +126,7 @@ bundle exec rackup                                      # then open http://local
 ./cistergraphia -m "Ora et labora" --weathered            # some strokes lost; -d prints the edition
 ./cistergraphia -m "Ora et labora" --weathered --tally    # with row and column sums: whole signs may go
 ./cistergraphia -m "Ora et labora" --broken               # in fragments; -d rejoins them by their sums
+./cistergraphia -m "Ora et labora" --broken --weathered   # worn fragments; -d rejoins them, then the edition
 ```
 
 A web server sees what you seal on it: serve it over HTTPS, or use the command line, which keeps

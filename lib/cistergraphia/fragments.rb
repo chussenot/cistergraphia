@@ -10,6 +10,8 @@ module Cistergraphia
   #   them in a tray: the reader rejoins them on the board
   # - Rejoin a broken plate: of every way the fragments tile the board, turned
   #   or not, read along either keyless layout, the one whose pairs all balance
+  # - A broken plate may be weathered too: it is weathered first, as an intact
+  #   plate is (Weathering), then broken. Rejoined, it reads as an edition
   #
   # Design Decisions:
   # - Breaks follow the grid, straight across a fragment (each break splits one
@@ -26,6 +28,11 @@ module Cistergraphia
   #   which no reader would take for upright
   # - A plate is broken only if exactly one arrangement rejoins it: the
   #   decoder's own search is run on every new plate
+  # - A weathered fragment's signs are read as their candidate values (what its
+  #   strokes allow, the lost positions anything), upright and turned; an
+  #   arrangement holds when every pair can balance. A lacuna widens what a
+  #   pair allows a little, the arrangement a great deal: wrong ones still fail
+  #   (the generator checks it), and only the true one is printed as an edition
   # - A fragment's own frame is the plate's, as if it lay at the top-left
   #   corner: its signs sit where a plate's would, centred in cell boxes that
   #   start at BOARD. Turned half round, it lands on the same boxes; moved by
@@ -36,21 +43,27 @@ module Cistergraphia
   #   break, so pairs straddle every join. Rongorongo pairs never straddle a
   #   line, and a Rongorongo plate turned half round balances just as well
   #   (its lines read in reverse order): the sums could not tell which is up
-  # - Not weathered, no tally signs (yet)
+  # - No tally signs (yet)
   # - At most MAX_PIECES fragments: the search is n! x 2^n arrangements, each
   #   read along both layouts (768 for four), and most fail on their first pairs
+  # - The search is bounded for crafted files too: a sign worn past one corner
+  #   is refused (MAX_CANDIDATES), and so are fragments that would have the
+  #   decoder weigh more than MAX_WEIGHINGS pairs. Every fragment touches the
+  #   plate's edge, so a wrong arrangement fails within the snail's first ring
   module Fragments
     CLASS = 'fragment'
     EDGE = Layout::SPACE / 2 # a fragment's margin around its signs: half the gap between two
     BOARD = Layout::PADDING - EDGE # where the board starts, and a fragment's box in its own frame
     MIN_SIDE = 2
     MAX_PIECES = 4
+    MAX_CANDIDATES = 10 # a lacuna takes at most one corner of a sign: ten digits it may have held
+    MAX_WEIGHINGS = 20_000 # pairs weighed in all; honest plates need under 3,000 (experiments/weathering)
     SEALED = 'A broken plate is a game plate: read it without a passphrase'
     NOT_SEALED = 'A sealed plate cannot be broken: its signs carry no sums to rejoin it by'
     NOT_UNDER_A_GRILLE = 'A plate under a grille cannot be broken yet'
     NOT_ALONG_THE_ROWS = 'Only a Phaistos plate can be broken: a Rongorongo plate turned half round ' \
                          'balances just as well, its lines in reverse order'
-    ONE_CONDITION = 'A broken plate cannot be weathered or carry tally signs yet: choose one'
+    NOT_TALLIED = 'A broken plate cannot carry tally signs yet'
     TOO_SMALL = 'Too short a message to break: a broken plate needs at least 4 × 4 signs'
 
     # What a fragment's cells are, in its own frame
@@ -82,8 +95,23 @@ module Cistergraphia
       end
     end
 
+    # A sign as a fragment shows it, in its own frame: where, its value, whether
+    # it is turned, its place in the reading order, and the strokes a lacuna took
+    Sign = Struct.new(:row, :col, :num, :turned, :index, :lost) do
+      def origin
+        Layout.origin(row, col)
+      end
+
+      # The strokes that survive, turned as the sign lies
+      def strokes
+        Lacunae.strokes(num, lost).map { |stroke| turned ? Glyphs.turn(stroke) : stroke }
+      end
+    end
+
     # A fragment as the file shows it: its size, and each cell's sign read
-    # upright and turned half round ({ [row, col] => [upright, turned] })
+    # upright and turned half round, as candidate values (one for an intact
+    # sign; nil where it does not read), and whether a lacuna took part of it
+    # ({ [row, col] => [upright, turned, worn] })
     Fragment = Struct.new(:rows, :cols, :readings) do
       include Cells
 
@@ -93,23 +121,26 @@ module Cistergraphia
       end
     end
 
-    # A way the fragments rejoin: the layout it reads along, the message, and
-    # where each fragment goes ([fragment index, row, col, turned], in file order)
+    # A way the fragments rejoin: the layout it reads along, the message (an
+    # edition, if weathered), and where each fragment goes ([fragment index,
+    # row, col, turned], in file order)
     Rejoining = Struct.new(:layout, :message, :places)
 
     module_function
 
-    # [sequence, svg, pieces] for a broken game plate, along the snail
-    def inscribe(message, layout: :phaistos, random: Random.new)
+    # [sequence, svg, pieces, damage] for a broken game plate, along the snail;
+    # weathered first if asked (damage is then Weathering's, else empty)
+    def inscribe(message, layout: :phaistos, weathered: false, random: Random.new)
       refuse(layout)
 
       100.times do
         sequence = Cistergraphia.encode(message)
         raise Error, TOO_SMALL if Integer.sqrt(sequence.size) < 2 * MIN_SIDE
 
+        damage = weathered ? Weathering.weather(sequence, random: random) : {}
         pieces = Breaking.cut(Integer.sqrt(sequence.size), random)
-        svg = Tray.render(sequence, layout, pieces, random)
-        return [sequence, svg, pieces] if Join.all(read(svg), Layout::KEYLESS).one?
+        svg = Tray.render(sequence, layout, pieces, random, damage)
+        return [sequence, svg, pieces, damage] if Join.all(read(svg), Layout::KEYLESS).one?
       end
       raise Error, 'Could not break this plate so that it rejoins one way only'
     end
@@ -149,37 +180,59 @@ module Cistergraphia
       root.each_recursive { |node| groups << node if node.name == 'g' && node.attributes['class'] == CLASS }
       raise DecodeError, "A broken plate has at most #{MAX_PIECES} fragments" if groups.size > MAX_PIECES
 
-      groups.map { |group| fragment(group) }
+      groups.map { |group| Reading.fragment(group) }
     end
 
-    # One fragment's signs, from its hidden lines in its own frame
-    def fragment(group)
-      cells = hidden_lines(group).group_by { |line| Layout.cell_of(line) }
-      raise DecodeError, 'A fragment has no signs' if cells.empty?
+    # A fragment read from its hidden lines, in its own frame: the strokes, and
+    # the stroke positions lacunae took (weathered plates)
+    module Reading
+      module_function
 
-      fragment = Fragment.of(cells.to_h { |cell, strokes| [cell, readings(strokes, *cell)] })
-      raise DecodeError, 'A fragment has lost a sign' unless fragment.cells.size == fragment.readings.size
+      def fragment(group)
+        cells = by_cell(group, :strokes)
+        raise DecodeError, 'A fragment has no signs' if cells.empty?
 
-      fragment
-    end
+        lost = by_cell(group, :lacunae)
+        fragment = Fragment.of(cells.to_h { |cell, strokes| [cell, readings(strokes, lost.fetch(cell, []), *cell)] })
+        raise DecodeError, 'A fragment has lost a sign' unless fragment.cells.size == fragment.readings.size
 
-    def hidden_lines(group)
-      lines = []
-      group.each_recursive do |node|
-        lines << %w[x1 y1 x2 y2].map { |attr| SVG.coordinate(node.attributes[attr]) } if node.name == 'line'
+        fragment
       end
-      lines
-    end
 
-    # A sign read upright and turned half round (nil where it does not read)
-    def readings(strokes, row, col)
-      raise DecodeError, 'A fragment sign lies outside its fragment' if row.negative? || col.negative?
+      # A fragment's lines in one layer (:strokes, or :lacunae), as SVG.lines reads a plate's, by cell
+      def by_cell(group, layer)
+        lines = []
+        group.each_recursive do |node|
+          lines << %w[x1 y1 x2 y2].map { |attr| SVG.coordinate(node.attributes[attr]) } if SVG.in_layer?(node, layer)
+        end
+        lines.group_by { |line| Layout.cell_of(line) }
+      end
 
-      upright = Layout.upright(strokes, row, col, false, :phaistos)
-      [upright, upright.map { |stroke| Glyphs.turn(stroke) }].map do |seen|
-        Glyphs.read(seen)
+      # A sign's candidate values read upright and turned half round (nil where
+      # it does not read), and whether a lacuna took part of it
+      def readings(strokes, lost, row, col)
+        raise DecodeError, 'A fragment sign lies outside its fragment' if row.negative? || col.negative?
+
+        seen, gone = [strokes, lost].map { |lines| Layout.upright(lines, row, col, false, :phaistos) }
+        [candidates(seen, gone), candidates(turned(seen), turned(gone)), gone.any?]
+      end
+
+      def candidates(seen, gone)
+        values = legible(seen, gone)
+        raise DecodeError, 'A sign of a broken plate is worn past one corner' if values && values.size > MAX_CANDIDATES
+
+        values
+      end
+
+      # What the strokes allow, or nil where they are no sign (read the other way up, say)
+      def legible(seen, gone)
+        Weathering.candidates(seen, gone)
       rescue DecodeError
         nil
+      end
+
+      def turned(lines)
+        lines.map { |stroke| Glyphs.turn(stroke) }
       end
     end
 
@@ -218,13 +271,18 @@ module Cistergraphia
       # Fragments laid on the board along a tiling ([[index, row, col], ...]),
       # some turned half round (turns, by fragment index): what each cell shows
       Laid = Struct.new(:fragments, :tiling, :owner, :turns) do
-        # The sign in a cell, read upright or turned as the path says (nil if it does not read)
+        # The sign in a cell, read upright or turned as the path says: [candidate
+        # values (nil if it does not read), worn?]
         def sign(row, col, turned)
           index, top, left = owner[row][col]
+          upright, half, worn = readings(index, row - top, col - left)
+          [turns[index] == turned ? upright : half, worn]
+        end
+
+        # What the fragment shows at a cell of its own, wherever it lies turned
+        def readings(index, row, col)
           fragment = fragments[index]
-          half = turns[index]
-          cell = half ? fragment.opposite(row - top, col - left) : [row - top, col - left]
-          fragment.readings.fetch(cell)[half == turned ? 0 : 1]
+          fragment.readings.fetch(turns[index] ? fragment.opposite(row, col) : [row, col])
         end
 
         # [index, row, col, turned] of every fragment, in file order
@@ -233,15 +291,28 @@ module Cistergraphia
         end
       end
 
+      # Pairs left to weigh, in all the arrangements a search tries
+      class Budget
+        def initialize(pairs)
+          @left = pairs
+        end
+
+        def spend
+          @left -= 1
+          raise DecodeError, 'These fragments allow too many ways to rejoin them' if @left.negative?
+        end
+      end
+
       # The arrangements whose pairs all balance, as Rejoinings
       def all(fragments, layouts)
         size = side(fragments)
         paths = layouts.to_h { |layout| [layout, Layout.path(size, layout)] }
+        budget = Budget.new(MAX_WEIGHINGS)
         tilings(fragments, size).flat_map do |tiling|
           owner = owners(fragments, tiling, size)
           [false, true].repeated_permutation(fragments.size).flat_map do |turns|
             laid = Laid.new(fragments, tiling, owner, turns)
-            paths.filter_map { |layout, path| rejoining(laid, layout, path) }
+            paths.filter_map { |layout, path| rejoining(laid, [layout, path], budget) }
           end
         end
       end
@@ -264,19 +335,34 @@ module Cistergraphia
         owner
       end
 
-      # The board read along a path: a Rejoining if every pair balances, else nil
-      # (on the first pair that does not, which is where most arrangements stop)
-      def rejoining(laid, layout, path)
-        sequence = []
+      # The board read along a path: a Rejoining if every pair can balance, else
+      # nil (on the first pair that cannot, which is where most arrangements stop)
+      def rejoining(laid, (layout, path), budget)
+        cells = []
         path.each_slice(2) do |pair|
-          a, b = pair.map { |row, col, turned| laid.sign(row, col, turned) }
-          return nil if a.nil? || b.nil? || Weathering.balance(a, b).nil?
+          budget.spend
+          signs = pair.map { |row, col, turned| laid.sign(row, col, turned) }
+          return nil unless balances?(*signs.map(&:first))
 
-          sequence.push(a, b)
+          cells.concat(signs)
         end
-        Rejoining.new(layout, Cistergraphia.decipher(sequence), laid.places)
+        text = edition(cells)
+        Rejoining.new(layout, text, laid.places) if text
+      end
+
+      # The edition of a board whose pairs all balance; nil if they are all null pairs (no letters)
+      def edition(cells)
+        Weathering::Edition.text(cells)
       rescue DecodeError
         nil
+      end
+
+      # Whether a pair can balance: at once for two intact signs, else by what their candidates allow
+      def balances?(firsts, seconds)
+        return false if firsts.nil? || seconds.nil?
+        return !Weathering.balance(firsts.first, seconds.first).nil? if firsts.one? && seconds.one?
+
+        Weathering.readings(firsts, seconds).any?
       end
 
       # Every way to tile the board with all the fragments: [[index, row, col], ...]
@@ -365,12 +451,14 @@ module Cistergraphia
 
       module_function
 
-      # The board, and below it a tray a little wider: fragments as wide as the board fit side by side
-      def render(sequence, layout, pieces, random)
+      # The board, and below it a tray a little wider: fragments as wide as the
+      # board fit side by side. Damage is Weathering's, by reading index
+      def render(sequence, layout, pieces, random, damage = {})
         size = Integer.sqrt(sequence.size)
         tray = tray_below(size, layout)
-        fragments = lay(pieces, sequence, layout, tray, random)
-        document(tray.room + (2 * BOARD), tray.bottom + BOARD, board(size, layout), fragments)
+        fragments = lay(pieces, [sequence, damage], layout, tray, random)
+        defs = damage.empty? ? board(size, layout) : "  #{Lacunae::PATTERN}\n#{board(size, layout)}"
+        document(tray.room + (2 * BOARD), tray.bottom + BOARD, defs, fragments)
       end
 
       def tray_below(size, layout)
@@ -379,11 +467,11 @@ module Cistergraphia
       end
 
       # The fragments drawn in the tray, the tallest first (in shuffled order among equals)
-      def lay(pieces, sequence, layout, tray, random)
+      def lay(pieces, (sequence, damage), layout, tray, random)
         where = reading_order(Integer.sqrt(sequence.size), layout)
         tallest = pieces.shuffle(random: random).each_with_index.sort_by { |piece, i| [-piece.rows, i] }.map(&:first)
         tallest.map do |piece|
-          fragment(box(piece, layout), signs(piece, sequence, where), tray, random)
+          fragment(box(piece, layout), signs(piece, [sequence, damage], where), tray, random)
         end
       end
 
@@ -418,11 +506,12 @@ module Cistergraphia
         SVG
       end
 
-      # [row, col, number, turned, reading index] of a fragment's signs, in its own frame
-      def signs(piece, sequence, where)
+      # A fragment's signs, in its own frame
+      def signs(piece, (sequence, damage), where)
         piece.cells.map do |row, col|
           index, turned = where.fetch([piece.row + row, piece.col + col])
-          [*(piece.turned ? piece.opposite(row, col) : [row, col]), sequence[index], turned ^ piece.turned, index]
+          cell = piece.turned ? piece.opposite(row, col) : [row, col]
+          Sign.new(*cell, sequence[index], turned ^ piece.turned, index, damage.fetch(index, []))
         end
       end
 
@@ -432,7 +521,8 @@ module Cistergraphia
         x, y = tray.place(width, height)
         tilt = "rotate(#{tilt(width, height, random)} #{BOARD + (width / 2)} #{BOARD + (height / 2)})"
         %(  <g class="#{CLASS}" transform="translate(#{x - BOARD} #{y - BOARD}) #{tilt}">\n) \
-          "#{sherd(width, height, random)}#{wedges(signs)}#{hidden(signs)}  </g>"
+          "#{sherd(width, height, random)}#{lacunae(signs, :worn)}#{wedges(signs)}#{hidden(signs)}" \
+          "#{lacunae(signs, :lost_lines)}  </g>"
       end
 
       # A slight tilt, never so much that a corner reaches the next fragment
@@ -461,19 +551,27 @@ module Cistergraphia
         (0...steps).map { |k| [ax + ((bx - ax) * k / steps), ay + ((by - ay) * k / steps)] }
       end
 
-      # The signs pressed in wedges, seeded by their place in the reading order as on an intact plate
+      # A fragment's worn patches (:worn, under the wedges) or its lost stroke
+      # positions (:lost_lines), drawn as Lacunae draws a plate's ('' if it has none)
+      def lacunae(signs, part)
+        worn = signs.filter_map { |sign| [sign.index, sign.lost, sign.turned, sign.origin] if sign.lost.any? }
+        worn.empty? ? '' : "#{Lacunae.public_send(part, worn).gsub(/^/, '  ')}\n"
+      end
+
+      # The signs pressed in wedges, seeded by their place in the reading order as
+      # on an intact plate (without the strokes a lacuna took)
       def wedges(signs)
-        paths = signs.flat_map do |row, col, num, turned, index|
-          SVG.press(Glyphs.strokes(num), turned, Layout.origin(row, col), Random.new(index))
+        paths = signs.flat_map do |sign|
+          SVG.press(Lacunae.strokes(sign.num, sign.lost), sign.turned, sign.origin, Random.new(sign.index))
         end
         %(    <g fill="black">\n#{paths.map { |d| %(      <path d="#{d}"/>) }.join("\n")}\n    </g>\n)
       end
 
-      # The strokes as hidden lines: what the decoder reads
+      # The strokes that survive, as hidden lines: what the decoder reads
       def hidden(signs)
-        lines = signs.flat_map do |row, col, num, turned, _|
-          x, y = Layout.origin(row, col)
-          Glyphs.strokes(num).map { |stroke| SVG.line_tag(SVG.relative(turned ? Glyphs.turn(stroke) : stroke, -x, -y)) }
+        lines = signs.flat_map do |sign|
+          x, y = sign.origin
+          sign.strokes.map { |stroke| SVG.line_tag(SVG.relative(stroke, -x, -y)) }
         end
         %(    <g stroke="black" stroke-width="2" display="none">\n#{lines.join("\n")}\n    </g>\n)
       end

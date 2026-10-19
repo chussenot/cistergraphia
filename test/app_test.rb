@@ -642,7 +642,7 @@ class AppTest < Minitest::Test
   def test_a_broken_plate_goes_back_to_the_form_when_it_cannot_break
     { { layout: 'rongorongo' } => Cistergraphia::Fragments::NOT_ALONG_THE_ROWS,
       { layout: 'grille' } => Cistergraphia::Fragments::NOT_UNDER_A_GRILLE,
-      { weathered: '1' } => Cistergraphia::Fragments::ONE_CONDITION,
+      { tally: '1' } => Cistergraphia::Fragments::NOT_TALLIED,
       { mode: 'secret', passphrase: 'abbey of molesme' } => Cistergraphia::Fragments::NOT_SEALED }.each do |form, error|
       post '/generate', { message: 'ora et labora', broken: '1' }.merge(form)
 
@@ -652,6 +652,29 @@ class AppTest < Minitest::Test
       assert_match(/name="broken"[^>]*aria-invalid="true" autofocus>/m, last_response.body) # never missed
       assert_includes last_response.body[%r{id="weathered-error"[^>]*>[^<]*</p>}], CGI.escapeHTML(error)
     end
+  end
+
+  def test_a_broken_plate_can_be_weathered_too
+    post '/generate', message: 'the brothers will gather in the chapter house', broken: '1', weathered: '1'
+
+    assert_predicate last_response, :ok?
+    body = last_response.body
+    assert_match(%r{<dt>Condition</dt><dd>Broken, in \d fragments, and weathered</dd>}, body)
+    assert_match(/Broken and weathered: \d fragments, \d+ lacunae/, body)
+    assert_includes body, 'class="lacunae"'
+    refute_includes body, 'data-bench' # no bench on a plate in pieces
+    signs = JSON.parse(CGI.unescapeHTML(body[/data-fragments="([^"]*)"/, 1]))['fragments'].flat_map { |f| f['signs'] }
+    assert(signs.any? { |_, _, worn| worn }, 'worn signs are marked')
+    assert(signs.all? { |upright, turned, _| [upright, turned].compact.all?(Array) })
+  end
+
+  def test_a_weathered_broken_plate_is_read_back_as_an_edition
+    _, svg, = Cistergraphia::Fragments.inscribe('ora et labora', weathered: true, random: Random.new(3))
+
+    post '/decode', svg: svg
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'Rejoined from a broken, weathered plate'
+    assert_match(%r{<span class="leiden-(restored|doubt)">\[[^<]*\]</span>}, last_response.body)
   end
 
   def test_a_broken_plate_is_read_back_rejoined

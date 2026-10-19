@@ -175,8 +175,10 @@ abbot's key) add a reader, not secrecy. Not measured; what the construction impl
    shows, place by place: nothing an attacker could not compute from the plate itself. A broken
    plate only hides where its fragments go, and the decoder finds that by trying every
    arrangement (at most 4! × 2⁴ for four fragments, each read along both layouts; most fail on
-   their first pairs). The search is bounded by refusing more than four fragments, so a crafted
-   file cannot make the server work harder than that.
+   their first pairs). The search is bounded by refusing more than four fragments, a sign worn
+   past one corner (at most ten values each), and any file that would have the decoder weigh more
+   than 20,000 pairs in all (honest plates need under 3,000), so a crafted file cannot make the
+   server work much harder than an honest one.
 
 **Why not harden the game instead?** The attacking agent suggested a keyed tablet, a keyed route
 and sums modulo 10,000. These remain classical constructions: a keyed homophonic substitution

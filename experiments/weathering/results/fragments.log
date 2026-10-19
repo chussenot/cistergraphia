@@ -1,6 +1,13 @@
 200 plates per size, seed 1098
 side  letters  pieces 2/3/4   arrangements (median, max)  one way on the snail   along the rows: one way   search (mean, max)
-   4        7    74/67/59             32,   384         99.5%                 0.0%                 0.001s, 0.006s
-   8       30    62/77/61             32,   192        100.0%                 0.0%                 0.001s, 0.008s
-  14       95    74/62/64             32,   384        100.0%                 0.0%                 0.002s, 0.010s
-  32      500    60/71/69             48,   384        100.0%                 0.0%                 0.009s, 0.030s
+   4        7    74/67/59             32,   384         99.5%                 0.0%                 0.002s, 0.016s
+   8       30    62/77/61             32,   192        100.0%                 0.0%                 0.002s, 0.010s
+  14       95    74/62/64             32,   384        100.0%                 0.0%                 0.003s, 0.011s
+  32      500    60/71/69             48,   384        100.0%                 0.0%                 0.013s, 0.040s
+
+Weathered first, then broken: 200 plates per size
+side  letters  lacunae (mean)  one way on the snail   two or more   search (mean, max)
+   4        7             2.0   99.5%                   0.5%        0.003s, 0.012s
+   8       30            10.0  100.0%                   0.0%        0.003s, 0.012s
+  14       95            32.0  100.0%                   0.0%        0.006s, 0.024s
+  32      500           170.0  100.0%                   0.0%        0.018s, 0.045s
