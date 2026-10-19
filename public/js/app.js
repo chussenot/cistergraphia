@@ -570,18 +570,12 @@
     }));
   }
 
-  // The exported file must be the plain SVG the decoder reads: drop
-  // everything added for display (ink, highlight, classes, styles)
-  function cleanSvgSource() {
-    const svg = plateSvg();
-    if (!svg) return null;
-    const clone = svg.cloneNode(true);
-    $$('.plate-focus', clone).forEach((el) => el.remove());
-    [clone, ...$$('*', clone)].forEach((el) => {
-      el.removeAttribute('class');
-      el.removeAttribute('style');
-    });
-    return new XMLSerializer().serializeToString(clone);
+  // The exported file is the plain SVG the decoder reads: the server's own,
+  // as Read it back sends it, never the shown plate (ink, highlight and walk
+  // are added to it for display). Its classes are part of the file: a
+  // weathered plate's lacunae, read without theirs, would be taken for strokes
+  function plainSvgSource() {
+    return $('.readback input[name="svg"]')?.value ?? null;
   }
 
   function download(blob, filename) {
@@ -652,7 +646,7 @@
         });
         return;
       }
-      const source = cleanSvgSource();
+      const source = plainSvgSource();
       if (!source) return;
       if (action === 'download-svg') download(new Blob([source], { type: 'image/svg+xml' }), 'cistergraphia.svg');
       if (action === 'download-png') downloadPng(source);
