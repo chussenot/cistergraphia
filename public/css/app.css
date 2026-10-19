@@ -683,7 +683,7 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 }
 .plate-frame svg { display: block; width: auto; height: auto; max-width: 100%; max-height: min(78vh, 60rem); color: var(--ink); }
 .plate-frame svg > rect:first-child { fill: transparent; }
-.plate-frame svg g { stroke: currentColor; stroke-width: 3; stroke-linecap: square; }
+.plate-frame svg path { fill: currentColor; stroke: none; } /* the pressed signs */
 .plate-frame:focus-visible { outline-offset: 4px; }
 .plate-frame.is-turned svg { transform: rotate(180deg); }
 @media (prefers-reduced-motion: no-preference) {
@@ -728,6 +728,19 @@ line.ink-in {
 @keyframes ink-dry {
   from { stroke: var(--accent); }
   to { stroke: currentColor; }
+}
+/* A pressed sign (a plate's wedges) is not drawn but pressed: it appears wet, then dries */
+path.ink-press {
+  animation-name: ink-press, ink-dry-fill;
+  animation-duration: var(--dur-stroke), var(--dur-dry);
+  animation-timing-function: var(--ease-ink), ease-out;
+  animation-delay: var(--delay), calc(var(--delay) + var(--dur-stroke));
+  animation-fill-mode: both;
+}
+@keyframes ink-press { from { opacity: 0; } }
+@keyframes ink-dry-fill {
+  from { fill: var(--accent); }
+  to { fill: currentColor; }
 }
 line.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 @keyframes ink-lift { to { opacity: 0; } }
@@ -993,5 +1006,5 @@ input[type="number"] { font-variant-numeric: lining-nums; font-size: 1.3rem; }
   .leaf { box-shadow: none; border: 0; padding: 0; }
   .leaf::before { display: none; }
   .plate-frame { border: 0; box-shadow: none; max-height: none; overflow: visible; }
-  .plate-frame svg g { stroke: #000; }
+  .plate-frame svg path { fill: #000; }
 }

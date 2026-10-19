@@ -6,6 +6,10 @@ module Cistergraphia
   # Lays a sequence out along a reading path (a layout) in an SVG document,
   # and reads it back. SVG is written as plain strings (numbers only, nothing to escape) and
   # parsed with REXML, so no native XML dependency is needed.
+  #
+  # A plate shows its signs pressed in wedges (Stylus), one path per sign in
+  # reading order, and keeps every stroke as a hidden <line>: what the decoder
+  # reads. Plates drawn before the wedges (visible lines only) read the same.
   module SVG
     SPACE = 20
     PADDING = 50 # Padding around the content
@@ -40,11 +44,36 @@ module Cistergraphia
       <<~SVG
         <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}">
           <rect width="100%" height="100%" fill="white"/>
-          <g stroke="black" stroke-width="2">
+          <g fill="black">
+        #{pressed(sequence, cols, layout).map { |outline| %(    <path d="#{outline}"/>) }.join("\n")}
+          </g>
+          <g stroke="black" stroke-width="2" display="none">
         #{strokes(sequence, cols, layout).map { |line| line_tag(line) }.join("\n")}
           </g>
         </svg>
       SVG
+    end
+
+    # Each sign pressed by the hand, as SVG path data, in reading order. A turned
+    # sign is pressed upright, then turned with its cell, as the scribe wrote it
+    # with the tablet turned. The hand is seeded by the sign's place in the
+    # reading order, so the same plate is always pressed the same way.
+    def pressed(sequence, cols, layout)
+      path(cols, layout).zip(sequence).each_with_index.map do |((row, col, turned), num), index|
+        press(num, turned, origin(row, col), Random.new(index))
+      end
+    end
+
+    # One sign's wedges as path data, in its cell (turned half round if need be)
+    def press(num, turned, (x, y), random)
+      Glyphs.strokes(num).flat_map { |stroke| Stylus.wedge(stroke, random) }.map do |polygon|
+        outline(turned ? polygon.map { |px, py| [Glyphs::WIDTH - px, Glyphs::HEIGHT - py] } : polygon, x, y)
+      end.join
+    end
+
+    # A closed polygon, moved to the cell's origin, with one decimal
+    def outline(points, x, y)
+      "M#{points.map { |px, py| "#{(px + x).round(1)} #{(py + y).round(1)}" }.join('L')}Z"
     end
 
     # Absolute strokes of every symbol in reading order, turned where the path says so

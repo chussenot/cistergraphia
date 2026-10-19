@@ -83,7 +83,9 @@ breakable (< 90%) or secret mode starts leaking (> 10%).
    (On very short messages the pair test can pass along both routes, about 1 two-letter plate
    in 100; the encoder redraws those, so the test always names one.)
 6. **Images instead of SVG would not help.** The glyphs are regular and documented: dCode
-   converts them, and a vision model or a small classifier reads them.
+   converts them, and a vision model or a small classifier reads them. Pressing the signs in
+   wedges does not change this either: the file still carries every stroke as a line (the
+   decoder needs them), and the wedges keep each stroke's position and direction.
 
 **Why not harden the game instead?** The attacking agent suggested a keyed tablet, a keyed route
 and sums modulo 10,000. These remain classical constructions: a keyed homophonic substitution

@@ -21,9 +21,14 @@ Three ideas carry the design:
 2. **The page teaches the cipher.** The key beside the form (one sign's anatomy, the units
    tabula, the snail) is drawn from the real cipher geometry (`Cistergraphia::Glyphs`), so it
    can never drift from what the encoder produces.
-3. **Motion shows the reading order.** On the result page each stroke is inked in reading
+3. **Motion shows the reading order.** On the result page each sign is pressed in reading
    order, so the path (the snail, or the turning rows) is visible the first time you see a
    plate. It is off under `prefers-reduced-motion`.
+4. **A plate is pressed by hand.** Its signs are wedges, as a stylus leaves them in clay: a
+   notched head where it bites, a tail that thins as it lifts, pressed left to right and
+   top-down like a cuneiform tablet, with a slight unevenness of the hand. The hand is seeded,
+   so a plate always looks the same. Signs elsewhere (key, preview, Lectio) stay drawn in line,
+   where they are taught.
 
 ## Tokens
 
@@ -62,7 +67,7 @@ and the passphrase.
 | Mode cards (`.mode`, About) | Native radios styled as two index cards; the first letter is a red or blue initial |
 | Fields | Labels in small capitals; vellum-filled inputs; a focus ring in the mode colour |
 | Buttons | Primary uses the mode colour; secondary is outlined; quiet is link-like; all are at least 48 px tall |
-| Plate (`.plate-frame`) | The SVG in ink colours (CSS only) inside a double frame, scaled to fit the viewport |
+| Plate (`.plate-frame`) | The signs pressed in wedges (`Cistergraphia::Stylus`: head 12, head length 14, tail 6, variation 6, in glyph units), in ink colours (CSS only), inside a double frame, scaled to fit the viewport |
 | Drop zone | Large dashed target; works by drag, click or keyboard |
 | Transcription | The decoded text with a plain two-line initial (`initial-letter`, with a float fallback) |
 | Toast | A polite live region, instead of `alert()` |
@@ -79,7 +84,8 @@ Motion and interaction follow four rules. Anything that breaks one does not ship
 1. **Motion only when it carries meaning.** Nothing loops, nothing moves for show; every
    animation either teaches how the cipher works or answers something you did.
 2. **One vocabulary: ink.** A stroke is *inked* (drawn end to end, wet in the mode's colour,
-   then drying to iron-gall ink) or *lifted* (it fades). A sign changes by *morphing*:
+   then drying to iron-gall ink) or *lifted* (it fades); a plate's wedges are *pressed*
+   (they appear wet, then dry). A sign changes by *morphing*:
    shared strokes stay, only the difference is written. Never a pop, a bounce or a shake.
 3. **The game is reading.** The page invites you to read the signs yourself, at your own
    pace: no timers, no sound, no confetti. Mistakes are shown, not punished.
@@ -101,7 +107,7 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | stroke gap | 70 ms | between two strokes of one sign, like a scribe's hand |
 | `--ease-ink` | `cubic-bezier(0.3, 0.6, 0.2, 1)` | quick to start, slow to settle |
 
-![The plate being inked: dry strokes in ink, the wet rubric front coiling up the left side](web-ui-ink.png)
+![The plate being pressed: dry signs in ink, the wet rubric front coiling inward](web-ui-ink.png)
 
 ### Catalogue
 
@@ -112,7 +118,7 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | How to read a sign | The four corners are dials (click, or arrow keys up/down); only the changed strokes are rewritten; hovering a corner lights its strokes; some years name themselves (1098, 1115, 1153, this year) | How the places combine |
 | Inscribe | Choosing Secret unfolds the passphrase below the message | What sealing needs |
 | Inscribe key | Choosing a layout re-inks the "Order of reading" path, in place | Where the plate starts and how it runs |
-| Plate | Inked sign by sign in reading order, the wet rubric front visibly coiling inward (or climbing the rows) | The reading order |
+| Plate | Pressed sign by sign in reading order, the wet rubric front visibly coiling inward (or climbing the rows) | The reading order |
 | Plate | Walk it: point at a sign, or focus the plate and use the arrow keys / Home / End; a soft field glides along the path; "Sign 12 of 36 · 4127", with "upside down: turn the plate to read it" on turned signs | Reading the numerals, the first step of solving a game plate |
 | Plate (Rongorongo) | **Turn the plate**: the plate rotates half round, as the readers of Rapa Nui turned their tablets; the turned rows now read upright, and walking follows | Why every other row is upside down |
 | Transcription | The decoded message appears letter by letter after its initial | The payoff of decoding |
@@ -144,9 +150,10 @@ downloaded SVG is unchanged.
 - **Progressive enhancement.** Without JS, every form works: both modes, decoding, and the
   read-it-back form. JS adds the mode switch, counter, reveal, exports, drag and drop, and
   the animation.
-- **Exports stay decodable.** Display styling is CSS-only, and the animation's inline styles
-  are stripped before Download SVG, PNG or Copy. The file is the same black-on-white SVG the
-  decoder reads.
+- **Exports stay decodable.** A plate file holds its pressed wedges (one path per sign) and
+  every stroke as a hidden `<line>`: the decoder reads the lines, the wedges are only the look,
+  and plates drawn before the wedges still read. Display styling is CSS-only, and the
+  animation's inline styles are stripped before Download SVG, PNG or Copy.
 - **Accessible by default.** Real labels, a native radio group (arrow keys work), visible
   focus, a skip link, `aria-live` feedback, reduced motion respected, and no horizontal scroll at
   390 px. axe-core reports no WCAG 2.1 AA violations on any page, in either theme.
