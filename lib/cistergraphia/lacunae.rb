@@ -46,8 +46,9 @@ module Cistergraphia
         sequence, damage = weathered(message, layout, tally, random)
         next if damage.empty? # a very short message may need another draw
 
-        svg = SVG.render(sequence, layout: layout, damage: damage, tally: tally)
-        return [sequence, svg, damage] if grille || unambiguous?(svg, layout)
+        next unless grille || unambiguous?(sequence, damage, layout, tally)
+
+        return [sequence, SVG.render(sequence, layout: layout, damage: damage, tally: tally), damage]
       end
       raise Error, 'Could not draw an unambiguous plate for this message'
     end
@@ -64,12 +65,10 @@ module Cistergraphia
       [sequence, Weathering.weather(sequence, random: random, lines: lines)]
     end
 
-    def unambiguous?(svg, layout)
-      (Layout::KEYLESS - [layout]).none? do |other|
-        decode(svg, layout: other)
-      rescue DecodeError
-        false
-      end
+    # Whether the plate restores along its own layout only, checked from the
+    # data (parsing the file it would make costs more than all the rest)
+    def unambiguous?(sequence, damage, layout, tally)
+      (Layout::KEYLESS - [layout]).none? { |other| Along.edition(sequence, damage, layout, other, tally) }
     end
 
     # The restored text of a weathered plate, in the Leiden conventions
@@ -158,6 +157,42 @@ module Cistergraphia
     def signs(cols, layout, damage)
       Layout.path(cols, layout).each_with_index.filter_map do |(row, col, turned), index|
         [index, damage[index], turned, Layout.origin(row, col, layout)] if damage.key?(index)
+      end
+    end
+
+    # A weathered plate read along another layout, from the data: what the
+    # decoder would find reading its file that way (the same signs, turned
+    # where the two paths disagree), without drawing or parsing the file
+    module Along
+      module_function
+
+      # The edition the decoder would print, or nil if the plate does not restore that way
+      def edition(sequence, damage, layout, other, tally)
+        cells = cells(sequence, damage, layout, other)
+        cells = Tally.restore(cells.map(&:first), Tally.signs(sequence, layout), other).zip(cells.map(&:last)) if tally
+        Weathering::Edition.text(cells)
+      rescue DecodeError
+        nil
+      end
+
+      # [candidate values, damaged?] of every sign as the other layout reads them
+      def cells(sequence, damage, layout, other)
+        size = Integer.sqrt(sequence.size)
+        drawn = Layout.path(size, layout).each_with_index.to_h do |(row, col, turned), index|
+          [[row, col], [index, turned]]
+        end
+        Layout.path(size, other).map do |row, col, turned|
+          index, was = drawn.fetch([row, col])
+          sign(sequence[index], damage.fetch(index, []), was != turned)
+        end
+      end
+
+      # One sign's [candidates, damaged?], its strokes turned half round if the other path reads it so
+      def sign(num, lost, turned)
+        seen, gone = [Weathering.surviving(num, lost), lost].map do |strokes|
+          turned ? strokes.map { |stroke| Glyphs.turn(stroke) } : strokes
+        end
+        [Weathering.candidates(seen, gone), gone.any?]
       end
     end
 
