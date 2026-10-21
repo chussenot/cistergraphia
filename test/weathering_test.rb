@@ -87,6 +87,30 @@ class WeatheringTest < Minitest::Test
     end
   end
 
+  # The generator checks the other layout from the data: it must find exactly
+  # what the decoder finds reading the file along that layout
+  def test_the_other_layout_is_checked_as_the_decoder_would_read_the_file
+    [[:phaistos, false], [:rongorongo, false], [:phaistos, true], [:rongorongo, true]].each do |layout, tally|
+      MESSAGES.each_with_index do |message, seed|
+        sequence, damage = Lacunae.weathered(message, layout, tally, Random.new(seed))
+        svg = C::SVG.render(sequence, layout: layout, damage: damage, tally: tally)
+        (C::Layout::KEYLESS - [layout]).each do |other|
+          assert_same_reading(read_file(svg, other), Lacunae::Along.edition(sequence, damage, layout, other, tally))
+        end
+      end
+    end
+  end
+
+  def read_file(svg, layout)
+    Lacunae.decode(svg, layout: layout)
+  rescue C::DecodeError
+    nil
+  end
+
+  def assert_same_reading(from_file, from_data)
+    from_file.nil? ? assert_nil(from_data) : assert_equal(from_file, from_data)
+  end
+
   def test_the_file_never_carries_what_was_lost
     sequence, svg, damage = Lacunae.inscribe('the brothers will gather')
     lost = C::SVG.lines(svg, layer: :lacunae)

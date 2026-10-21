@@ -286,9 +286,10 @@ const FLOWS = [
         anchor: '[data-rejoin-reading]',
         act: async (p) => {
           const count = await p.locator('[data-plate] svg g.fragment').count();
-          for (let i = 0; i < count; i += 1) { // picked, then up the sheet cell by cell, onto the board
+          for (let i = 0; i < count; i += 1) { // picked, then up and left cell by cell, onto the board
             await p.locator(`[data-plate] svg g.fragment[aria-label^="Fragment ${i + 1} "]`).click({ position: { x: 12, y: 12 } });
             for (let k = 0; k < 16; k += 1) await p.keyboard.press('ArrowUp');
+            for (let k = 0; k < 16; k += 1) await p.keyboard.press('ArrowLeft');
           }
         }
       },
