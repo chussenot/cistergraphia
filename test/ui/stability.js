@@ -18,6 +18,7 @@ const { chromium } = require('playwright');
 
 const [baseUrl, plateFile, executablePath] = process.argv.slice(2);
 const weatheredFile = plateFile.replace(/\.svg$/, '-weathered.svg'); // written beside it by stability.rb
+const brokenFile = plateFile.replace(/\.svg$/, '-broken.svg'); // and this one
 const VIEWPORTS = [
   { width: 320, height: 640 }, // the smallest phone
   { width: 390, height: 844 }, // a common phone
@@ -118,6 +119,16 @@ const openGrillePlate = async (page, decoy = '') => {
   if (decoy) await page.fill('#decoy', decoy);
   await page.click('[data-submit]');
   await page.waitForSelector('[data-plate] svg');
+};
+
+// A file brought to Read: a damaged plate opens as its puzzle (the bench, the
+// board); "Decipher it" below asks the decoder, as the plain submit does for an intact plate
+const bringToRead = (file, selector, decipher = false) => async (page) => {
+  await page.goto(`${baseUrl}/decode`);
+  await page.setInputFiles('#file', file);
+  await Promise.all([page.waitForURL('**/decode'), page.click('.entry [type="submit"]')]);
+  if (decipher) await Promise.all([page.waitForURL('**/decode'), page.click('.readback [type="submit"]')]);
+  await page.waitForSelector(selector, { state: 'attached' }); // the bench and the board await the script
 };
 
 // A weathered plate: some strokes lost to the centuries
@@ -309,13 +320,29 @@ const FLOWS = [
     ]
   },
   {
+    page: 'restore',
+    open: bringToRead(weatheredFile, '[data-bench]'),
+    steps: [
+      { name: 'walk the worn signs', act: async (p) => { await p.focus('[data-plate]'); for (let i = 0; i < 12; i += 1) await p.keyboard.press('ArrowRight'); } },
+      { name: 'choose a lacuna on the plate', act: (p) => p.click('.bench-target >> nth=1', { force: true }) },
+      { name: 'press every digit', act: async (p) => { for (const button of await p.locator('[data-digit]:not([disabled])').all()) await button.click(); } },
+      { name: 'step through the lacunae', act: async (p) => { for (let i = 0; i < 4; i += 1) await p.click('[data-bench-step="1"]'); await p.click('[data-bench-step="-1"]'); } }
+    ]
+  },
+  {
+    page: 'rejoin',
+    open: bringToRead(brokenFile, '[data-rejoin]'),
+    steps: [
+      { name: 'pick a fragment', act: (p) => p.click('[data-plate] svg g.fragment >> nth=0', { position: { x: 12, y: 12 } }) },
+      { name: 'lay it on the board', act: (p) => layOnBoard(p, 4, 4) },
+      { name: 'move it with the keys', act: async (p) => { for (const key of ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp']) await p.keyboard.press(key); } },
+      { name: 'turn it', act: async (p) => { await p.keyboard.press('t'); await p.click('[data-rejoin-turn]'); } },
+      { name: 'back to the tray', anchor: '[data-rejoin-reading]', act: (p) => p.click('[data-rejoin-reset]') }
+    ]
+  },
+  {
     page: 'edition',
-    open: async (page) => {
-      await page.goto(`${baseUrl}/decode`);
-      await page.setInputFiles('#file', weatheredFile);
-      await Promise.all([page.waitForURL('**/decode'), page.click('.entry [type="submit"]')]);
-      await page.waitForSelector('[data-transcription]');
-    },
+    open: bringToRead(weatheredFile, '[data-transcription]', true),
     steps: [
       { name: 'copy the edition', act: (p) => p.click('[data-action="copy-text"]') }
     ]
@@ -379,15 +406,9 @@ const PAGES = [
   { page: 'tallied', open: openSamePlate({ message: MESSAGE, weathered: '1', tally: '1' }) },
   { page: 'broken', open: openSamePlate({ message: MESSAGE, broken: '1' }) },
   { page: 'worn+broken', open: openSamePlate({ message: MESSAGE, broken: '1', weathered: '1' }) },
-  {
-    page: 'edition',
-    open: async (page) => {
-      await page.goto(`${baseUrl}/decode`);
-      await page.setInputFiles('#file', weatheredFile);
-      await Promise.all([page.waitForURL('**/decode'), page.click('.entry [type="submit"]')]);
-      await page.waitForSelector('[data-transcription]');
-    }
-  },
+  { page: 'restore', open: bringToRead(weatheredFile, '[data-bench]') },
+  { page: 'rejoin', open: bringToRead(brokenFile, '[data-rejoin]') },
+  { page: 'edition', open: bringToRead(weatheredFile, '[data-transcription]', true) },
   { page: 'read', open: (page) => page.goto(`${baseUrl}/decode`) },
   {
     page: 'decoded',

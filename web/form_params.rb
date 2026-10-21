@@ -130,12 +130,14 @@ module FormParams
     Cistergraphia::TwoReaders.inscribe(@message, @decoy, passphrase: passphrase, grille: given)
   end
 
-  # A broken or a weathered game plate: [sequence, svg, layout]
+  # A broken or a weathered game plate: [sequence, svg, layout]. A broken
+  # plate's fragments are read back from its file, as the reader's page reads them
   def damaged_plate
     if @broken
       sequence, svg, @pieces, damage = Cistergraphia::Fragments.inscribe(@message, layout: @layout,
                                                                                    weathered: @weathered)
       @damage = damage unless damage.empty?
+      @fragments = Cistergraphia::Fragments.read(svg)
     else
       sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout, tally: @tally)
     end
@@ -144,8 +146,7 @@ module FormParams
 
   # What the plate says: under a grille, what its key reads (both messages for
   # an abbot's key); otherwise the message along the layout the decoder finds
-  def read_plate
-    svg = submitted_svg
+  def read_plate(svg)
     @weathered = Cistergraphia::Lacunae.weathered?(svg)
     @broken = Cistergraphia::Fragments.broken?(svg)
     grille = submitted_grille

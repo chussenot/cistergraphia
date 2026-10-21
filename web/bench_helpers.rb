@@ -16,21 +16,33 @@ module BenchHelpers
     PLACE_NAMES.fetch(place)
   end
 
-  # One entry per damaged place of a sign (a sign wholly lost has four), in reading order
+  # One entry per damaged place of a sign (a sign wholly lost has four), in
+  # reading order, from the plate's data (the scribe's page)
   def lacunae(sequence, layout, damage)
     path = Cistergraphia::Layout.path(Integer.sqrt(sequence.size), layout)
-    damage.sort.flat_map do |index, lost|
-      row, col, turned = path[index]
-      x, y = Cistergraphia::Layout.origin(row, col, layout)
-      sign = { sign: index, x: x, y: y, turned: turned }
-      by_place(sequence[index], lost).map { |entry| sign.merge(entry) }
+    damage.sort.flat_map { |index, lost| sign_entries(path, layout, index, lost, options(sequence[index], lost)) }
+  end
+
+  # The same entries from the plate's file alone (the reader's page): the
+  # survey's lost positions and candidates are what the file shows
+  def lacunae_in(svg, layout, values)
+    path = Cistergraphia::Layout.path(Integer.sqrt(values.size), layout)
+    Cistergraphia::Lacunae::Survey.damaged(svg, layout).flat_map do |sign|
+      sign_entries(path, layout, sign[:index], sign[:lost], sign[:candidates])
     end
   end
 
+  def sign_entries(path, layout, index, lost, options)
+    row, col, turned = path[index]
+    x, y = Cistergraphia::Layout.origin(row, col, layout)
+    sign = { sign: index, x: x, y: y, turned: turned }
+    by_place(options, lost).map { |entry| sign.merge(entry) }
+  end
+
   # Each damaged place of a sign: its lost strokes, the digits it can still
-  # hold, the sign's digits that survive (0 in its damaged places) and those places
-  def by_place(value, lost)
-    options = options(value, lost)
+  # hold (options: the values the sign can be), the sign's digits that survive
+  # (0 in its damaged places) and those places
+  def by_place(options, lost)
     places = lost.group_by { |stroke| Cistergraphia::Glyphs::STROKE_PLACES.fetch(stroke) }
     shared = { known: without(options.first, places.keys), open: places.keys.sort }
     places.sort.reverse.map do |place, strokes|
@@ -52,11 +64,15 @@ module BenchHelpers
     values.map { |value| value / place % 10 }.uniq.sort
   end
 
-  # A lacuna's pair as the bench first shows it: "1?34 + 6234 = ?"
-  def bench_sum(sequence, lacuna)
+  # A lacuna's pair as the bench first shows it: "1?34 + 6234 = ?", a partner
+  # lacuna as open as this one (the page never holds a lost digit)
+  def bench_sum(values, entries, lacuna)
     sign = lacuna[:sign]
     first = sign - (sign % 2)
-    shown = [first, first + 1].map { |index| index == sign ? open_digits(lacuna) : format('%04d', sequence[index]) }
+    shown = [first, first + 1].map do |index|
+      worn = entries.find { |entry| entry[:sign] == index }
+      worn ? open_digits(worn) : format('%04d', values.fetch(index))
+    end
     "#{shown.join(' + ')} = ?"
   end
 
@@ -68,8 +84,8 @@ module BenchHelpers
   end
 
   # The bench's first verdict: a null pair (an intact 9999 after a lost first sign) needs no digit
-  def bench_verdict(sequence, lacuna)
-    null = lacuna[:sign].even? && sequence[lacuna[:sign] + 1] == Cistergraphia::EVIL_MARKER
+  def bench_verdict(values, lacuna)
+    null = lacuna[:sign].even? && values[lacuna[:sign] + 1] == Cistergraphia::EVIL_MARKER
     null ? 'A null pair: any digit.' : 'Press a digit to balance it.'
   end
 
@@ -82,8 +98,8 @@ module BenchHelpers
   # The bench's edition before anything is restored, as app.js redraws it:
   # null pairs (an intact 9999) left out, [.] for a pair a lacuna took part
   # of, letters for the rest
-  def bench_edition(sequence, damage)
-    sequence.each_slice(2).with_index.filter_map do |(first, second), pair|
+  def bench_edition(values, damage)
+    values.each_slice(2).with_index.filter_map do |(first, second), pair|
       next if second == Cistergraphia::EVIL_MARKER && !damage.key?((2 * pair) + 1)
       next '[.]' if damage.key?(2 * pair) || damage.key?((2 * pair) + 1)
 

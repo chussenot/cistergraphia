@@ -184,4 +184,33 @@ class WeatheringTest < Minitest::Test
     assert_raises(C::GrilleKeyNeededError) { C.decode(svg) }
     assert_raises(C::WrongGrilleError) { C.decode(svg, layout: C::Grille.new('00000-00000')) }
   end
+
+  # The survey: what the reader's page learns from a weathered plate's file alone
+  def test_the_survey_finds_the_layout_the_values_and_the_lacunae_of_a_weathered_plate
+    [[:phaistos, false], [:rongorongo, false], [:phaistos, true]].each do |layout, tally|
+      message = 'the brothers will gather in the chapter house'
+      sequence, svg, damage = C::Lacunae.inscribe(message, layout: layout, tally: tally, random: Random.new(7))
+
+      assert_equal layout, C::Lacunae::Survey.layout(svg)
+      assert_equal C.decode(svg), C::Lacunae::Survey.edition(svg, layout)
+      assert_equal sequence.each_with_index.map { |value, index| damage.key?(index) ? nil : value },
+                   C::Lacunae::Survey.values(svg, layout)
+      assert_survey_shows_the_damage(C::Lacunae::Survey.damaged(svg, layout), sequence, damage)
+    end
+  end
+
+  # The lost strokes as they were lost, and the lost value among the candidates
+  def assert_survey_shows_the_damage(damaged, sequence, damage)
+    assert_equal damage, damaged.to_h { |sign| [sign[:index], sign[:lost]] }.sort.to_h
+    damaged.each { |sign| assert_includes sign[:candidates], sequence[sign[:index]] }
+  end
+
+  def test_the_survey_reads_a_grille_plate_only_with_its_key
+    grille = C::Grille.new('K7Q2M-ZXB4P')
+    _, svg, damage = C::Lacunae.inscribe('ora et labora', layout: grille)
+
+    assert_nil C::Lacunae::Survey.layout(svg)
+    assert_nil C::Lacunae::Survey.edition(svg, C::Grille.new('00000-00000'))
+    assert_equal damage.keys.sort, C::Lacunae::Survey.damaged(svg, grille).map { |sign| sign[:index] }.sort
+  end
 end

@@ -35,6 +35,8 @@ require_relative 'web/view_helpers'
 require_relative 'web/bench_helpers'
 require_relative 'web/tray_helpers'
 require_relative 'web/form_params'
+require_relative 'web/plate_file'
+require_relative 'web/reader_game'
 require_relative 'web/figures'
 
 class CistergraphiaApp < Sinatra::Base
@@ -46,7 +48,7 @@ class CistergraphiaApp < Sinatra::Base
     "form-action 'self'", "frame-ancestors 'none'"
   ].join('; ')
 
-  helpers ViewHelpers, BenchHelpers, TrayHelpers, Figures, FormParams
+  helpers ViewHelpers, BenchHelpers, TrayHelpers, Figures, FormParams, ReaderGame
 
   configure do
     set :root, __dir__
@@ -129,10 +131,14 @@ class CistergraphiaApp < Sinatra::Base
     erb :about
   end
 
+  # A weathered or broken game plate opens as its puzzle (the reader's game);
+  # decipher=1 asks the decoder instead
   post '/decode' do
     @page = :read
-    reading = read_plate
-    @message, @decoy, @reader = reading.to_a
+    svg = submitted_svg
+    next erb :play if playable?(svg)
+
+    @message, @decoy, @reader = read_plate(svg).to_a
     @secret = !passphrase.nil?
     erb :decoded
   rescue Cistergraphia::GrilleKeyNeededError => e

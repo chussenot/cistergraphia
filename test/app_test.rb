@@ -8,6 +8,7 @@ require_relative '../app'
 
 class AppTest < Minitest::Test
   include Rack::Test::Methods
+  include BenchHelpers # the scribe's bench entries, to compare the reader's with
 
   def app
     CistergraphiaApp
@@ -73,6 +74,7 @@ class AppTest < Minitest::Test
 
   def test_result_page_can_read_its_plate_back
     post '/generate', message: 'Ora et labora'
+    assert_includes last_response.body, '<input type="hidden" name="decipher" value="1">' # the scribe knows the answer
     svg = CGI.unescapeHTML(last_response.body[/<input type="hidden" name="svg" value="([^"]*)"/, 1])
 
     post '/decode', svg: svg
@@ -598,7 +600,7 @@ class AppTest < Minitest::Test
   def test_a_weathered_plate_is_read_back_as_an_edition
     _, svg, = Cistergraphia::Lacunae.inscribe('ora et labora', random: Random.new(3))
 
-    post '/decode', svg: svg
+    post '/decode', svg: svg, decipher: '1'
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'Restored from a weathered plate'
     assert_match(%r{<span class="leiden-(restored|doubt)">\[[^<]*\]</span>}, last_response.body)
@@ -608,7 +610,7 @@ class AppTest < Minitest::Test
     grille = Cistergraphia::Grille.new('K7Q2M-ZXB4P')
     _, svg, = Cistergraphia::Lacunae.inscribe('ora et labora', layout: grille)
 
-    post '/decode', svg: svg, grille: grille.to_s
+    post '/decode', svg: svg, grille: grille.to_s, decipher: '1'
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'leiden-'
   end
@@ -671,7 +673,7 @@ class AppTest < Minitest::Test
   def test_a_weathered_broken_plate_is_read_back_as_an_edition
     _, svg, = Cistergraphia::Fragments.inscribe('ora et labora', weathered: true, random: Random.new(3))
 
-    post '/decode', svg: svg
+    post '/decode', svg: svg, decipher: '1'
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'Rejoined from a broken, weathered plate'
     assert_match(%r{<span class="leiden-(restored|doubt)">\[[^<]*\]</span>}, last_response.body)
@@ -680,9 +682,141 @@ class AppTest < Minitest::Test
   def test_a_broken_plate_is_read_back_rejoined
     _, svg, = Cistergraphia::Fragments.inscribe('ora et labora', random: Random.new(3))
 
-    post '/decode', svg: svg
+    post '/decode', svg: svg, decipher: '1'
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'Rejoined from a broken plate'
     assert_includes last_response.body, 'ora et labora'
+  end
+
+  # --- The reader's game: a damaged plate brought to Read opens as its puzzle
+
+  def test_a_weathered_plate_brought_to_read_opens_as_a_bench
+    _, svg, = Cistergraphia::Lacunae.inscribe('the brothers will gather in the chapter house', random: Random.new(3))
+
+    post '/decode', svg: svg
+    assert_predicate last_response, :ok?
+    body = last_response.body
+    assert_includes body, 'A plate to restore'
+    assert_includes body, 'data-bench'
+    assert_match(%r{<dt>Condition</dt><dd>Weathered</dd>}, body)
+    refute_includes body, 'data-transcription' # the answer is not on the page
+    refute_includes body, 'leiden-'
+  end
+
+  def test_the_readers_bench_holds_only_what_the_file_shows
+    sequence, svg, damage = Cistergraphia::Lacunae.inscribe('the brothers will gather in the chapter house',
+                                                            random: Random.new(3))
+
+    post '/decode', svg: svg
+    entries = JSON.parse(CGI.unescapeHTML(last_response.body[/data-lacunae="([^"]*)"/, 1]))
+    assert_equal damage.keys.sort, entries.map { |entry| entry['sign'] }.uniq.sort
+    entries.each { |entry| assert_lacuna_shows_only_the_file(entry) }
+    cells = JSON.parse(CGI.unescapeHTML(last_response.body[/data-plate-cells="([^"]*)"/, 1]))
+    assert(damage.keys.all? { |index| cells[index][2].nil? }, 'worn signs are not valued')
+    assert_equal sequence.size, cells.size
+  end
+
+  def test_the_readers_bench_is_the_scribes_bench
+    sequence, svg, damage = Cistergraphia::Lacunae.inscribe('the brothers will gather in the chapter house',
+                                                            layout: :rongorongo, tally: true, random: Random.new(5))
+
+    post '/decode', svg: svg
+    body = last_response.body
+    entries = JSON.parse(CGI.unescapeHTML(body[/data-lacunae="([^"]*)"/, 1]))
+    assert_equal JSON.parse(JSON.generate(lacunae(sequence, :rongorongo, damage))), entries
+    assert_match(%r{<dt>Condition</dt><dd>Weathered, with tally signs</dd>}, body)
+    assert_match(%r{<dt>Layout</dt><dd>Rongorongo</dd>}, body)
+    assert_equal Cistergraphia::Tally.signs(sequence, :rongorongo),
+                 JSON.parse(CGI.unescapeHTML(body[/data-tally="([^"]*)"/, 1]), symbolize_names: true)
+  end
+
+  def test_a_broken_plate_brought_to_read_opens_as_a_board
+    _, svg, pieces, = Cistergraphia::Fragments.inscribe('the brothers will gather in the chapter house',
+                                                        random: Random.new(3))
+
+    post '/decode', svg: svg
+    body = last_response.body
+    assert_includes body, 'A plate to rejoin'
+    assert_match(%r{<dt>Condition</dt><dd>Broken, in #{pieces.size} fragments</dd>}, body)
+    assert_equal pieces.size, body.scan('<g class="fragment"').size
+    assert_equal pieces.size, JSON.parse(CGI.unescapeHTML(body[/data-fragments="([^"]*)"/, 1]))['fragments'].size
+    assert_includes body, 'data-rejoin-status'
+    refute_match(/data-transcription|data-plate-cells/, body) # no answer, no walking a plate in pieces
+  end
+
+  def test_a_weathered_broken_plate_brought_to_read_opens_as_a_board_with_worn_signs
+    _, svg, = Cistergraphia::Fragments.inscribe('the brothers will gather in the chapter house',
+                                                weathered: true, random: Random.new(3))
+
+    post '/decode', svg: svg
+    assert_predicate last_response, :ok?
+    body = last_response.body
+    assert_includes body, 'A plate to rejoin and restore'
+    assert_match(%r{<dt>Condition</dt><dd>Broken, in \d fragments, and weathered</dd>}, body)
+    signs = JSON.parse(CGI.unescapeHTML(body[/data-fragments="([^"]*)"/, 1]))['fragments'].flat_map { |f| f['signs'] }
+    assert(signs.any? { |_, _, worn| worn }, 'worn signs are marked')
+    refute_includes body, 'leiden-'
+  end
+
+  def test_the_readers_page_asks_the_decoder_with_the_same_file
+    _, svg, = Cistergraphia::Lacunae.inscribe('ora et labora', random: Random.new(3))
+
+    post '/decode', svg: svg
+    body = last_response.body
+    assert_match(%r{<form class="readback" method="post" action="/decode">.*name="decipher" value="1".*Decipher it}m,
+                 body)
+    carried = CGI.unescapeHTML(body[/<input type="hidden" name="svg" value="([^"]*)"/, 1])
+
+    post '/decode', svg: carried, decipher: '1'
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'Restored from a weathered plate'
+    assert_equal Cistergraphia.decode(svg), Cistergraphia.decode(carried) # the file shown is the file brought
+  end
+
+  def test_a_weathered_grille_plate_plays_with_its_key
+    grille = Cistergraphia::Grille.new('K7Q2M-ZXB4P')
+    _, svg, = Cistergraphia::Lacunae.inscribe('ora et labora', layout: grille)
+
+    post '/decode', svg: svg, grille: grille.to_s
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'A plate to restore'
+    assert_match(%r{<dt>Layout</dt><dd>Grille</dd>}, last_response.body)
+    assert_includes last_response.body, %(<input type="hidden" name="grille" value="#{grille}">)
+  end
+
+  def test_a_weathered_grille_plate_needs_its_key_to_play
+    grille = Cistergraphia::Grille.new('K7Q2M-ZXB4P')
+    _, svg, = Cistergraphia::Lacunae.inscribe('ora et labora', layout: grille)
+
+    post '/decode', svg: svg
+    assert_equal 400, last_response.status
+    assert_includes last_response.body, 'Enter it under “Grille key”'
+
+    post '/decode', svg: svg, grille: '00000-00000'
+    assert_equal 400, last_response.status
+    assert_includes last_response.body, Cistergraphia::Grille::WRONG_KEY
+  end
+
+  def test_the_readers_page_redraws_the_file_it_was_given
+    _, svg, = Cistergraphia::Fragments.inscribe('ora et labora', random: Random.new(3))
+    hostile = svg.sub('<defs>',
+                      '<script>alert(1)</script><a href="javascript:alert(2)"><rect onclick="alert(3)"/></a><defs>')
+
+    post '/decode', svg: hostile
+    assert_predicate last_response, :ok?
+    body = last_response.body
+    refute_includes body, 'alert('
+    refute_includes body, 'onclick'
+    assert_includes body, '<g class="fragment"'
+  end
+
+  def test_a_sealed_or_intact_plate_is_read_not_played
+    post '/decode', svg: Cistergraphia.to_svg(Cistergraphia.encode('ora et labora'))
+    assert_includes last_response.body, 'data-transcription'
+
+    _, svg, = Cistergraphia::Lacunae.inscribe('ora et labora', random: Random.new(3))
+    post '/decode', svg: svg, passphrase: 'abbey of molesme'
+    assert_equal 400, last_response.status # a weathered plate is never sealed: the decoder says so
+    refute_includes last_response.body, 'data-bench'
   end
 end

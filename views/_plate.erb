@@ -1,0 +1,26 @@
+<%#
+A plate, walkable: the figure the plate page and the reader's page share.
+Locals: svg, cells (plate_cells_json), geometry (plate_layout_json), layout, decoy
+%>
+<figure class="plate">
+  <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
+       aria-label="The plate. Use the arrow keys to walk its signs in reading order."
+       data-plate-cells="<%= cells %>" data-plate-layout="<%= geometry %>">
+    <%== svg %>
+  </div>
+  <figcaption>
+    <span class="plate-reading">
+      <% if layout == :rongorongo %>
+        <span class="plate-reading-rest">Read from the bottom left, left to right; turn the plate half round for each next line.</span>
+      <% elsif layout.is_a?(Cistergraphia::Grille) && decoy %>
+        <span class="plate-reading-rest">Two grilles share this plate: the abbot’s reads the message, the novice’s the other one. The abbot’s key gives both; the novice’s, only its own.</span>
+      <% elsif layout.is_a?(Cistergraphia::Grille) %>
+        <span class="plate-reading-rest">Read through the grille: N at the top, the holes row by row, then a quarter turn clockwise. Without it, the plate is an anagram of itself.</span>
+      <% else %>
+        <span class="plate-reading-rest">Read clockwise from the top-left corner, coiling inward.</span>
+      <% end %>
+      <span class="plate-reading-live" data-plate-reading aria-live="polite"></span>
+    </span>
+    <span class="plate-hint awaits-script" data-plate-hint>Point at a sign, or focus the plate and use the arrow keys, to walk it in reading order.</span>
+  </figcaption>
+</figure>

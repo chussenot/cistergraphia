@@ -89,6 +89,8 @@ Dir.mktmpdir do |dir|
   File.write(plate, Cistergraphia.inscribe('ora et labora', layout: :rongorongo).last)
   # The same weathered plate for every run (its edition's length depends on its lacunae)
   File.write(plate.sub(/\.svg\z/, '-weathered.svg'), Cistergraphia::Lacunae.inscribe(MESSAGE)[1])
+  # And the same broken plate: brought to Read, it opens as the board
+  File.write(plate.sub(/\.svg\z/, '-broken.svg'), Cistergraphia::Fragments.inscribe(MESSAGE, random: Random.new(3))[1])
 
   ok = if ENV['BASE_URL']
          check(ENV.fetch('BASE_URL'), plate)
