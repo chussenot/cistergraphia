@@ -661,6 +661,11 @@
   // fragment shows (every sign read upright and turned), never where it goes:
   // once the fragments cover the board, it reads them along both paths and
   // counts the pairs that balance.
+  // On a wide screen the tray is laid again beside the board, so the whole
+  // puzzle is in view at once; the frame's box is fixed by CSS, so nothing on
+  // the page moves when it is. A ghost of the picked fragment shows where it
+  // would land.
+  const WIDE = '(min-width: 64rem)';
   function initFragments() {
     const frame = $('[data-plate]');
     const panel = $('[data-rejoin]');
@@ -679,6 +684,10 @@
     });
     const total = pieces.length;
     let picked = null;
+    const boardWidth = data.size * cellWidth;
+    const boardHeight = data.size * cellHeight;
+    const fileView = svg.getAttribute('viewBox');
+    const fileHomes = pieces.map((piece) => ({ ...piece.home }));
 
     const draw = (piece) => {
       const cx = data.board + (piece.width / 2);
@@ -702,6 +711,72 @@
 
     const onBoard = (piece) => piece.row !== null
       && piece.row + piece.rows <= data.size && piece.col + piece.cols <= data.size;
+
+    // Each fragment where it lies highest, along a skyline of what is laid
+    // already ([from x, to x, first free y] spans), as the server packs the tray
+    const skyline = (room, top) => {
+      let spans = [[0, room, top]];
+      return (width, height) => {
+        const [x, y] = spans.filter(([from]) => from + width <= room)
+          .map(([from]) => [from, Math.max(...spans.filter(([a, b]) => a < from + width && b > from).map(([, , free]) => free))])
+          .reduce((best, next) => (next[1] < best[1] || (next[1] === best[1] && next[0] < best[0]) ? next : best));
+        const upto = x + width + data.gap;
+        spans = spans.flatMap(([a, b, free]) => [[a, Math.min(b, x), free], [[Math.max(a, upto), b, free]][0]])
+          .filter(([a, b]) => a < b);
+        spans.push([x, upto, y + height + data.gap]);
+        spans.sort((a, b) => a[0] - b[0]);
+        return [x, y];
+      };
+    };
+
+    // The tray beside the board (wide screens) or below it, as the file has it:
+    // the fragments still in the tray go to their new places, those on the board stay
+    const layTray = (beside) => {
+      if (!beside) {
+        svg.setAttribute('viewBox', fileView);
+        pieces.forEach((piece, i) => { piece.home = { ...fileHomes[i] }; });
+      } else {
+        const left = data.board + boardWidth + (2 * data.gap);
+        // Room for fragments as wide as the board, side by side, gaps included (as the server's tray)
+        const room = Math.max(boardWidth + ((pieces.length - 1) * data.gap), ...pieces.map((piece) => piece.width));
+        const place = skyline(room, data.board);
+        let bottom = data.board;
+        pieces.map((piece, i) => [piece, i]).sort(([a], [b]) => b.rows - a.rows).forEach(([piece, i]) => {
+          const [x, y] = place(piece.width, piece.height);
+          piece.home = { ...fileHomes[i], x: left + x - data.board, y: y - data.board };
+          bottom = Math.max(bottom, y + piece.height);
+        });
+        const height = Math.max(boardHeight + (2 * data.board), bottom + data.board);
+        svg.setAttribute('viewBox', `0 0 ${left + room + data.board} ${height}`);
+      }
+      pieces.forEach((piece) => {
+        if (piece.row !== null) return;
+        Object.assign(piece, piece.home);
+        draw(piece);
+      });
+    };
+
+    // Where a fragment would land, as a dashed footprint on the board; off
+    // the board, or hanging over its edge, it is drawn in grey
+    const ghost = document.createElementNS(SVG_NS, 'rect');
+    ghost.setAttribute('class', 'ghost');
+    ghost.setAttribute('rx', 6);
+    ghost.setAttribute('visibility', 'hidden');
+    svg.insertBefore(ghost, $('g.fragment', svg));
+    const hideGhost = () => ghost.setAttribute('visibility', 'hidden');
+    const showGhost = (piece, x, y) => {
+      const col = Math.round(x / cellWidth);
+      const row = Math.round(y / cellHeight);
+      const overBoard = row + piece.rows > 0 && col + piece.cols > 0 && row < data.size && col < data.size;
+      if (!overBoard) return hideGhost();
+      ghost.setAttribute('x', data.board + (col * cellWidth));
+      ghost.setAttribute('y', data.board + (row * cellHeight));
+      ghost.setAttribute('width', piece.width);
+      ghost.setAttribute('height', piece.height);
+      const fits = row >= 0 && col >= 0 && row + piece.rows <= data.size && col + piece.cols <= data.size;
+      ghost.classList.toggle('is-off', !fits);
+      return ghost.removeAttribute('visibility');
+    };
 
     // Every board cell's sign as it lies there, [upright, turned, worn] (candidate
     // values, null where it does not read), or null if the board is not covered once over
@@ -784,6 +859,7 @@
         other.group.setAttribute('aria-pressed', String(other === piece));
       });
       turnButton.disabled = !piece;
+      if (!piece) hideGhost();
     };
 
     const turn = (piece) => {
@@ -833,11 +909,13 @@
         piece.y = drag.y + dy;
         piece.tilt = 0;
         draw(piece);
+        showGhost(piece, piece.x, piece.y);
       });
       const drop = () => {
         if (!drag || drag.piece !== piece) return;
         const { moved } = drag;
         drag = null;
+        hideGhost();
         if (moved) {
           snap(piece);
           pick(piece);
@@ -868,14 +946,24 @@
       });
     });
 
-    // A fragment picked, then a cell: its top-left corner goes there
+    // A fragment picked, then a cell: its top-left corner goes there (the
+    // ghost shows which cell the pointer is over, until it is laid)
+    const cellUnder = (event) => {
+      const at = toSvg(event);
+      return [Math.floor((at.x - data.board) / cellWidth) * cellWidth, Math.floor((at.y - data.board) / cellHeight) * cellHeight];
+    };
+    svg.addEventListener('pointermove', (event) => {
+      if (drag || !picked || event.pointerType === 'touch') return;
+      if (event.target.closest('g.fragment') && event.target.closest('g.fragment') !== picked.group) return hideGhost();
+      return showGhost(picked, ...cellUnder(event));
+    });
+    svg.addEventListener('pointerleave', () => { if (!drag) hideGhost(); });
     svg.addEventListener('click', (event) => {
       if (!picked || event.target.closest('g.fragment')) return;
-      const at = toSvg(event);
-      picked.x = Math.floor((at.x - data.board) / cellWidth) * cellWidth;
-      picked.y = Math.floor((at.y - data.board) / cellHeight) * cellHeight;
+      [picked.x, picked.y] = cellUnder(event);
       raise(picked);
       snap(picked);
+      hideGhost();
       picked.group.focus({ preventScroll: true }); // the keys go on moving and turning it
       update();
     });
@@ -890,6 +978,9 @@
       update();
     });
 
+    const wide = window.matchMedia(WIDE);
+    layTray(wide.matches);
+    wide.addEventListener('change', (event) => layTray(event.matches));
     frame.classList.add('is-rejoining');
     panel.classList.remove('awaits-script');
     $('[data-plate-hint]').classList.remove('awaits-script');
@@ -970,8 +1061,9 @@
     lacunae.forEach((lacuna) => bySign.set(lacuna.sign, [...(bySign.get(lacuna.sign) || []), lacuna]));
     const chosen = new Map(); // "sign:place" => the digit pressed in
     const key = (lacuna) => `${lacuna.sign}:${lacuna.place}`;
-    const [which, sumEl, verdict, tallyEl, edition] = ['which', 'sum', 'verdict', 'tally', 'edition']
+    const [which, sumEl, verdict, tallyEl, countEl, edition] = ['which', 'sum', 'verdict', 'tally', 'count', 'edition']
       .map((name) => $(`[data-bench-${name}]`, bench));
+    const [cellWidth, cellHeight] = JSON.parse(frame.dataset.plateLayout).cell;
     const digits = $$('[data-digit]', bench);
     const digitOf = (value, place) => Math.floor(value / place) % 10;
     const canonical = (coords) => {
@@ -993,12 +1085,21 @@
       });
       const xs = points.map(([x]) => x);
       const ys = points.map(([, y]) => y);
+      // The target to choose it by: the sign's whole cell when it has one
+      // lacuna (large enough to find, and to tap, on a phone), else the corner
       const target = document.createElementNS(SVG_NS, 'rect');
       target.setAttribute('class', 'bench-target');
-      target.setAttribute('x', Math.min(...xs) - 10);
-      target.setAttribute('y', Math.min(...ys) - 10);
-      target.setAttribute('width', Math.max(...xs) - Math.min(...xs) + 20);
-      target.setAttribute('height', Math.max(...ys) - Math.min(...ys) + 20);
+      if (bySign.get(lacuna.sign).length === 1) { // the cell, centred on the sign (100 x 150), a hair inside its edges
+        target.setAttribute('x', (-(cellWidth - 100) / 2) + 3);
+        target.setAttribute('y', (-(cellHeight - 150) / 2) + 3);
+        target.setAttribute('width', cellWidth - 6);
+        target.setAttribute('height', cellHeight - 6);
+      } else {
+        target.setAttribute('x', Math.min(...xs) - 10);
+        target.setAttribute('y', Math.min(...ys) - 10);
+        target.setAttribute('width', Math.max(...xs) - Math.min(...xs) + 20);
+        target.setAttribute('height', Math.max(...ys) - Math.min(...ys) + 20);
+      }
       target.setAttribute('rx', 6);
       target.addEventListener('click', () => select(i));
       const pressed = document.createElementNS(SVG_NS, 'g');
@@ -1060,6 +1161,12 @@
         else out.push(open ? `[${reading === ' ' ? '\u00a0' : reading}]` : reading); // a restored space: brackets, and no new break
       }
       edition.textContent = out.join('');
+      const restored = lacunae.filter((l) => {
+        if (!chosen.has(key(l))) return false;
+        const reading = weigh(l.sign - (l.sign % 2));
+        return reading !== undefined && reading !== false;
+      }).length;
+      countEl.textContent = `${restored} of ${lacunae.length} restored`;
     }
 
     // Short lines that never wrap, even on the smallest phone: the sum, its verdict, the tallies

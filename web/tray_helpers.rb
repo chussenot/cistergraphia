@@ -13,7 +13,8 @@ module TrayHelpers
   def fragments_json(svg, size)
     fragments = Cistergraphia::Fragments.read(svg)
     JSON.generate(
-      cell: Cistergraphia::Layout.cell(:phaistos), board: Cistergraphia::Fragments::BOARD, size: size,
+      cell: Cistergraphia::Layout.cell(:phaistos), board: Cistergraphia::Fragments::BOARD,
+      gap: Cistergraphia::Fragments::Tray::GAP, size: size,
       paths: Cistergraphia::Layout::KEYLESS.to_h { |layout| [layout, Cistergraphia::Layout.path(size, layout)] },
       tablet: Cistergraphia::CHARACTERS, null: Cistergraphia::EVIL_MARKER,
       fragments: fragments.map do |fragment|

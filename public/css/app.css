@@ -910,6 +910,12 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .plate-frame svg path.restored { color: var(--rubric); }
 /* A broken plate: the board, the fragments in their tray, and the rejoining */
 .plate--broken .plate-frame svg { max-height: none; width: 100%; }
+/* Wide screens: a box of fixed height, in which the script lays the tray beside
+   the board (the file has it below), so the whole puzzle is in view at once
+   and nothing moves when the script arrives */
+@media (min-width: 64rem) { .plate--broken .plate-frame svg { height: min(78vh, 60rem); } }
+.plate-frame svg .ghost { fill: var(--accent-ring); stroke: var(--rubric); stroke-width: 3; stroke-dasharray: 10 8; pointer-events: none; }
+.plate-frame svg .ghost.is-off { fill: transparent; stroke: var(--ink-soft); }
 .plate-frame svg .board { stroke: var(--parchment-edge); }
 .plate-frame svg #board rect { fill: var(--paper); stroke: var(--rule); } /* the empty board: the leaf, ruled */
 .plate-frame svg .sherd { fill: var(--parchment); stroke: var(--parchment-edge); } /* the clay of a fragment */

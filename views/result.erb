@@ -19,8 +19,10 @@ Design Decisions:
   goes along with "Read it back"
 - A weathered plate shows its lacunae; walking a worn sign says it is worn,
   never its value (the page must not hold the answer)
-- The restoration bench (weathered plates): choose a lacuna on the plate or
-  step through them, press a digit back in, and the pair is weighed. The page
+- The restoration bench (weathered plates): choose a lacuna on the plate (a
+  sign with one lacuna is chosen by its whole cell) or step through them,
+  press a digit back in, and the pair is weighed; a count says how many are
+  restored. The page
   only knows what the file shows, so it says whether pairs balance, never
   whether a restoration is right: the words, and Read it back, decide. Its
   first state is drawn by the server, so nothing moves when the script arrives
@@ -151,7 +153,8 @@ Constraints:
       </div>
       <p class="bench-balance" aria-live="polite"><span class="bench-sum" data-bench-sum><%= bench_sum(@sequence, first) %></span>
         <span class="bench-verdict" data-bench-verdict><%= bench_verdict(@sequence, first) %></span><% if @tally %>
-        <span class="bench-verdict" data-bench-tally><%= bench_tallies(first) %></span><% end %></p>
+        <span class="bench-verdict" data-bench-tally><%= bench_tallies(first) %></span><% end %>
+        <span class="bench-verdict" data-bench-count>0 of <%= entries.size %> restored</span></p>
       <p class="bench-edition" data-bench-edition><%= bench_edition(@sequence, @damage) %></p>
     </section>
   <% end %>
