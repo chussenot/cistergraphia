@@ -25,10 +25,13 @@ Design Decisions:
   detects the first two, so they are never asked. A grille is drawn for each
   plate unless the key of one already shared is given: that field unfolds
   below the message, like the passphrase, and keeps its value on a 422
-- Condition: a weathered plate loses some strokes (game only: a sealed plate
-  would never open), tally signs sum its rows and columns, a broken plate
-  comes in fragments to rejoin. Checkboxes under the layouts, with one
-  reserved note that says why they are off in secret mode
+- Condition: one control, four rungs (Intact, Worn, Broken, Ruined), a
+  segmented control like the layouts, with one reserved note describing the
+  rung chosen. A rung the layout does not allow (Broken and Ruined follow the
+  snail) is greyed, and choosing it puts the reason in the note; in secret
+  mode the rungs past Intact are greyed and the note says why (a sealed plate
+  that loses a stroke never opens again). Sent anyway, the server says the
+  same in the note's place (422). Tally signs stay in the library and the CLI
 
 Constraints:
 - Posts to /generate; message limited to 500 characters
@@ -84,27 +87,23 @@ Constraints:
 
         <fieldset class="choice choice--condition">
           <legend>Condition</legend>
-          <div class="checks">
-            <label class="check">
-              <input type="checkbox" name="weathered" value="1" data-weathered<%= ' checked' if @weathered %>
-                     aria-describedby="note-weathered note-unweathered weathered-error"<%== condition_invalid(:weathered, @weathered_error) %>>
-              <span class="check-title">Weathered</span>
-            </label>
-            <label class="check">
-              <input type="checkbox" name="tally" value="1" data-weathered<%= ' checked' if @tally %>
-                     aria-describedby="note-weathered note-unweathered weathered-error"<%== condition_invalid(:tally, @tally_error) %>>
-              <span class="check-title">Tally signs</span>
-            </label>
-            <label class="check">
-              <input type="checkbox" name="broken" value="1" data-weathered<%= ' checked' if @broken %>
-                     aria-describedby="note-weathered note-unweathered weathered-error"<%== condition_invalid(:broken, @broken_error) %>>
-              <span class="check-title">Broken</span>
-            </label>
+          <div class="segments segments--ladder">
+            <% FormParams::RUNGS.each do |rung, title| %>
+              <label class="segment segment--rung segment--<%= rung %><%= ' segment--snail' if FormParams::CONDITIONS.fetch(rung).last %>">
+                <input type="radio" name="condition" value="<%= rung %>" data-rung<%= ' checked' if (@condition || 'intact') == rung %>
+                       aria-describedby="note-<%= rung %> note-unweathered note-snail condition-error"<%== condition_invalid(rung) %>>
+                <span class="segment-title"><%= title %></span>
+              </label>
+            <% end %>
           </div>
           <div class="choice-notes">
-            <p class="choice-note" id="note-weathered" data-note="weathered">Weathered: some strokes are lost; each pair must balance again. Tally signs: each row and column summed, as on a khipu, so whole signs can be lost. Broken: the plate in fragments, to rejoin by its sums (Phaistos only, weathered or not).</p>
+            <p class="choice-note" id="note-intact" data-note="intact">As copied: read the signs, add the pairs, look them up on the tablet.</p>
+            <p class="choice-note" id="note-worn" data-note="worn">Some strokes are lost. Press the digits back in: each pair must balance, and the words settle the doubts.</p>
+            <p class="choice-note" id="note-broken" data-note="broken">The plate in two to four pieces, some turned. Only the sums say where each one goes.</p>
+            <p class="choice-note" id="note-ruined" data-note="ruined">Broken and worn. Rejoin it by what each worn sign may hold, then restore the whole.</p>
+            <p class="choice-note" id="note-snail" data-note="snail">Broken plates follow the snail: along the rows, a turned plate balances just as well. Choose Phaistos, or a plate in one piece.</p>
             <p class="choice-note" id="note-unweathered" data-note="unweathered">A sealed plate cannot weather or break: with one stroke lost, it would never open again.</p>
-            <p class="choice-note field-error" id="weathered-error" aria-live="polite"><%= condition_error&.last %></p>
+            <p class="choice-note field-error" id="condition-error" aria-live="polite"><%= @condition_error %></p>
           </div>
         </fieldset>
       </div>
