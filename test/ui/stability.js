@@ -278,8 +278,12 @@ const FLOWS = [
       { name: 'lay it on the board', act: (p) => layOnBoard(p, 4, 4) },
       { name: 'move it with the keys', act: async (p) => { for (const key of ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp']) await p.keyboard.press(key); } },
       { name: 'turn it', act: async (p) => { await p.keyboard.press('t'); await p.click('[data-rejoin-turn]'); } },
+      // Laid one above the other, the fragments sometimes rejoin by chance (a
+      // plate broken straight across, nothing turned): then what it reads is
+      // revealed, the one deliberate movement, so only what is above it counts
       {
         name: 'lay them all with the keys',
+        anchor: '[data-rejoin-reading]',
         act: async (p) => {
           const count = await p.locator('[data-plate] svg g.fragment').count();
           for (let i = 0; i < count; i += 1) { // picked, then up and left cell by cell, onto the board
@@ -289,7 +293,7 @@ const FLOWS = [
           }
         }
       },
-      { name: 'back to the tray', act: (p) => p.click('[data-rejoin-reset]') }
+      { name: 'back to the tray', anchor: '[data-rejoin-reading]', act: (p) => p.click('[data-rejoin-reset]') }
     ]
   },
   {
