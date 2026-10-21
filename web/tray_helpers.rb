@@ -10,8 +10,7 @@ module TrayHelpers
   # row by row, as the fragment lies in the tray: [upright, turned, worn], the
   # readings as candidate values (one for an intact sign, what the strokes
   # allow for a worn one: what the file shows, never what was lost)
-  def fragments_json(svg, size)
-    fragments = Cistergraphia::Fragments.read(svg)
+  def fragments_json(fragments, size)
     JSON.generate(
       cell: Cistergraphia::Layout.cell(:phaistos), board: Cistergraphia::Fragments::BOARD,
       gap: Cistergraphia::Fragments::Tray::GAP, size: size,

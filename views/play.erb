@@ -1,0 +1,65 @@
+<%#
+Cistergraphia: a plate to play (fol. 1v, turned)
+===============================================
+
+Purpose:
+- The reader's game. A weathered or broken game plate brought to Read opens as
+  its puzzle: the bench to restore it, the board to rejoin it. The decoder's
+  answer stays one click away, below
+
+Design Decisions:
+- The page is built from the file alone, never from the message: which signs
+  are worn, what their strokes allow, where the fragments' edges are. The
+  scribe's plate page knows more; this one cannot, and says so
+- The same bench, board and plate figure as the plate page (partials), so the
+  two pages play the same
+- "Decipher it" posts the same file back with decipher=1: the solver, for a
+  reader who wants the answer, or has one to check
+
+Constraints:
+- Weathered plates under a grille play once the key is given; broken plates
+  follow the snail. Sealed plates are not games
+%>
+<section class="leaf" aria-labelledby="play-title">
+  <p class="folio-mark" aria-hidden="true">fol. 1<sup>v</sup></p>
+  <h1 id="play-title" class="rubric"><%= @broken ? (@weathered ? 'A plate to rejoin and restore' : 'A plate to rejoin') : 'A plate to restore' %></h1>
+  <% if @broken && @weathered %>
+    <p class="lede">The plate came in <%= fragments_count(@fragments.size) %>, worn where the surface is hatched. Lay them on the board, turned where need be: a join holds when every pair of signs can balance, whatever its lacunae held. Whole again, it reads as an edition, its doubts in brackets for you to settle.</p>
+  <% elsif @broken %>
+    <p class="lede">The plate came in <%= fragments_count(@fragments.size) %>. Lay them on the board, turned where need be: only one arrangement makes every pair of signs balance, and the shapes alone will not tell you which.</p>
+  <% else %>
+    <p class="lede">The plate has lost <%= @entries.size %> <%= @entries.size == 1 ? 'stroke position' : 'stroke positions' %>, hatched where the surface is worn. Press the lost digits back in: each pair of signs must sum to a value on the tablet. Where two or three letters balance, the words decide.</p>
+  <% end %>
+
+  <dl class="specs">
+    <div><dt>Signs</dt><dd><%= @size * @size %></dd></div>
+    <div><dt>Grid</dt><dd><%= @size %> × <%= @size %></dd></div>
+    <div><dt>Layout</dt><dd><%= @broken ? 'Phaistos' : layout_name(@layout) %></dd></div>
+    <% if @broken %>
+      <div><dt>Condition</dt><dd>Broken, in <%= fragments_count(@fragments.size) %><%= ', and weathered' if @weathered %></dd></div>
+    <% else %>
+      <div><dt>Condition</dt><dd><%= @tally ? 'Weathered, with tally signs' : 'Weathered' %></dd></div>
+    <% end %>
+    <% if grille? %>
+      <div><dt>Grille key</dt><dd><code class="grille-key"><%= @layout %></code></dd></div>
+    <% end %>
+  </dl>
+
+  <% if @broken %>
+    <%== erb :_board, layout: false, locals: { svg: @svg_content, fragments: @fragments, size: @size, worn: @weathered } %>
+  <% else %>
+    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout, @damage), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil } %>
+    <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally } %>
+  <% end %>
+
+  <form class="readback" method="post" action="/decode">
+    <h2 class="index-heading">Or ask the decoder</h2>
+    <input type="hidden" name="svg" value="<%= @svg_content %>">
+    <input type="hidden" name="decipher" value="1">
+    <% if grille? %><input type="hidden" name="grille" value="<%= @layout %>"><% end %>
+    <div class="readback-row">
+      <button type="submit" class="btn">Decipher it</button>
+      <a class="btn btn--quiet" href="/decode">Read another</a>
+    </div>
+  </form>
+</section>

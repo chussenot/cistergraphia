@@ -160,6 +160,43 @@ module Cistergraphia
       end
     end
 
+    # What a weathered plate's file shows of itself, for a page that must hold
+    # no more than the file (the reader's): the layout it reads along, its
+    # damaged signs with their lost positions and the values their surviving
+    # strokes allow, and every sign's value where no lacuna leaves it open
+    module Survey
+      module_function
+
+      # The keyless layout along which the plate restores, or nil
+      def layout(svg)
+        Layout::KEYLESS.find { |layout| edition(svg, layout) }
+      end
+
+      def edition(svg, layout)
+        Weathering::Edition.text(Lacunae.restored(svg, layout))
+      rescue DecodeError
+        nil
+      end
+
+      # [{ index:, lost:, candidates: }] of every damaged sign in reading order:
+      # its lost stroke positions (canonical, upright) and what it can still be
+      def damaged(svg, layout)
+        strokes = Lacunae.cells(svg, :strokes, layout)
+        lost = Lacunae.cells(svg, :lacunae, layout)
+        Layout.path(SVG.grid_size(strokes), layout).each_with_index.filter_map do |(row, col, turned), index|
+          gone = lost[[row, col]] or next
+          seen = Layout.upright(strokes.fetch([row, col]), row, col, turned, layout)
+          gone = Layout.upright(gone, row, col, turned, layout).map(&Glyphs::CANONICAL)
+          { index: index, lost: gone, candidates: Weathering.candidates(seen, gone) }
+        end
+      end
+
+      # Every sign's value as the file shows it: nil for a sign a lacuna touched
+      def values(svg, layout)
+        Lacunae.read(svg, layout).map { |candidates, worn| worn ? nil : candidates.first }
+      end
+    end
+
     # A weathered plate read along another layout, from the data: what the
     # decoder would find reading its file that way (the same signs, turned
     # where the two paths disagree), without drawing or parsing the file
