@@ -181,6 +181,59 @@ class AppTest < Minitest::Test
     assert_equal 6, last_response.body.scan('class="segment-figure"').size # each way shows its order
   end
 
+  def test_index_offers_the_path_shown_or_withheld
+    get '/'
+
+    assert_match(/name="path" value="shown" checked/, last_response.body)
+    assert_match(/name="path" value="withheld"/, last_response.body)
+    assert_includes last_response.body, 'data-path-withheld'
+  end
+
+  def test_a_pathless_plate_is_written_in_grid_order_and_says_so
+    post '/generate', message: 'Ora et labora', layout: 'leap', path: 'withheld'
+    _cells, _layout, svg = plate_of(last_response.body)
+
+    assert_includes last_response.body, '<dd>Withheld: the reader finds it</dd>'
+    assert Cistergraphia::Pathless.pathless?(svg)
+    assert_equal 'ora et labora', Cistergraphia.decode(svg)
+  end
+
+  def test_a_plate_cannot_be_pathless_sealed_under_a_grille_or_damaged
+    { { mode: 'secret', passphrase: 'abbey of molesme' } => Cistergraphia::Pathless::NOT_SEALED,
+      { layout: 'grille' } => Cistergraphia::Pathless::NOT_UNDER_A_GRILLE,
+      { condition: 'worn' } => Cistergraphia::Pathless::NOT_DAMAGED }.each do |fields, reason|
+      post '/generate', { message: 'Ora et labora', path: 'withheld' }.merge(fields)
+
+      assert_equal 422, last_response.status, fields
+      assert_includes last_response.body, reason
+      assert_match(/name="path" value="withheld" checked/, last_response.body)
+    end
+  end
+
+  def test_a_pathless_plate_brought_to_read_opens_at_a_desk_without_its_way
+    _, svg = Cistergraphia.inscribe('Ora et labora', layout: :leap, pathless: true)
+    post '/decode', svg: svg
+    body = last_response.body
+    cells, _layout, = plate_of(body)
+
+    ['data-play="pathless"', 'data-desk-pathless', 'Which way does it run?'].each { |s| assert_includes body, s }
+    assert_equal 5, body.scan('data-desk-way=').size
+    assert_equal cells.sort, cells, 'the cells go to the page in grid order, not along the way'
+    assert_pathless_grid(body, cells)
+    post '/decode', svg: svg, decipher: '1'
+
+    assert_includes last_response.body, 'ora et labora', 'the decoder still answers'
+  end
+
+  # The grid beside the cells: the same cells, both readings; the way unnamed
+  def assert_pathless_grid(body, cells)
+    grid = JSON.parse(CGI.unescapeHTML(body[/data-plate-grid="([^"]*)"/, 1]))
+    upright = ->(list) { list.map { |row, col, value, _| [row, col, value] } }
+
+    assert_equal upright.call(cells), upright.call(grid)
+    assert_includes body, '<dd>Withheld: one of the five ways</dd>', 'the page names the five, not the one'
+  end
+
   def test_a_plate_along_each_new_way_is_walked_along_it_and_read_back
     %i[leap furrows unwinding].each do |way|
       post '/generate', message: 'Ora et labora', layout: way.to_s

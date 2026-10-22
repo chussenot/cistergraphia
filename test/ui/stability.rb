@@ -23,6 +23,9 @@ Dir.mktmpdir do |dir|
   # And the same ruined plate: the board, then (rejoined=1) the bench on the plate rejoined
   File.write(plate.sub(/\.svg\z/, '-ruined.svg'),
              Cistergraphia::Fragments.inscribe(MESSAGE, weathered: true, random: Random.new(3))[1])
+  # And a pathless one along the leap: brought to Read, it opens as the desk without its way
+  srand(11)
+  File.write(plate.sub(/\.svg\z/, '-pathless.svg'), Cistergraphia.inscribe(MESSAGE, layout: :leap, pathless: true).last)
   # And one with tally signs (the library's and the CLI's, not the form's): the bench checks them
   File.write(plate.sub(/\.svg\z/, '-tallied.svg'),
              Cistergraphia::Lacunae.inscribe(MESSAGE, tally: true, random: Random.new(7))[1])

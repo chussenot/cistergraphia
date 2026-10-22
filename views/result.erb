@@ -73,6 +73,9 @@ Constraints:
     <div><dt>Signs</dt><dd><%= @symbols %></dd></div>
     <div><dt>Grid</dt><dd><%= Integer.sqrt(@symbols) %> × <%= Integer.sqrt(@symbols) %></dd></div>
     <div><dt>Layout</dt><dd><%= layout_name(@layout) %></dd></div>
+    <% if @pathless %>
+      <div><dt>Path</dt><dd>Withheld: the reader finds it</dd></div>
+    <% end %>
     <% if @pieces && @damage %>
       <div><dt>Condition</dt><dd>Ruined: <%= fragments_count(@pieces.size) %>, worn</dd></div>
     <% elsif @pieces %>

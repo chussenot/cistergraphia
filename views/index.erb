@@ -106,6 +106,29 @@ Constraints:
           </div>
         </fieldset>
 
+        <fieldset class="choice choice--path">
+          <legend>Path</legend>
+          <div class="segments">
+            <label class="segment segment--path-shown">
+              <input type="radio" name="path" value="shown"<%= ' checked' unless @pathless %> aria-describedby="note-shown">
+              <span class="segment-title">Shown</span>
+            </label>
+            <label class="segment segment--path-withheld">
+              <input type="radio" name="path" value="withheld"<%= ' checked' if @pathless %>
+                     aria-describedby="note-withheld note-path-sealed note-path-grille note-path-damaged path-error"<%= ' aria-invalid="true"' if @path_error %>>
+              <span class="segment-title">Withheld</span>
+            </label>
+          </div>
+          <div class="choice-notes">
+            <p class="choice-note" id="note-shown" data-note="shown">The reader’s desk opens on the way the plate runs.</p>
+            <p class="choice-note" id="note-withheld" data-note="withheld">A pathless plate: nothing says where it begins. The reader finds the way among the five.</p>
+            <p class="choice-note" id="note-path-sealed" data-note="path-sealed">A sealed plate reads as no letters along any way: nothing to find. Choose Game.</p>
+            <p class="choice-note" id="note-path-grille" data-note="path-grille">A grille plate hides its way by its key already. Choose another layout.</p>
+            <p class="choice-note" id="note-path-damaged" data-note="path-damaged">A worn or broken plate cannot be pathless yet. Choose Intact.</p>
+            <p class="choice-note field-error" id="path-error" aria-live="polite"><%= @path_error %></p>
+          </div>
+        </fieldset>
+
         <fieldset class="choice choice--condition">
           <legend>Condition</legend>
           <div class="segments segments--ladder">
@@ -246,5 +269,6 @@ Constraints:
       </figure>
     </div>
     <p class="note"><a href="/about#layouts">Where do they come from?</a></p>
+    <p class="note" data-path-withheld>Path withheld: the file says nothing of it. The reader finds the way among the five.</p>
   </aside>
 </div>

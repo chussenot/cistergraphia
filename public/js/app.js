@@ -370,7 +370,7 @@
   // exchange, not a leaderboard. The Read page shows it; a plate won on the
   // reader's page (read to the end, every pair balanced, whole again) adds one
   const RECORD_KEY = 'cistergraphia.record';
-  const RUNGS = ['intact', 'worn', 'broken', 'ruined'];
+  const RUNGS = ['intact', 'worn', 'broken', 'ruined', 'pathless'];
   function storedRecord() {
     const empty = Object.fromEntries(RUNGS.map((rung) => [rung, 0]));
     try {
@@ -431,13 +431,20 @@
     const frame = $('[data-plate]');
     const svg = plateSvg();
     if (!frame || !svg || !frame.dataset.plateCells) return;
-    const cells = JSON.parse(frame.dataset.plateCells);
+    let cells = JSON.parse(frame.dataset.plateCells);
     const layout = JSON.parse(frame.dataset.plateLayout);
     // The live reading and the resting caption share one cell (CSS): walking
     // swaps them in place, so nothing below the plate moves
     const readingEl = $('[data-plate-reading]');
     const caption = readingEl.closest('.plate-reading');
     const index = new Map(cells.map(([row, col], i) => [`${row},${col}`, i]));
+    // A pathless plate's desk lays a way over the grid: the walk follows it
+    const follow = (next) => {
+      cells = next;
+      index.clear();
+      next.forEach(([row, col], i) => index.set(`${row},${col}`, i));
+      show(-1);
+    };
     const [cellWidth, cellHeight] = layout.cell;
 
     const focus = document.createElementNS(SVG_NS, 'rect');
@@ -527,7 +534,7 @@
     });
     $('[data-plate-hint]').classList.remove('awaits-script');
     // For the desk: move the field, find a sign under a tap, say or keep the values
-    frame.plateWalk = { show, cellAt, reveal: (on) => { revealing = on; if (current >= 0) show(current); } };
+    frame.plateWalk = { show, cellAt, follow, reveal: (on) => { revealing = on; if (current >= 0) show(current); } };
   }
 
   // ---------- The reading desk: an intact plate, read pair by pair ----------
@@ -538,20 +545,31 @@
   // values to itself, and three right pairs in a row earn the Lectio's ranks
   // (the same best, kept in the browser).
   const DESK_MODE_KEY = 'cistergraphia.desk.mode';
+  // A pathless plate (docs/design.md, "Find the path"): the desk asks which
+  // way the plate runs, lays the way chosen over the grid (Ways), and reads
+  // along it: the pairs balance to letters, or break ("not on the tablet",
+  // or a sign that reads as nothing turned). The notebook keeps what each
+  // way gave and where it broke; the plate is read when a way runs to the end
+  const WAY_NAMES = { phaistos: 'the snail', rongorongo: 'the turning tablet', leap: 'the leap', furrows: 'the furrows', unwinding: 'the unwinding' };
+  const capital = (words) => words.charAt(0).toUpperCase() + words.slice(1);
   function initDesk() {
     const desk = $('[data-desk]');
     const frame = $('[data-plate]');
     if (!desk || !frame || !frame.dataset.plateCells || !Ink.glyphTable()) return;
     const cells = JSON.parse(frame.dataset.plateCells);
-    const values = cells.map(([, , value]) => value);
+    const pathless = 'deskPathless' in desk.dataset;
+    const grid = pathless ? JSON.parse(frame.dataset.plateGrid) : null;
+    let values = cells.map(([, , value]) => value);
     const tablet = JSON.parse(desk.dataset.tablet);
     const nullMark = Number(desk.dataset.null);
-    const pairs = values.length / 2;
+    let pairs = values.length / 2;
     const form = $('[data-desk-form]', desk);
     const inputs = [0, 1].map((k) => $(`[data-desk-value="${k}"]`, desk));
     const signs = [0, 1].map((k) => $(`[data-desk-sign="${k}"]`, desk));
-    const [which, letterEl, feedback, textEl] = ['which', 'letter', 'feedback', 'text'].map((n) => $(`[data-desk-${n}]`, desk));
-    const read = new Array(pairs).fill(null); // the letter of each pair once read ('' for a null pair)
+    const [which, letterEl, feedback, textEl, notebookEl] = ['which', 'letter', 'feedback', 'text', 'notebook'].map((n) => $(`[data-desk-${n}]`, desk));
+    let read = new Array(pairs).fill(null); // the letter of each pair once read ('' for a null pair, '?' for a break)
+    let way = null; // a pathless plate: the way laid, once chosen
+    const tried = new Map(); // way => { read, broke }: the notebook
     let pair = 0;
     let mode = 'guided';
     let streak = 0;
@@ -560,8 +578,10 @@
 
     const letterOf = (p) => {
       const [a, b] = [values[2 * p], values[(2 * p) + 1]];
+      if (a === null || b === null) return '?'; // a sign that reads as nothing the way it is laid
       return b === nullMark ? '' : (tablet[a + b] ?? '?');
     };
+    const waiting = () => pathless && !way;
     const text = () => read.map((letter) => (letter === null ? '·' : (letter === ' ' ? ' ' : letter))).join('');
     const standing = () => {
       $('[data-desk-rank]', desk).textContent = rankFor(streak).name;
@@ -576,10 +596,13 @@
       try { localStorage.setItem(DESK_MODE_KEY, mode); } catch (error) { /* private mode */ }
     };
     const show = (p) => {
+      if (waiting()) return;
       pair = Math.min(Math.max(p, 0), pairs - 1);
       which.textContent = `Pair ${pair + 1} of ${pairs} · signs ${(2 * pair) + 1} and ${(2 * pair) + 2}`;
       [0, 1].forEach((k) => {
-        signs[k].replaceChildren(Ink.glyph(values[(2 * pair) + k], { label: `The ${k ? 'second' : 'first'} sign of the pair`, inked: true }));
+        const value = values[(2 * pair) + k];
+        if (value === null) signs[k].replaceChildren('∅'); // turned half round, it reads as nothing
+        else signs[k].replaceChildren(Ink.glyph(value, { label: `The ${k ? 'second' : 'first'} sign of the pair`, inked: true }));
         inputs[k].value = '';
         inputs[k].removeAttribute('aria-invalid');
       });
@@ -590,8 +613,41 @@
       for (let k = 1; k <= pairs; k += 1) if (read[(pair + k) % pairs] === null) return (pair + k) % pairs;
       return -1;
     };
+    // The notebook of a pathless plate: what each way gave, and where it broke
+    const notebook = () => {
+      if (!notebookEl) return;
+      const lines = Array.from(tried, ([name, t]) => {
+        const given = t.read.map((l) => (l === null || l === '?' ? '·' : l)).join('').replace(/·+$/, '');
+        const end = t.broke ? ` ✗ at pair ${t.broke}` : (t.read.every((l) => l !== null && l !== '?') ? ' ✓' : '');
+        return `${WAY_NAMES[name]}${given ? `: ${given}` : ''}${end}`;
+      });
+      notebookEl.textContent = lines.length ? `Tried: ${lines.join(' · ')}` : 'The notebook: what each way gave, and where it broke.';
+    };
+    // Lay a way over the grid: the signs along it (turned where it says so),
+    // the walk following, the reading kept per way
+    const lay = (name) => {
+      const byCell = new Map(grid.map(([row, col, upright, turned]) => [`${row},${col}`, { upright, turned }]));
+      const laid = Ways.path(Math.sqrt(grid.length), name).map(([row, col, turned]) => {
+        const cell = byCell.get(`${row},${col}`);
+        return [row, col, turned ? cell.turned : cell.upright, turned];
+      });
+      way = name;
+      values = laid.map(([, , value]) => value);
+      pairs = values.length / 2;
+      if (!tried.has(name)) tried.set(name, { read: new Array(pairs).fill(null), broke: null });
+      read = tried.get(name).read;
+      $$('[data-desk-way]', desk).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.deskWay === name)));
+      frame.plateWalk?.follow(laid);
+      feedback.textContent = `Along ${WAY_NAMES[name]}: the pairs form. Read them.`;
+      textEl.textContent = text();
+      notebook();
+      pair = 0;
+      const next = read[0] === null ? 0 : nextUnread();
+      show(next < 0 ? 0 : next);
+      inputs[0].focus();
+    };
     const reveal = (sign) => { // guided: a tapped sign shows its value in its box
-      if (mode !== 'guided') return;
+      if (mode !== 'guided' || waiting()) return;
       const p = Math.floor(sign / 2);
       if (p !== pair) show(p);
       inputs[sign % 2].value = values[sign];
@@ -601,6 +657,19 @@
 
     form.addEventListener('submit', (event) => {
       event.preventDefault();
+      if (waiting()) {
+        feedback.textContent = 'Choose a way first: the plate says nothing of where it begins.';
+        return;
+      }
+      if (values[2 * pair] === null || values[(2 * pair) + 1] === null) { // a sign that reads as nothing turned
+        read[pair] = '?';
+        tried.get(way).broke ??= pair + 1;
+        feedback.textContent = `Turned half round, a sign reads as no number: ${WAY_NAMES[way]} is not the way.`;
+        letterEl.textContent = '✗';
+        textEl.textContent = text();
+        notebook();
+        return;
+      }
       const typed = inputs.map((input) => (input.value.trim() === '' ? null : Math.trunc(Number(input.value))));
       if (typed.some((v) => v === null)) {
         feedback.textContent = 'Type what each sign reads.';
@@ -619,11 +688,22 @@
       const letter = letterOf(pair);
       read[pair] = letter;
       const [a, b] = [values[2 * pair], values[(2 * pair) + 1]];
+      if (letter === '?') { // along a way laid over a pathless plate: the pair does not balance
+        tried.get(way).broke ??= pair + 1;
+        feedback.textContent = `${a} + ${b} = ${a + b}: not on the tablet. ${capital(WAY_NAMES[way])} breaks at pair ${pair + 1}.`;
+        letterEl.textContent = '✗';
+        textEl.textContent = text();
+        notebook();
+        const next = nextUnread();
+        if (next >= 0) setTimeout(() => { show(next); inputs[0].focus(); }, reducedMotion ? 300 : 900);
+        return;
+      }
       if (letter === '') feedback.textContent = `${a} + ${b}: the second sign is ${nullMark}, a null pair. Nothing to read.`;
       else feedback.textContent = `${a} + ${b} = ${a + b}: ${letter === ' ' ? 'a space' : `“${letter}”`}.`;
       letterEl.textContent = letter === '' ? '∅' : letter;
       hand('bite'); // the letter written down
       textEl.textContent = text();
+      notebook();
       if (mode === 'unaided') {
         const before = rankFor(streak).name;
         streak += 1;
@@ -635,12 +715,18 @@
       }
       const next = nextUnread();
       if (next < 0) {
-        feedback.textContent = `Read to the end: “${text().trim()}”.`;
+        const breaks = read.filter((l) => l === '?').length;
+        if (breaks) {
+          feedback.textContent = `Read to the end along ${WAY_NAMES[way]}: ${breaks} ${breaks === 1 ? 'pair' : 'pairs'} not on the tablet. Not the way.`;
+          return;
+        }
+        feedback.textContent = way ? `Read to the end, along ${WAY_NAMES[way]}: “${text().trim()}”.` : `Read to the end: “${text().trim()}”.`;
         recordWin();
         return;
       }
       setTimeout(() => { show(next); inputs[0].focus(); }, reducedMotion ? 300 : 900);
     });
+    $$('[data-desk-way]', desk).forEach((button) => button.addEventListener('click', () => lay(button.dataset.deskWay)));
 
     $$('[data-desk-step]', desk).forEach((button) => button.addEventListener('click', () => {
       show((pair + Number(button.dataset.deskStep) + pairs) % pairs);
@@ -656,7 +742,8 @@
     });
 
     // The first pair is the one the server drew: take it over, don't redraw it
-    [0, 1].forEach((k) => Ink.adopt($('svg', signs[k]), values[k]));
+    // (a pathless plate's desk waits empty for a way)
+    if (!pathless) [0, 1].forEach((k) => Ink.adopt($('svg', signs[k]), values[k]));
     setMode(mode);
     standing();
     desk.classList.remove('awaits-script');

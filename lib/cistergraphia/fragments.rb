@@ -666,7 +666,7 @@ module Cistergraphia
       def hidden(signs)
         lines = signs.flat_map do |sign|
           x, y = sign.origin
-          sign.strokes.map { |stroke| SVG.line_tag(SVG.relative(stroke, -x, -y)) }
+          sign.strokes.map { |stroke| SVG.line_tag(Layout.relative(stroke, -x, -y)) }
         end
         %(    <g stroke="black" stroke-width="2" display="none">\n#{lines.join("\n")}\n    </g>\n)
       end

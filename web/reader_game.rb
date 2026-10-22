@@ -15,6 +15,7 @@ module ReaderGame
 
     @weathered = Cistergraphia::Lacunae.weathered?(svg)
     @broken = Cistergraphia::Fragments.broken?(svg)
+    @pathless = Cistergraphia::Pathless.pathless?(svg)
     @svg_content = PlateFile.clean(svg)
     return false unless @svg_content
 
@@ -53,8 +54,17 @@ module ReaderGame
     @layout = submitted_grille || Cistergraphia::Layout::KEYLESS.find { |layout| letters(svg, layout) }
     return unless @layout && (@values = letters(svg, @layout))
 
-    @desk = true
     @size = Integer.sqrt(@values.size)
+    lay_pathless if @pathless && !submitted_grille
+    @desk = true
+  end
+
+  # A pathless plate: the page gets every cell's readings in grid order and
+  # not the way, nor the values along it; the desk lays the five ways itself
+  def lay_pathless(svg = @svg_content)
+    @grid = Cistergraphia::Pathless.grid(svg)
+    @layout = :phaistos # the figure's geometry; the plate walk starts row by row
+    @values = @grid.map { |_, _, upright, _| upright || 0 }
   end
 
   # The plate's values along a layout when every pair reads as a letter, else nil

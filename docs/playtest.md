@@ -24,6 +24,7 @@ end", "every pair balances", "Whole again"), or to Decipher if the reader gave u
 |---|---|---|---|---|---|---|---|---|
 | Intact | 6 × 6 | Phaistos | | | | n/a | | |
 | Intact | 10 × 10 | Rongorongo | | | | n/a | | |
+| Intact, pathless | 8 × 8 | Leap, withheld | | | | n/a | | which way first; how many tried before the right one |
 | Worn | 6 × 6 | Phaistos | | | | / | | |
 | Worn | 10 × 10 | Phaistos | | | | / | | |
 | Broken | 10 × 10 | Phaistos | | | | n/a | | |

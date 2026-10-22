@@ -63,6 +63,14 @@ module Cistergraphia
       (KEYLESS - [layout]).reject { |other| pairs(size, other) == pairs(size, layout) }
     end
 
+    # [[row, col, turned], num, index, seed] of every sign of a sequence along
+    # a layout, in reading order, the seed its place in it (SVG's hand); on a
+    # pathless plate, in grid order and seeded by the cell (Pathless.by_cell)
+    def placed(sequence, cols, layout, pathless: false)
+      signs = path(cols, layout).zip(sequence).each_with_index.map { |(cell, num), index| [cell, num, index, index] }
+      pathless ? Pathless.by_cell(signs, cols) : signs
+    end
+
     # The pairs a layout forms, each as its two [row, col, turned] sorted
     def pairs(size, layout)
       path(size, layout).each_slice(2).map(&:sort)
@@ -134,6 +142,12 @@ module Cistergraphia
       x, y = cell_origin(row, col, layout)
       dx, dy = inset(layout)
       [x + dx, y + dy]
+    end
+
+    # A line moved by (x, y): the plate's strokes made relative to a cell, or absolute again
+    def relative(line, x, y)
+      x1, y1, x2, y2 = line
+      [x1 - x, y1 - y, x2 - x, y2 - y]
     end
 
     # A cell's lines made relative to its sign and turned back upright

@@ -56,7 +56,7 @@ parser = OptionParser.new do |opts|
   opts.on('-d', '--decode FILE', 'Decode a Cistergraphia SVG and print its message') { |d| options[:decode] = d }
 
   opts.on('-l', '--layout LAYOUT', [*Cistergraphia::Layout::KEYLESS.map(&:to_s), 'grille'],
-          'Reading path: phaistos (the snail, default), rongorongo (turned rows) or grille') do |l|
+          'Reading path: phaistos (the snail, default), rongorongo, leap, furrows, unwinding or grille') do |l|
     options[:layout] = l.to_sym
   end
 
@@ -65,6 +65,7 @@ parser = OptionParser.new do |opts|
   opts.on('--decoy MESSAGE', "A second message, for a novice's grille (implies a grille)") { |d| options[:decoy] = d }
   opts.on('-w', '--weathered', 'Game mode: a worn plate, some strokes lost to restore') { options[:weathered] = true }
   opts.on('-b', '--broken', 'Game mode: the plate in fragments, to rejoin (the snail only)') { options[:broken] = true }
+  opts.on('--pathless', 'Game mode: the reader finds the way, the plate says nothing') { options[:pathless] = true }
   opts.on('-t', '--tally', 'Game mode: row and column sums (with -w, whole signs may be lost)') do
     options[:tally] = true
   end
@@ -162,6 +163,7 @@ begin
   abort Cistergraphia::Lacunae::NOT_TWO_READERS if options[:weathered] && options[:decoy]
   abort Cistergraphia::Fragments::NOT_SEALED if options[:broken] && options[:secret]
   abort Cistergraphia::Fragments::NOT_TALLIED if options[:broken] && options[:tally]
+  abort Cistergraphia::Pathless::NOT_DAMAGED if options[:pathless] && (options[:weathered] || options[:broken])
   passphrase = ask_passphrase(confirm: true) if options[:secret]
   if options[:broken]
     sequence, svg, pieces, damage = Cistergraphia::Fragments.inscribe(message, layout: layout,
@@ -177,7 +179,9 @@ begin
     sequence, svg, layout = Cistergraphia::TwoReaders.inscribe(message, options[:decoy], passphrase: passphrase,
                                                                                          grille: given)
   else
-    sequence, svg = Cistergraphia.inscribe(message, passphrase: passphrase, layout: layout, tally: options[:tally])
+    sequence, svg = Cistergraphia.inscribe(message, passphrase: passphrase, layout: layout, tally: options[:tally],
+                                                    pathless: options[:pathless])
+    puts 'Pathless: the plate says nothing of where it begins; -d finds the way' if options[:pathless]
   end
 rescue Cistergraphia::Error => e
   abort e.message

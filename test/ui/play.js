@@ -112,6 +112,60 @@ async function desk(file, label, { unaided = false } = {}) {
   await ctx.close();
 }
 
+// ---------- A pathless plate: the way is to find ----------
+const Ways = require(path.join(__dirname, '../../public/js/ways.js'));
+async function pathless() {
+  const ctx = await context();
+  const page = await ctx.newPage();
+  await bringToRead(page, 'pathless.svg', '[data-desk-pathless]');
+  const { way, breaks } = answers.pathless;
+  expectEqual('pathless', 'the plate opens without its way', await text(page, '[data-desk-which]'), 'Choose a way to read');
+  expectEqual('pathless', 'the pair boxes wait empty', await page.locator('[data-desk-sign] svg').count(), 0);
+  const grid = await page.evaluate(() => JSON.parse(document.querySelector('[data-plate]').dataset.plateGrid));
+  const byCell = new Map(grid.map(([r, c, up, turned]) => [`${r},${c}`, { up, turned }]));
+  const along = (name) => Ways.path(Math.sqrt(grid.length), name).map(([r, c, turned]) => { const cell = byCell.get(`${r},${c}`); return turned ? cell.turned : cell.up; });
+  const readPair = async (values, p) => {
+    await page.fill('#desk-first', String(values[2 * p]));
+    await page.fill('#desk-second', String(values[(2 * p) + 1]));
+    await page.click('[data-desk-read]');
+    await page.waitForTimeout(80);
+  };
+  // A wrong way, the one that breaks soonest: letters until it breaks, then the break said and noted
+  const [wrong, at] = Object.entries(breaks).filter(([name]) => name !== way).sort((a, b) => a[1] - b[1])[0];
+  await page.click(`[data-desk-way="${wrong}"]`);
+  const wrongValues = along(wrong);
+  await page.focus('[data-plate]');
+  await page.keyboard.press('Home');
+  expectEqual('pathless', `${wrong} laid: the walk follows it`, await text(page, '[data-plate-reading]'), `Sign 1 of ${wrongValues.length} · ${wrongValues[0]}`);
+  for (let p = 0; p < at - 1; p += 1) {
+    await readPair(wrongValues, p);
+    await page.waitForFunction((n) => document.querySelector('[data-desk-which]').textContent.startsWith(`Pair ${n + 2} of`), p);
+  }
+  if (wrongValues[2 * (at - 1)] === null || wrongValues[(2 * (at - 1)) + 1] === null) {
+    await page.click('[data-desk-read]');
+    await page.waitForTimeout(80);
+    expectEqual('pathless', `${wrong} breaks at pair ${at}: a sign reads as nothing turned`, (await text(page, '[data-desk-feedback]')).includes('reads as no number'), true);
+  } else {
+    await readPair(wrongValues, at - 1);
+    const named = `The ${wrong === 'phaistos' ? 'snail' : wrong === 'rongorongo' ? 'turning tablet' : wrong}`;
+    expectEqual('pathless', `${wrong} breaks at pair ${at}: not on the tablet`, (await text(page, '[data-desk-feedback]')).includes(`not on the tablet. ${named} breaks at pair ${at}`), true);
+  }
+  expectEqual('pathless', 'the notebook keeps where it broke', (await text(page, '[data-desk-notebook]')).includes(`✗ at pair ${at}`), true);
+  // The way: every pair reads, the plate is read along it, one pathless plate in the record
+  await page.click(`[data-desk-way="${way}"]`);
+  const values = along(way);
+  const pairs = values.length / 2;
+  for (let p = 0; p < pairs; p += 1) {
+    await readPair(values, p);
+    if (p < pairs - 1) await page.waitForFunction((n) => document.querySelector('[data-desk-which]').textContent.startsWith(`Pair ${n + 2} of`), p);
+  }
+  expectEqual('pathless', `along ${way}, the text is the message`, await text(page, '[data-desk-text]'), MESSAGE);
+  expectEqual('pathless', 'the page says along which way', (await text(page, '[data-desk-feedback]')).startsWith(`Read to the end, along the ${way}`), true);
+  expectEqual('pathless', 'one pathless plate entered in the scriptorium', await record(page), 'Entered in your scriptorium: 1 plate read, 1 pathless.');
+  expectEqual('pathless', 'the notebook ticks the way', (await text(page, '[data-desk-notebook]')).includes(`the ${way}: ${MESSAGE} ✓`), true);
+  await ctx.close();
+}
+
 // ---------- The bench ----------
 async function bench() {
   const ctx = await context();
@@ -341,6 +395,7 @@ async function budgets() {
   await preview();
   await desk('intact.svg', 'the snail');
   await desk('rongorongo.svg', 'the turning rows', { unaided: true });
+  await pathless();
   await bench();
   await board();
   await lectio();

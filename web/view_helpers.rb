@@ -44,6 +44,13 @@ module ViewHelpers
     end)
   end
 
+  # A pathless plate's cells for the page, in grid order, read upright, none
+  # turned: the walk before a way is chosen. The grid itself (both readings
+  # of every cell) goes beside it for the desk to lay the ways over
+  def pathless_cells_json(grid)
+    JSON.generate(grid.map { |row, col, upright, _| [row, col, upright, false] })
+  end
+
   # A Leiden edition as HTML: [r] restored, [b/l] doubtful, the rest as read
   def leiden_html(text)
     text.split(/(\[[^\]]*\])/).reject(&:empty?).map do |part|

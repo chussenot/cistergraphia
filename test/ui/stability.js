@@ -21,6 +21,7 @@ const weatheredFile = plateFile.replace(/\.svg$/, '-weathered.svg'); // written 
 const brokenFile = plateFile.replace(/\.svg$/, '-broken.svg'); // and this one
 const talliedFile = plateFile.replace(/\.svg$/, '-tallied.svg'); // and this one, with tally signs
 const ruinedFile = plateFile.replace(/\.svg$/, '-ruined.svg'); // and this one, broken and worn
+const pathlessFile = plateFile.replace(/\.svg$/, '-pathless.svg'); // and this one, its way withheld
 const VIEWPORTS = [
   { width: 320, height: 640 }, // the smallest phone
   { width: 390, height: 844 }, // a common phone
@@ -339,6 +340,16 @@ const FLOWS = [
     ]
   },
   {
+    page: 'pathless',
+    open: bringToRead(pathlessFile, '[data-desk-pathless]'),
+    steps: [
+      { name: 'choose the leap', act: (p) => p.click('[data-desk-way="leap"]') },
+      { name: 'walk along it', act: async (p) => { await p.focus('[data-plate]'); for (let i = 0; i < 6; i += 1) await p.keyboard.press('ArrowRight'); } },
+      { name: 'choose the turning tablet', act: (p) => p.click('[data-desk-way="rongorongo"]') },
+      { name: 'step through the pairs', act: async (p) => { for (let i = 0; i < 3; i += 1) await p.click('[data-desk-step="1"]'); } }
+    ]
+  },
+  {
     page: 'restore',
     open: bringToRead(weatheredFile, '[data-bench]'),
     steps: [
@@ -437,6 +448,7 @@ const PAGES = [
   { page: 'broken', open: openSamePlate({ message: MESSAGE, condition: 'broken' }) },
   { page: 'worn+broken', open: openSamePlate({ message: MESSAGE, condition: 'ruined' }) },
   { page: 'restore', open: bringToRead(weatheredFile, '[data-bench]') },
+  { page: 'pathless', open: bringToRead(pathlessFile, '[data-desk-pathless]') },
   { page: 'rejoin', open: bringToRead(brokenFile, '[data-rejoin]') },
   { page: 'ruined', open: bringToRead(ruinedFile, '[data-rejoin]') },
   { page: 'rejoined', open: openRejoinedBench },
