@@ -37,6 +37,20 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq wamerican wfrench
       - run: experiments/cryptanalysis/run.sh --check
 
+  # Keeps the reader's game honest: the desk, the bench and the board give the
+  # message; silence by default; no axe violation; the budgets
+  behaviour:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+      - run: npm install --no-save --no-package-lock playwright@1.56.1 axe-core@4.10.2
+      - run: npx playwright install --with-deps chromium
+      - run: bundle exec rake ui:play
+
   # Keeps docs/design.md honest: nothing on a page moves under the reader
   stability:
     runs-on: ubuntu-latest

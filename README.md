@@ -146,6 +146,7 @@ For builders
 bundle exec rake test                 # unit and HTTP tests
 bundle exec rubocop                   # lint
 bundle exec rake ui:stability         # nothing on a page moves under the reader (needs Playwright)
+bundle exec rake ui:play              # the reader who does the work gets the message (needs Playwright, axe-core)
 experiments/cryptanalysis/run.sh      # attack both modes (needs python3, wamerican, wfrench)
 bundle exec rake og:image             # social preview images (needs Chromium)
 ```
