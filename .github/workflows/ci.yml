@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# bash with pipefail (GitHub's default shell has none): a suite that fails
+# behind the `| tee` of a step summary must fail its step
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test:
     runs-on: ubuntu-latest
