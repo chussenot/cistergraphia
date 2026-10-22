@@ -144,6 +144,7 @@ For builders
 
 ```
 bundle exec rake test                 # unit and HTTP tests
+bundle exec rake quality              # the suite with coverage, the Node tests, rubocop (docs/quality.md)
 bundle exec rubocop                   # lint
 bundle exec rake ui:stability         # nothing on a page moves under the reader (needs Playwright)
 experiments/cryptanalysis/run.sh      # attack both modes (needs python3, wamerican, wfrench)
@@ -152,7 +153,8 @@ bundle exec rake og:image             # social preview images (needs Chromium)
 
 The cipher lives in `lib/`, the leaf in `app.rb`, `views/`, `web/` and `public/`, the command line
 in `cistergraphia`. The design and its rules are in [docs/design.md](docs/design.md); the
-cryptanalysis is in [experiments/cryptanalysis](experiments/cryptanalysis). In Claude Code cloud
+cryptanalysis is in [experiments/cryptanalysis](experiments/cryptanalysis); how all of it is kept true, in
+[docs/quality.md](docs/quality.md). In Claude Code cloud
 sessions, `.claude/hooks/session-start.sh` installs everything above.
 
 Further reading

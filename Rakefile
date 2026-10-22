@@ -15,6 +15,18 @@ namespace :test do
   task :sound do
     sh 'node', '--test', 'test/sound_test.js'
   end
+
+  desc 'The Ruby suite under Coverage, with a floor (COVERAGE_FLOOR=97): lib, web and app.rb'
+  task :coverage do
+    ruby 'test/coverage.rb'
+  end
+end
+
+desc 'Everything that runs locally in minutes: the suite with coverage, the Node tests, rubocop'
+task quality: ['test:coverage', 'test:sound'] do
+  sh 'bundle', 'exec', 'rubocop'
+  puts "\nFor a change to the pages, also: bundle exec rake ui:stability (nothing moves) " \
+       'and bundle exec rake ui:play (the reader gets the message). See docs/quality.md.'
 end
 
 namespace :og do
