@@ -72,9 +72,11 @@ module Cistergraphia
       %(    <line x1="#{x1}" y1="#{y1}" x2="#{x2}" y2="#{y2}"/>)
     end
 
-    # Recovers the sequence from an SVG rendered by #render with that layout
-    def read(svg, layout: :phaistos)
-      cells = lines(svg).group_by { |line| Layout.cell_of(line, layout) }
+    # Recovers the sequence from an SVG rendered by #render with that layout.
+    # strokes: the document's lines already parsed (#lines), when the same
+    # plate is read along several candidate layouts
+    def read(svg, layout: :phaistos, strokes: nil)
+      cells = (strokes || lines(svg)).group_by { |line| Layout.cell_of(line, layout) }
 
       Layout.path(grid_size(cells), layout).map { |row, col, turned| read_cell(cells, [row, col], turned, layout) }
     end

@@ -151,7 +151,7 @@ class AppTest < Minitest::Test
     cells, layout, svg = plate_of(last_response.body)
 
     assert_equal(Cistergraphia::SVG.read(svg), cells.map { |_, _, value, _| value }) # values, in reading order
-    assert_equal(Cistergraphia.spiral_coordinates(layout['size']), cells.map { |row, col, _| [row, col] })
+    assert_equal(Cistergraphia::Layout.spiral_coordinates(layout['size']), cells.map { |row, col, _| [row, col] })
     assert(cells.none? { |*, turned| turned })
     assert_equal({ 'padding' => 50, 'cell' => [120, 170], 'offset' => -10, 'grille' => false }, layout.except('size'))
     assert_includes last_response.body, 'tabindex="0"'
@@ -186,7 +186,7 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, '<dd>Rongorongo</dd>'
     assert_includes last_response.body, 'data-action="turn-plate"'
     assert_equal(Cistergraphia::SVG.read(svg, layout: :rongorongo), cells.map { |_, _, value, _| value })
-    assert_equal(Cistergraphia.boustrophedon_coordinates(layout['size']),
+    assert_equal(Cistergraphia::Layout.boustrophedon_coordinates(layout['size']),
                  cells.map { |row, col, _, turned| [row, col, turned] })
 
     post '/decode', svg: svg, decipher: '1'

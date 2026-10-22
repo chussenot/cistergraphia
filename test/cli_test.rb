@@ -49,6 +49,14 @@ class CliTest < Minitest::Test
     assert_equal [0, MESSAGE], [status, out.strip]
   end
 
+  def test_the_new_ways_are_written_and_read_back_without_being_told
+    %w[leap furrows unwinding].each do |way|
+      cli('-m', MESSAGE, '-l', way, '-o', plate(way))
+      out, _, status = cli('-d', plate(way))
+      assert_equal [0, MESSAGE], [status, out.strip], way
+    end
+  end
+
   def test_a_worn_plate_says_its_lacunae_and_reads_back_as_an_edition
     out, _, status = cli('-m', MESSAGE, '-w', '-o', plate('worn'))
     assert_equal 0, status

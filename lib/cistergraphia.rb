@@ -18,12 +18,15 @@
 #   different picture every time)
 # - 'Evil' pairs [noise, 9999] pad the sequence to a perfect square; 9999 can
 #   never come from a character, so the decoder can drop them reliably
-# - The sequence is laid out along one of three reading paths (layouts):
+# - The sequence is laid out along one of six reading paths (layouts):
 #   Phaistos, a clockwise spiral from the top-left to the centre (default),
 #   Rongorongo, reverse boustrophedon: rows from the bottom, every other row
-#   running back with its signs turned half round, or a turning Grille (with a
-#   key: see Cistergraphia::Grille). Without a key the decoder tries the first
-#   two; #inscribe redraws any game plate that would read along both. A grille's
+#   running back with its signs turned half round, the leap (the Zodiac's step:
+#   one row down, two columns across, wrapping), the furrows (boustrophedon by
+#   columns), the unwinding (from the centre outward, counter-clockwise), or a
+#   turning Grille (with a key: see Cistergraphia::Grille). Without a key the
+#   decoder tries the five keyless paths; #inscribe redraws any game plate that
+#   would read along more than one. A grille's
 #   plate has square cells, so it is never mistaken for the others
 #
 # Constraints:
@@ -83,7 +86,7 @@ module Cistergraphia
   end
 
   # Full pipeline: SVG rendered by #to_svg => message (normalized in game mode).
-  # Without a layout, Phaistos and Rongorongo are tried: only the right one
+  # Without a layout, the five keyless paths are tried: only the right one
   # yields letters (game) or passes authentication (secret). A grille's plate
   # (square) can only be read with its grille.
   def decode(svg, passphrase: nil, layout: nil)
@@ -91,8 +94,15 @@ module Cistergraphia
     return Fragments.decode(svg, passphrase: passphrase, layout: layout) if Fragments.broken?(svg)
     return Lacunae.decode(svg, passphrase: passphrase, layout: layout) if Lacunae.weathered?(svg)
 
+    read_whole(svg, passphrase, layout)
+  end
+
+  # An intact plate: along the layout given, else along every keyless path,
+  # the file parsed once
+  def read_whole(svg, passphrase, layout)
+    strokes = SVG.lines(svg)
     errors = (layout ? [layout] : Layout::KEYLESS).map do |candidate|
-      sequence = SVG.read(svg, layout: candidate)
+      sequence = SVG.read(svg, layout: candidate, strokes: strokes)
       return passphrase ? Secret.decrypt(sequence, passphrase) : decipher(sequence)
     rescue DecodeError => e
       e
@@ -123,10 +133,13 @@ module Cistergraphia
     raise Error, 'Could not draw an unambiguous plate for this message'
   end
 
-  # True when the plate reads as letters along its own layout only
+  # True when the plate reads as letters along its own layout only (a path that
+  # is the same walk at this plate's side is not another layout)
   def unambiguous?(svg, layout)
-    (Layout::KEYLESS - [layout]).none? do |other|
-      decipher(SVG.read(svg, layout: other))
+    strokes = SVG.lines(svg)
+    side = SVG.grid_size(strokes.group_by { |line| Layout.cell_of(line, layout) })
+    Layout.others(layout, side).none? do |other|
+      decipher(SVG.read(svg, layout: other, strokes: strokes))
     rescue DecodeError
       false
     end
@@ -161,28 +174,6 @@ module Cistergraphia
   def split(num)
     part = rand(num)
     [num - part, part].shuffle
-  end
-
-  # Reads an array of rows in a snail pattern (clockwise spiral from the top-left)
-  def snail(matrix)
-    return [] if matrix.empty?
-
-    matrix.first + snail(matrix.drop(1).transpose.reverse)
-  end
-
-  # [row, col] of each grid cell, in snail order
-  def spiral_coordinates(size)
-    snail(Array.new(size) { |row| Array.new(size) { |col| [row, col] } })
-  end
-
-  # [row, col, turned] of each grid cell in reverse boustrophedon order, the
-  # rongorongo way: rows from the bottom, left to right, then the tablet turns
-  # half round, so every other row runs back with its signs upside down
-  def boustrophedon_coordinates(size)
-    (size - 1).downto(0).each_with_index.flat_map do |row, k|
-      cols = k.even? ? (0...size).to_a : (size - 1).downto(0).to_a
-      cols.map { |col| [row, col, k.odd?] }
-    end
   end
 
   # Inserts a pair of 'evil' symbols between two character pairs

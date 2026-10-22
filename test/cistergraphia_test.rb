@@ -84,12 +84,12 @@ class CistergraphiaTest < Minitest::Test
   def test_snail_returns_spiral_order_without_mutating_its_input
     matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 
-    assert_equal [1, 2, 3, 6, 9, 8, 7, 4, 5], Cistergraphia.snail(matrix)
+    assert_equal [1, 2, 3, 6, 9, 8, 7, 4, 5], Cistergraphia::Layout.snail(matrix)
     assert_equal [[1, 2, 3], [4, 5, 6], [7, 8, 9]], matrix
   end
 
   def test_spiral_coordinates_visit_every_cell_once
-    coords = Cistergraphia.spiral_coordinates(6)
+    coords = Cistergraphia::Layout.spiral_coordinates(6)
 
     assert_equal 36, coords.uniq.size
     assert_equal (0..5).map { |col| [0, col] }, coords.first(6)  # along the top
@@ -107,12 +107,12 @@ class CistergraphiaTest < Minitest::Test
   end
 
   def test_boustrophedon_coordinates_turn_every_other_row
-    coords = Cistergraphia.boustrophedon_coordinates(3)
+    coords = Cistergraphia::Layout.boustrophedon_coordinates(3)
 
     assert_equal [[2, 0, false], [2, 1, false], [2, 2, false]], coords.first(3) # bottom row, left to right
     assert_equal [[1, 2, true], [1, 1, true], [1, 0, true]], coords[3, 3] # back, upside down
     assert_equal [[0, 0, false], [0, 1, false], [0, 2, false]], coords.last(3)
-    assert_equal(16, Cistergraphia.boustrophedon_coordinates(4).map { |row, col, _| [row, col] }.uniq.size)
+    assert_equal(16, Cistergraphia::Layout.boustrophedon_coordinates(4).map { |row, col, _| [row, col] }.uniq.size)
   end
 
   def test_turning_a_sign_swaps_its_places
@@ -143,6 +143,40 @@ class CistergraphiaTest < Minitest::Test
       _sequence, svg = Cistergraphia.inscribe('jj', layout: :rongorongo)
 
       assert_equal 'jj', Cistergraphia.decode(svg)
+    end
+  end
+
+  def test_every_keyless_path_visits_every_cell_once_at_every_side
+    Cistergraphia::Layout::KEYLESS.each do |layout|
+      (1..14).each do |side|
+        cells = Cistergraphia::Layout.path(side, layout).map { |row, col, _| [row, col] }
+
+        assert_equal side * side, cells.uniq.size, "#{layout} at #{side}"
+        assert(cells.all? { |row, col| row.between?(0, side - 1) && col.between?(0, side - 1) }, "#{layout} at #{side}")
+      end
+    end
+  end
+
+  def test_the_leap_steps_as_the_zodiac_did_and_the_unwinding_is_not_the_snail_backwards
+    leap = Cistergraphia::Layout.path(6, :leap)
+
+    assert_equal [[0, 0, false], [1, 2, false], [2, 4, false], [3, 0, false]], leap.first(4)
+    assert_equal [0, 1, false], leap[6], 'the next orbit starts a column to the right'
+    pairs = ->(layout) { Cistergraphia::Layout.path(6, layout).each_slice(2).to_set { |(a, b)| [a.first(2), b.first(2)].sort } }
+
+    assert_empty pairs.call(:unwinding) & pairs.call(:phaistos), 'no two signs are read as one pair along both'
+    unwinding = Cistergraphia::Layout.path(6, :unwinding)
+
+    assert_equal [[2, 2, false], [0, 5, false]], [unwinding.first, unwinding.last]
+  end
+
+  def test_at_a_side_of_two_three_of_the_ways_are_one_walk_and_a_one_letter_plate_still_reads
+    assert_equal %i[phaistos rongorongo], Cistergraphia::Layout.others(:leap, 2)
+    assert_equal %i[phaistos rongorongo leap furrows], Cistergraphia::Layout.others(:unwinding, 4)
+    %i[leap furrows unwinding].each do |way|
+      _sequence, svg = Cistergraphia.inscribe('x', layout: way)
+
+      assert_equal 'x', Cistergraphia.decode(svg), way
     end
   end
 
