@@ -89,6 +89,11 @@
     if (mark.classList.contains('ink-dry')) settle(mark);
   }
 
+  // The hand's motions, told to whoever listens (sound.js): the stroke and when it starts
+  function tell(name, detail) {
+    document.dispatchEvent(new CustomEvent(name, { detail }));
+  }
+
   const listening = new WeakSet();
   function listen(mark) {
     if (listening.has(mark)) return;
@@ -99,6 +104,7 @@
   // Press a wedge: the stylus bites at its head and runs to its tip, wet in
   // the mode's colour, then the ink dries
   function press(mark, delay = 0) {
+    tell('ink:press', { mark, delay });
     if (reducedMotion) return;
     const at = bite(mark);
     if (at) {
@@ -116,6 +122,7 @@
   // A wedge already there, wet, that dries in its turn: for plates too long to
   // draw stroke by stroke, where the drying front alone shows the reading order
   function wet(mark, delay = 0) {
+    tell('ink:press', { mark, delay, wet: true }); // the pressing the drawing skipped
     if (reducedMotion) return;
     mark.style.setProperty('--dry-delay', `${Math.round(delay)}ms`);
     restart(mark);
@@ -131,6 +138,7 @@
   }
 
   function lift(mark) {
+    tell('ink:lift', { mark });
     if (reducedMotion) {
       mark.remove();
       return;

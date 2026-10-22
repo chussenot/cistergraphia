@@ -1122,6 +1122,10 @@ input[type="number"] { font-variant-numeric: lining-nums; font-size: 1.3rem; }
 .colophon a { color: var(--ink-soft); }
 .colophon a:hover { color: var(--accent); }
 .colophon nav { display: flex; gap: var(--space-4); font-style: normal; font-family: var(--sans); font-size: 0.8rem; }
+/* Hear the hand: the one control for the sounds of silence, a link among the colophon's links */
+.hear { appearance: none; background: none; border: 0; padding: 0; margin: 0; font: inherit; color: var(--ink-soft); cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 0.18em; }
+.hear:hover { color: var(--accent); }
+.hear[aria-pressed="true"] { color: var(--accent); text-decoration-color: var(--accent); }
 
 /* ---------- Toast ---------- */
 .toast {

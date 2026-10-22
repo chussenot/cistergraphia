@@ -10,6 +10,13 @@ end
 
 task default: :test
 
+namespace :test do
+  desc 'The sounds of silence: the pure part of public/js/sound.js (needs Node)'
+  task :sound do
+    sh 'node', '--test', 'test/sound_test.js'
+  end
+end
+
 namespace :og do
   desc 'Render the social preview images (public/og.png, docs/social-preview.png); needs Chromium'
   task :image do
