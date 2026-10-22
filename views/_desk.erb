@@ -48,7 +48,7 @@ notebook of the ways tried; the pair boxes wait empty for a way)
     <output class="desk-letter" data-desk-letter aria-label="The letter the pair makes">?</output>
     <button type="submit" class="btn btn--primary btn--small" data-desk-read>Read</button>
   </form>
-  <p class="desk-feedback" data-desk-feedback aria-live="polite"><%= pathless_desk ? 'The plate says nothing of where it begins. Choose a way: the pairs form along it, and each reads as a letter on the tablet, or does not.' : 'Type what each sign reads: the page adds them and finds the letter on the tablet. Guided, a tap on a sign shows its value.' %></p>
+  <p class="desk-feedback" data-desk-feedback aria-live="polite"><%= pathless_desk ? 'Nothing says where the plate begins. Choose a way: the pairs form along it, and read as letters or do not.' : 'Type what each sign reads: the page adds them and finds the letter on the tablet. Guided, a tap on a sign shows its value.' %></p>
   <p class="desk-text" data-desk-text aria-live="polite"><%= '·' * (values.size / 2) %></p>
   <% if pathless_desk %>
     <p class="desk-notebook" data-desk-notebook aria-live="polite">The notebook: what each way gave, and where it broke.</p>

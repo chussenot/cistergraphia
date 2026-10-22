@@ -78,7 +78,7 @@ and the passphrase.
 | Leaf (`.leaf`) | Paper card with the double vertical bounding lines of a ruled writing area; folio mark (`fol. 1r`…) top right, hidden on phones |
 | Rubric (`.rubric`) | Page title in the mode colour |
 | Index heading (`.index-heading`) | Small capitals followed by a hairline rule |
-| Choices (`.choice`, `.segment`) | First on the form, above the message: **Mode** (Game, Secret; red and blue initials) and **Layout** (six ways: Phaistos, Rongorongo, Leap, Furrows, Unwinding, Grille, each a small figure of its reading order over its name, `.segments--ways`: two rows of three at every width) as segmented controls over native radios, one above the other. Each has one reserved line of description; the notes swap in place. The key's "Order of reading" shows the chosen path; hollow points mark signs written upside down, and the grille's figure letters each cell with the turn that reads it. Then **Condition**, the difficulty ladder (`.segments--ladder`): one segmented control, four rungs, Intact, Worn, Broken, Ruined, each a complete design, with one reserved note describing the rung chosen. A rung the layout does not allow (Broken and Ruined follow the snail) is greyed, and choosing it puts the reason in the note instead of an error after sending; in secret mode the rungs past Intact are greyed and the note says why (a sealed plate that loses a stroke never opens again). Tally signs are the library's and the CLI's, not the form's |
+| Choices (`.choice`, `.segment`) | First on the form, above the message: **Mode** (Game, Secret; red and blue initials) and **Layout** (six ways: Phaistos, Rongorongo, Leap, Furrows, Unwinding, Grille, each a small figure of its reading order over its name, `.segments--ways`: two rows of three at every width) as segmented controls over native radios, one above the other. Each has one reserved line of description; the notes swap in place. The key's "Order of reading" shows the chosen path; hollow points mark signs written upside down, and the grille's figure letters each cell with the turn that reads it. Then **Path** (Shown, Withheld), two segments with one reserved note: a pathless plate says nothing of where it begins, and its reader finds the way among the five; Withheld is greyed, with its reason in the note, on a sealed plate, under a grille and on a damaged one. Then **Condition**, the difficulty ladder (`.segments--ladder`): one segmented control, four rungs, Intact, Worn, Broken, Ruined, each a complete design, with one reserved note describing the rung chosen. A rung the layout does not allow (Broken and Ruined follow the snail) is greyed, and choosing it puts the reason in the note instead of an error after sending; in secret mode the rungs past Intact are greyed and the note says why (a sealed plate that loses a stroke never opens again). Tally signs are the library's and the CLI's, not the form's |
 | Mode cards (`.mode`, About) | Native radios styled as two index cards; the first letter is a red or blue initial |
 | Fields | Labels in small capitals; vellum-filled inputs; a focus ring in the mode colour |
 | Buttons | Primary uses the mode colour; secondary is outlined; quiet is link-like; all are at least 48 px tall |
@@ -105,7 +105,7 @@ fourth voice, and is declined.
 |---|---|
 | The catalogue | The leaves: Inscribe, Read, About, the Erratum. Index headings, folio marks, the lede in italic. It describes; it does not perform |
 | The collection | The plates: clay pressed by a stylus, sometimes worn, broken or ruined; the grille cut from parchment; the tablet of values. Objects have conditions, layouts and keys |
-| The scriptorium | Where the reader works: the desk, the bench, the board; Lectio; the ranks from novice to abbot; the record of plates read. Its verbs are manual: read, press, lay, turn, restore |
+| The scriptorium | Where the reader works: the desk, the bench, the board; Lectio; the ranks from novice to abbot; the record of plates read; on a pathless plate, the way to find and the notebook of ways tried. Its verbs are manual: read, press, lay, turn, restore |
 
 **Voice.** A careful epigrapher writing a catalogue entry: declarative, exact, unhurried, with a
 dry wit that never winks ("Without it, the plate is an anagram of itself").
@@ -142,6 +142,8 @@ dry wit that never winks ("Without it, the plate is an anagram of itself").
 | the snail, the turning tablet, the leap, the furrows, the unwinding, the turning parchment | the six layouts, by their movement | spiral mode, boustrophedon outside About, knight's move, Zodiac mode |
 | scribe, reader | the two people in every exchange | user, player, sender |
 | the desk, the bench, the board | the scriptorium's furniture | mode, puzzle view, game screen |
+| a pathless plate | a plate whose reader must find the way (Path withheld on the form) | Zodiac mode, hidden layout, blind mode |
+| Which way does it run?; the notebook | the desk's question on a pathless plate, and its line of the ways tried: what each gave, where it broke | select transposition, history, log |
 | Lectio; novice, monk, prior, abbot | the reading exercise and the ranks it and the desk award | level, XP, badge |
 | your scriptorium | the record of plates read, kept in the browser | history, stats, profile |
 | transcription | what the decoder hands back | output, result, decoded message |

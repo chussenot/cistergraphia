@@ -133,6 +133,7 @@ bundle exec rackup                                      # then open http://local
 ./cistergraphia -m "Meet me at the old abbey after vespers"
 ./cistergraphia -m "Vespers at six" -g K7Q2M-ZXB4P --stencil grille.svg  # -l grille draws a new key
 ./cistergraphia -m "Vespers at six" -l leap -o plate.svg          # or rongorongo, furrows, unwinding: -d finds the way
+./cistergraphia -m "Vespers at six" -l leap --pathless -o plate.svg  # the reader finds the way; -d still does
 ./cistergraphia -d tmp/inline.svg -g K7Q2M-ZXB4P                          # read it under its grille
 ./cistergraphia -m "The relics are under the third stone" --decoy "Vespers at six" -g K7Q2M-ZXB4P
                                      # two readers: K7Q2M-ZXB4P reads both, the novice's key only the decoy

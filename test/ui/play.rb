@@ -25,6 +25,24 @@ def rejoining(svg)
   Cistergraphia::Fragments::Join.all(fragments, Cistergraphia::Layout::KEYLESS).first.places
 end
 
+# Whether a pair reads along a way: both signs read, and they add to a letter (or the second is the null mark)
+def reads?(first, second)
+  return false if first.nil? || second.nil?
+
+  second == Cistergraphia::EVIL_MARKER || Cistergraphia::CHARACTERS.key?(first + second)
+end
+
+# way => the first pair (1-based) that does not read along it, nil where every pair does
+def breaks(svg)
+  grid = Cistergraphia::Pathless.grid(svg).to_h { |row, col, upright, turned| [[row, col], [upright, turned]] }
+  side = Integer.sqrt(grid.size)
+  Cistergraphia::Layout::KEYLESS.to_h do |way|
+    values = Cistergraphia::Layout.path(side, way).map { |row, col, turned| grid[[row, col]][turned ? 1 : 0] }
+    broke = values.each_slice(2).find_index { |first, second| !reads?(first, second) }
+    [way, broke.nil? ? nil : broke + 1]
+  end
+end
+
 Dir.mktmpdir do |dir|
   answers = { message: Cistergraphia.normalize(MESSAGE) }
   File.write(File.join(dir, 'intact.svg'), Cistergraphia.inscribe(MESSAGE).last)
@@ -35,6 +53,12 @@ Dir.mktmpdir do |dir|
   _, broken, = Cistergraphia::Fragments.inscribe(MESSAGE, random: Random.new(3))
   File.write(File.join(dir, 'broken.svg'), broken)
   answers[:broken] = rejoining(broken)
+  # A pathless plate along the leap (the splits drawn from a fixed seed), with
+  # where each way breaks: the first pair that does not read along it
+  srand(11)
+  _, pathless = Cistergraphia.inscribe(MESSAGE, layout: :leap, pathless: true)
+  File.write(File.join(dir, 'pathless.svg'), pathless)
+  answers[:pathless] = { way: 'leap', breaks: breaks(pathless) }
   File.write(File.join(dir, 'answers.json'), JSON.generate(answers))
 
   ok = UiHarness.serve(dir) { |base_url| UiHarness.run_script('play.js', base_url, dir) }
