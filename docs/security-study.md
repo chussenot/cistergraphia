@@ -153,12 +153,19 @@ abbot's key) add a reader, not secrecy. Not measured; what the construction impl
    value, and that sum always ends in 0, which also reveals where each pair starts.
 4. **The filler is labelled** by the constant 9999.
 5. **The spiral is one of a handful of obvious routes,** and the pair test confirms which one.
-   The Rongorongo layout (reverse boustrophedon, every other row upside down) adds one more route
-   to try, not a key: the decoder itself tells the two apart with the same pair test, so an
-   attacker does too. Turned glyphs read as their mirror (units ⇄ thousands, tens ⇄ hundreds),
-   which is a fixed, public transformation. Choose a layout for its look, not for security.
-   (On very short messages the pair test can pass along both routes, about 1 two-letter plate
-   in 100; the encoder redraws those, so the test always names one.)
+   The other keyless layouts (Rongorongo, the leap, the furrows, the unwinding) add four more
+   routes to try, not a key: the decoder itself tells the five apart with the same pair test, so
+   an attacker does too, and the scripted attack tries 64 routes (four bases in every rotation
+   and reflection, forwards and backwards) before it has looked at a single letter. Turned
+   glyphs read as their mirror (units ⇄ thousands, tens ⇄ hundreds), which is a fixed, public
+   transformation. Choose a layout for its look, not for security. A **pathless** plate
+   withholds the way from the reader's page, not from an attacker: its file holds the same
+   signs on the same grid, and the attack reads them by position. The Zodiac's 340-character
+   cipher is the precedent: its transposition held for 51 years against hand work and fell in
+   2020 to a search over some 650,000 candidate reading orders; here there are five, and the
+   search is the game. (On very short messages the pair test can pass along two routes, about
+   1 one- or two-word plate in 20 with five routes to try; the encoder redraws those, so the
+   test always names one.)
    The **Grille** layout is the one route with a key: a turning grille, set by a code of 50
    bits. It hides what the attacks above start from, which cells are neighbours in reading
    order, and it slows a blind attacker tenfold. But it keeps the order inside each quarter,
@@ -210,8 +217,8 @@ payload bytes ──base 10,000──▶ glyph values ──▶ [length, length,
 - **Agility:** the version byte selects the KDF and cipher parameters, so they can be raised
   later and old images still decode.
 - **Exact text:** no normalisation, so capitals, digits, accents and emoji survive.
-- **Layout:** the decoder tries both keyless layouts (a grille's plate, square, asks for its
-  key instead). The wrong one fails the length frame before any
+- **Layout:** the decoder tries the five keyless layouts (a grille's plate, square, asks for its
+  key instead). A wrong one fails the length frame before any
   scrypt work (in 200 of 200 random plates), or else the GCM tag, so it never yields a false
   message. It is not
   secret and adds no security.

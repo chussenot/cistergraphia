@@ -15,7 +15,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-mkdir -p "$work/game" "$work/secret" "$work/game-grille" "$work/secret-grille"
+mkdir -p "$work/game" "$work/game-leap" "$work/secret" "$work/game-grille" "$work/secret-grille"
 
 game_check=() grille_check=() secret_check=()
 if [[ "${1:-}" == "--check" ]]; then
@@ -25,12 +25,16 @@ if [[ "${1:-}" == "--check" ]]; then
 fi
 
 bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/game" game
+bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/game-leap" game leap pathless
 bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/secret" secret
 bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/game-grille" game grille
 bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/secret-grille" secret grille
 
 echo; echo "##### GAME MODE (no passphrase) #####"
 python3 -I "$here/crack.py" "$work/game" --answers "$work/game/answers.json" --subsets 1 3 10 "${game_check[@]}"
+
+echo; echo "##### GAME MODE ALONG THE LEAP, PATHLESS (the attacker tries the ways; the file tells nothing) #####"
+python3 -I "$here/crack.py" "$work/game-leap" --answers "$work/game-leap/answers.json" --subsets 1 3 10 "${game_check[@]}"
 
 echo; echo "##### SECRET MODE (passphrase, AES-256-GCM) #####"
 python3 -I "$here/crack.py" "$work/secret" --answers "$work/secret/answers.json" "${secret_check[@]}"
