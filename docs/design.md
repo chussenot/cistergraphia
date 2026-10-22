@@ -81,6 +81,63 @@ and the passphrase.
 | Index of dates (About) | A timeline whose exact years are written as signs; centuries get an em dash |
 | Tablet (About) | The 27 letters as index cards: sign, letter in the mode colour, value |
 
+## Voice and lexicon
+
+The frame that holds the three worlds the site draws on (the Cistercian abbey, the archaeology of
+undeciphered writing, the cipher register): **Cistergraphia is an abbey library that keeps the
+world's lost scripts. The leaf is the catalogue, the plate is the object, the scriptorium is where
+readers work.** Every surface belongs to one of the three rooms; a feature that fits none is a
+fourth voice, and is declined.
+
+| Room | What is in it |
+|---|---|
+| The catalogue | The leaves: Inscribe, Read, About, the Erratum. Index headings, folio marks, the lede in italic. It describes; it does not perform |
+| The collection | The plates: clay pressed by a stylus, sometimes worn, broken or ruined; the grille cut from parchment; the tablet of values. Objects have conditions, layouts and keys |
+| The scriptorium | Where the reader works: the desk, the bench, the board; Lectio; the ranks from novice to abbot; the record of plates read. Its verbs are manual: read, press, lay, turn, restore |
+
+**Voice.** A careful epigrapher writing a catalogue entry: declarative, exact, unhurried, with a
+dry wit that never winks ("Without it, the plate is an anagram of itself").
+
+- Sentences state; they do not sell. No exclamation marks, no "you can", no "simply".
+- The colon is the house punctuation: a claim, a colon, its consequence. Semicolons on About
+  only; em-dashes never.
+- Mistakes are shown in rubric and left to the reader ("Neither sign reads that. Look again."),
+  never corrected, never named "wrong".
+- Progress is a count a scribe would keep ("7 of 32 restored", "2 plates read"): never a score,
+  a timer or a streak outside Lectio's own "in a row".
+- Technical words stay at the doors: SVG, PNG and AES-256-GCM appear where a file enters or
+  leaves (the download row, the Read form, the seal's note), never in a lede, a heading or a
+  puzzle line.
+- Latin and the monks' words earn their place by having no plain equivalent (Lectio,
+  scriptorium, folio, erratum, lacuna) and are never explained twice.
+- Red means one thing at a time: wet ink, a restoration, or "look here".
+
+**Lexicon.** One word for each thing, in pages, scripts, docs and refusals alike.
+
+| We say | For | Never |
+|---|---|---|
+| plate | the object a message becomes | image, "a Cistergraphia" (the site's name is not a noun), file except at the doors |
+| sign; stroke, corner, stem | one numeral and its parts | glyph, symbol (code only); quadrant in copy |
+| pair, balance, the tablet | two signs summing to a letter; the table of values | checksum, lookup |
+| intact, worn, broken, ruined | the ladder's four conditions | weathered, damaged (except as the family word on About) |
+| lacuna, restore, edition | a lost stroke position, putting it back, the Leiden-bracketed result | gap, repair, fix |
+| fragment, sherd, rejoin, whole again | the pieces of a broken plate and the act | piece in copy, reassemble, solve |
+| inscribe | what the scribe does | generate, encode, create |
+| read | what a person does to a plate | decode (a person never decodes) |
+| decipher, the decoder | what the machine does, and its name | decode this plate, decoded message, solver |
+| seal, sealed, passphrase | secret mode and its key | encrypt, password, lock |
+| key, grille, stencil | the grille's secret, the parchment, the printed cut-out | code, mask |
+| the snail, the turning tablet, the turning parchment | the three layouts, by their movement | spiral mode, boustrophedon outside About |
+| scribe, reader | the two people in every exchange | user, player, sender |
+| the desk, the bench, the board | the scriptorium's furniture | mode, puzzle view, game screen |
+| Lectio; novice, monk, prior, abbot | the reading exercise and the ranks it and the desk award | level, XP, badge |
+| your scriptorium | the record of plates read, kept in the browser | history, stats, profile |
+| transcription | what the decoder hands back | output, result, decoded message |
+
+**The codex.** The folios follow the order the story is read: Inscribe `1r`, the plate `1v`,
+Read `2r`, the scriptorium `2v`, the transcription `3r`, About `4r`. The Erratum has no folio: a
+slip of paper in the book.
+
 ## Interaction: "the silence of the monks"
 
 Motion and interaction follow four rules. Anything that breaks one does not ship.
