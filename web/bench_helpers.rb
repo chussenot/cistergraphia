@@ -32,6 +32,13 @@ module BenchHelpers
     end
   end
 
+  # The same entries from a plate rejoined (Fragments::Whole): its lacunae and
+  # what each worn sign may hold are what its fragments show
+  def lacunae_from(values, layout, damage, candidates)
+    path = Cistergraphia::Layout.path(Integer.sqrt(values.size), layout)
+    damage.sort.flat_map { |index, lost| sign_entries(path, layout, index, lost, candidates.fetch(index)) }
+  end
+
   def sign_entries(path, layout, index, lost, options)
     row, col, turned = path[index]
     x, y = Cistergraphia::Layout.origin(row, col, layout)

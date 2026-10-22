@@ -1002,10 +1002,12 @@
       return { balanced, pairs: Math.floor(path.length / 2), text };
     };
 
+    const restore = $('[data-rejoin-restore]');
     const update = () => {
       const board = laid();
       readingEl.textContent = '';
       frame.classList.remove('is-whole');
+      if (restore) restore.disabled = true;
       if (!board) {
         const on = pieces.filter(onBoard).length;
         status.textContent = on === total ? 'All on the board, but two overlap.' : `On the board: ${on} of ${total} fragments.`;
@@ -1015,11 +1017,13 @@
         .reduce((a, b) => (b.balanced > a.balanced ? b : a));
       if (best.balanced === best.pairs && best.text) {
         status.textContent = 'Whole again: every pair balances.';
-        recordWin();
         readingEl.textContent = best.text.includes('[')
           ? `It reads, restored: ${best.text}`
           : `It reads: ${best.text}`;
         frame.classList.add('is-whole');
+        // A ruined plate is won on the bench, which opens on it from here
+        if (restore) restore.disabled = false;
+        else recordWin();
         return;
       }
       status.textContent = `Covered: ${best.balanced} of ${best.pairs} pairs balance.`;

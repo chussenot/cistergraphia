@@ -91,6 +91,9 @@ Dir.mktmpdir do |dir|
   File.write(plate.sub(/\.svg\z/, '-weathered.svg'), Cistergraphia::Lacunae.inscribe(MESSAGE)[1])
   # And the same broken plate: brought to Read, it opens as the board
   File.write(plate.sub(/\.svg\z/, '-broken.svg'), Cistergraphia::Fragments.inscribe(MESSAGE, random: Random.new(3))[1])
+  # And the same ruined plate: the board, then (rejoined=1) the bench on the plate rejoined
+  File.write(plate.sub(/\.svg\z/, '-ruined.svg'),
+             Cistergraphia::Fragments.inscribe(MESSAGE, weathered: true, random: Random.new(3))[1])
   # And one with tally signs (the library's and the CLI's, not the form's): the bench checks them
   File.write(plate.sub(/\.svg\z/, '-tallied.svg'), Cistergraphia::Lacunae.inscribe(MESSAGE, tally: true)[1])
 

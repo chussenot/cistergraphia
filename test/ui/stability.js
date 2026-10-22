@@ -20,6 +20,7 @@ const [baseUrl, plateFile, executablePath] = process.argv.slice(2);
 const weatheredFile = plateFile.replace(/\.svg$/, '-weathered.svg'); // written beside it by stability.rb
 const brokenFile = plateFile.replace(/\.svg$/, '-broken.svg'); // and this one
 const talliedFile = plateFile.replace(/\.svg$/, '-tallied.svg'); // and this one, with tally signs
+const ruinedFile = plateFile.replace(/\.svg$/, '-ruined.svg'); // and this one, broken and worn
 const VIEWPORTS = [
   { width: 320, height: 640 }, // the smallest phone
   { width: 390, height: 844 }, // a common phone
@@ -130,6 +131,19 @@ const bringToRead = (file, selector, decipher = false) => async (page) => {
   await Promise.all([page.waitForURL('**/decode'), page.click('.entry [type="submit"]')]);
   if (decipher) await Promise.all([page.waitForURL('**/decode'), page.click('.readback [type="submit"]')]);
   await page.waitForSelector(selector, { state: 'attached' }); // the bench and the board await the script
+};
+
+// The bench on a ruined plate rejoined: what the board's "Restore it" posts once whole
+const openRejoinedBench = async (page) => {
+  const key = 'rejoined';
+  if (!pageOnce.has(key)) {
+    const svg = require('fs').readFileSync(ruinedFile, 'utf8');
+    const response = await page.request.post(`${baseUrl}/decode`, { form: { svg, rejoined: '1' } });
+    pageOnce.set(key, await response.text());
+  }
+  await page.goto(`${baseUrl}/`);
+  await page.setContent(pageOnce.get(key), { waitUntil: 'load' });
+  await page.waitForSelector('[data-bench]', { state: 'attached' });
 };
 
 // A weathered plate: some strokes lost to the centuries
@@ -340,6 +354,16 @@ const FLOWS = [
     ]
   },
   {
+    page: 'rejoined',
+    open: openRejoinedBench,
+    steps: [
+      { name: 'walk the rejoined plate', act: async (p) => { await p.focus('[data-plate]'); for (let i = 0; i < 8; i += 1) await p.keyboard.press('ArrowRight'); } },
+      { name: 'choose a lacuna on the plate', act: (p) => p.click('.bench-target >> nth=1', { force: true }) },
+      { name: 'press every digit', act: async (p) => { for (const button of await p.locator('[data-digit]:not([disabled])').all()) await button.click(); } },
+      { name: 'step through the lacunae', act: async (p) => { for (let i = 0; i < 3; i += 1) await p.click('[data-bench-step="1"]'); } }
+    ]
+  },
+  {
     page: 'edition',
     open: bringToRead(weatheredFile, '[data-transcription]', true),
     steps: [
@@ -407,6 +431,8 @@ const PAGES = [
   { page: 'worn+broken', open: openSamePlate({ message: MESSAGE, condition: 'ruined' }) },
   { page: 'restore', open: bringToRead(weatheredFile, '[data-bench]') },
   { page: 'rejoin', open: bringToRead(brokenFile, '[data-rejoin]') },
+  { page: 'ruined', open: bringToRead(ruinedFile, '[data-rejoin]') },
+  { page: 'rejoined', open: openRejoinedBench },
   { page: 'edition', open: bringToRead(weatheredFile, '[data-transcription]', true) },
   { page: 'read', open: (page) => page.goto(`${baseUrl}/decode`) },
   { page: 'desk', open: bringToRead(plateFile, '[data-desk]') },

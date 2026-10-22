@@ -147,8 +147,9 @@ module Cistergraphia
       node.name == 'line' && node.parent.attributes['class'] == { lacunae: Lacunae::CLASS, tally: Tally::CLASS }[layer]
     end
 
-    def parse(svg)
-      REXML::Document.new(svg.to_s)
+    # (quoted: true writes the elements back with double quotes, as the library draws them)
+    def parse(svg, quoted: false)
+      REXML::Document.new(svg.to_s, quoted ? { attribute_quote: :quote } : {})
     rescue REXML::ParseException
       raise DecodeError, 'Unreadable SVG: not well-formed XML'
     end

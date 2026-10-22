@@ -18,11 +18,31 @@ module ReaderGame
     @svg_content = PlateFile.clean(svg)
     return false unless @svg_content
 
-    laid = if @broken then lay_board(svg)
-           elsif @weathered then lay_bench(svg)
-           else lay_desk(svg)
-           end
-    !laid.nil?
+    !lay(svg).nil?
+  end
+
+  # The puzzle the plate opens as: the board for a broken plate (the bench on
+  # it rejoined, when asked), the bench for a worn one, the desk for an intact one
+  def lay(svg)
+    return lay_rejoined(svg) if @broken && @weathered && params[:rejoined] == '1'
+    return lay_board(svg) if @broken
+
+    @weathered ? lay_bench(svg) : lay_desk(svg)
+  end
+
+  # The bench on a ruined plate rejoined (rejoined=1, from the board once it
+  # is whole): the plate drawn from its own fragments moved into place, its
+  # lacunae from the file alone. The file carried on is still the broken one
+  def lay_rejoined(svg)
+    whole = Cistergraphia::Fragments.rejoined(svg)
+    @layout = whole.layout
+    @values = whole.signs
+    @damage = whole.damage
+    @entries = lacunae_from(whole.signs, @layout, @damage, whole.candidates)
+    @plate_svg = PlateFile.clean(whole.svg)
+    @rejoined = true
+    @broken = false
+    @size = Integer.sqrt(@values.size)
   end
 
   # The reading desk: an intact game plate, along the layout that reads it as

@@ -904,4 +904,54 @@ class AppTest < Minitest::Test
     refute_includes last_response.body, 'data-play='
     refute_includes last_response.body, 'data-record='
   end
+
+  # --- A ruined plate: the board, then the bench on the plate rejoined
+
+  def test_a_ruined_board_offers_the_bench_once_whole_and_a_broken_one_does_not
+    _, ruined, = Cistergraphia::Fragments.inscribe('ora et labora', weathered: true, random: Random.new(3))
+    post '/decode', svg: ruined
+    form = last_response.body[%r{<form method="post" action="/decode" class="rejoin-restore">.*?</form>}m]
+    assert_includes form, '<input type="hidden" name="rejoined" value="1">'
+    assert_includes form, 'data-rejoin-restore disabled>Restore it</button>'
+
+    _, broken, = Cistergraphia::Fragments.inscribe('ora et labora', random: Random.new(3))
+    post '/decode', svg: broken
+    refute_includes last_response.body, 'data-rejoin-restore'
+  end
+
+  def test_a_ruined_plate_rejoined_opens_on_the_bench
+    sequence, svg, pieces, damage = Cistergraphia::Fragments.inscribe('the brothers will gather in the chapter house',
+                                                                      weathered: true, random: Random.new(3))
+
+    post '/decode', svg: svg, rejoined: '1'
+    body = last_response.body
+    assert_includes body, 'A plate to restore'
+    assert_includes body, 'Whole again: the fragments are rejoined'
+    assert_match(%r{<dt>Condition</dt><dd>Ruined, rejoined: worn</dd>}, body)
+    assert_match(/data-play="ruined"|data-bench/, body)
+    assert_equal pieces.size, body.scan('<g class="fragment"').size
+    assert_rejoined_bench_holds_only_the_file(body, sequence, damage)
+  end
+
+  def assert_rejoined_bench_holds_only_the_file(body, sequence, damage)
+    entries = JSON.parse(CGI.unescapeHTML(body[/data-lacunae="([^"]*)"/, 1]))
+    assert_equal damage.keys.sort, entries.map { |entry| entry['sign'] }.uniq.sort
+    entries.each { |entry| assert_lacuna_shows_only_the_file(entry) }
+    values = JSON.parse(CGI.unescapeHTML(body[/data-plate-cells="([^"]*)"/, 1])).map { |cell| cell.fetch(2) }
+    assert_equal sequence.each_with_index.map { |num, i| damage.key?(i) ? nil : num }, values
+    carried = CGI.unescapeHTML(body[/<input type="hidden" name="svg" value="([^"]*)"/, 1])
+    assert Cistergraphia::Fragments.broken?(carried), 'the decoder gets the broken file, not the drawing'
+  end
+
+  def test_rejoined_is_ignored_on_a_plate_that_is_not_ruined
+    _, broken, = Cistergraphia::Fragments.inscribe('ora et labora', random: Random.new(3))
+    post '/decode', svg: broken, rejoined: '1'
+    assert_includes last_response.body, 'data-rejoin-status'
+    refute_includes last_response.body, 'data-bench'
+
+    _, worn, = Cistergraphia::Lacunae.inscribe('ora et labora', random: Random.new(3))
+    post '/decode', svg: worn, rejoined: '1'
+    assert_includes last_response.body, 'data-bench'
+    assert_match(%r{<dt>Condition</dt><dd>Worn</dd>}, last_response.body)
+  end
 end
