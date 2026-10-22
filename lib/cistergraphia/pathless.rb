@@ -26,6 +26,22 @@ module Cistergraphia
            .map { |(row, col, turned), num, index, _| [[row, col, turned], num, index, (row * cols) + col] }
     end
 
+    # What each cell of a plate reads, upright and turned half round, as
+    # [row, col, upright, turned] in grid order (nil where the strokes read as
+    # no sign that way): what a desk needs to lay any of the five ways over it
+    def grid(svg)
+      cells = SVG.lines(svg).group_by { |line| Layout.cell_of(line) }
+      cells.sort.map do |(row, col), strokes|
+        [row, col, *[false, true].map { |turned| reading(strokes, row, col, turned) }]
+      end
+    end
+
+    def reading(strokes, row, col, turned)
+      Glyphs.read(Layout.upright(strokes, row, col, turned, :phaistos))
+    rescue DecodeError
+      nil
+    end
+
     # The plates that cannot be pathless, in the library's words
     def check(passphrase, layout)
       raise Error, NOT_SEALED if passphrase

@@ -453,6 +453,8 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .choice:has(input[value="furrows"]:checked) [data-note="furrows"],
   .choice:has(input[value="unwinding"]:checked) [data-note="unwinding"],
   .choice:has(input[value="grille"]:checked) [data-note="grille"] { visibility: visible; }
+  .choice:has(input[value="shown"]:checked) [data-note="shown"],
+  .choice:has(input[value="withheld"]:checked) [data-note="withheld"],
   .choice:has(input[value="intact"]:checked) [data-note="intact"],
   .choice:has(input[value="worn"]:checked) [data-note="worn"],
   .choice:has(input[value="broken"]:checked) [data-note="broken"],
@@ -466,6 +468,17 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .entry:has(input[name="mode"][value="secret"]:checked) .segment--rung:not(.segment--intact) { opacity: 0.5; }
   .entry:has(input[name="mode"][value="secret"]:checked) .choice--condition .choice-note:not(.field-error) { visibility: hidden; }
   .entry:has(input[name="mode"][value="secret"]:checked) .choice--condition .choice-note[data-note="unweathered"] { visibility: visible; }
+  /* The path cannot be withheld on a sealed plate, under a grille, or on a
+     damaged one: Withheld is greyed, and its note gives the reason */
+  .entry:has(input[name="mode"][value="secret"]:checked) .segment--path-withheld,
+  .entry:has(input[name="layout"][value="grille"]:checked) .segment--path-withheld,
+  .entry:has(input[name="condition"]:not([value="intact"]):checked) .segment--path-withheld { opacity: 0.5; }
+  .entry:has(input[name="mode"][value="secret"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note:not(.field-error),
+  .entry:has(input[name="layout"][value="grille"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note:not(.field-error),
+  .entry:has(input[name="condition"]:not([value="intact"]):checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note:not(.field-error) { visibility: hidden; }
+  .entry:has(input[name="condition"]:not([value="intact"]):checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-damaged"],
+  .entry:has(input[name="layout"][value="grille"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-grille"],
+  .entry:has(input[name="mode"][value="secret"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-sealed"] { visibility: visible; }
   /* A condition sent back with an error: the error takes its note's place
      (the class twice: this weighs more than the reasons above) */
   .entry .choice-notes:has(.field-error:not(:empty)) .choice-note.choice-note:not(.field-error) { visibility: hidden; }
@@ -690,6 +703,7 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   body:not(:has(input[name="layout"][value="furrows"]:checked)) [data-layout-note="furrows"],
   body:not(:has(input[name="layout"][value="unwinding"]:checked)) [data-layout-note="unwinding"],
   body:not(:has(input[name="layout"][value="grille"]:checked)) [data-layout-note="grille"] { visibility: hidden; }
+  body:not(:has(input[name="path"][value="withheld"]:checked)) [data-path-withheld] { visibility: hidden; }
 }
 /* The grille over a 4 x 4 grid: its holes (paper) at N, each other cell
    lettered with the turn that brings a hole over it */

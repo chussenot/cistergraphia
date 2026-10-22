@@ -1,16 +1,20 @@
 <%#
 A plate, walkable: the figure the plate page and the reader's page share.
-Locals: svg, cells (plate_cells_json), geometry (plate_layout_json), layout, decoy, size (the grid's side)
+Locals: svg, cells (plate_cells_json), geometry (plate_layout_json), layout, decoy, size (the grid's side),
+grid (a pathless plate's cells with both readings, for the desk to lay the ways over; nil otherwise)
 %>
+<% plate_grid = defined?(grid) ? grid : nil %>
 <figure class="plate<%= plate_size_class(size) %>">
   <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
        aria-label="The plate. Use the arrow keys to walk its signs in reading order."
-       data-plate-cells="<%= cells %>" data-plate-layout="<%= geometry %>">
+       data-plate-cells="<%= cells %>" data-plate-layout="<%= geometry %>"<% if plate_grid %> data-plate-grid="<%= JSON.generate(plate_grid) %>"<% end %>>
     <%== svg %>
   </div>
   <figcaption>
     <span class="plate-reading">
-      <% if layout == :rongorongo %>
+      <% if plate_grid %>
+        <span class="plate-reading-rest">The plate says nothing of where it begins. Choose a way at the desk: the walk follows it.</span>
+      <% elsif layout == :rongorongo %>
         <span class="plate-reading-rest">Read from the bottom left, left to right; turn the plate half round for each next line.</span>
       <% elsif layout.is_a?(Cistergraphia::Grille) && decoy %>
         <span class="plate-reading-rest">Two grilles share this plate: the abbot’s reads the message, the novice’s the other one. The abbot’s key gives both; the novice’s, only its own.</span>

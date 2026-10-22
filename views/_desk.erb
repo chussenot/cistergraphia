@@ -4,9 +4,12 @@ shown large, two numbers to type, the sum and its letter on the tablet, the
 text so far. Its first state is drawn here as the script draws it, so nothing
 moves when the script arrives. Guided shows a sign when it is tapped; Unaided
 marks a wrong value without correcting it and earns the Lectio's ranks.
-Locals: values (every sign's value, in reading order), tablet (value => letter)
+Locals: values (every sign's value, in reading order), tablet (value => letter),
+pathless (a pathless plate: the way is to find; the desk asks which, and keeps a
+notebook of the ways tried; the pair boxes wait empty for a way)
 %>
-<section class="desk awaits-script" aria-labelledby="desk-title" data-desk data-desk-mode="guided"
+<% pathless_desk = defined?(pathless) ? pathless : false %>
+<section class="desk awaits-script" aria-labelledby="desk-title" data-desk data-desk-mode="guided"<%= ' data-desk-pathless' if pathless_desk %>
          data-tablet="<%= JSON.generate(tablet) %>" data-null="<%= Cistergraphia::EVIL_MARKER %>" data-glyph-table="<%= glyph_table_json %>">
   <div class="desk-head">
     <h2 id="desk-title" class="index-heading">Read it</h2>
@@ -15,24 +18,40 @@ Locals: values (every sign's value, in reading order), tablet (value => letter)
       <button type="button" class="segment" data-desk-set-mode="unaided" aria-pressed="false"><span class="segment-title">Unaided</span></button>
     </div>
   </div>
+  <% if pathless_desk %>
+    <div class="desk-ways-ask">
+      <p class="desk-question" id="desk-question">Which way does it run?</p>
+      <div class="segments segments--ways desk-ways" role="group" aria-labelledby="desk-question">
+        <% { phaistos: 'Phaistos', rongorongo: 'Rongorongo', leap: 'Leap', furrows: 'Furrows', unwinding: 'Unwinding' }.each do |way, title| %>
+          <button type="button" class="segment segment--way" data-desk-way="<%= way %>" aria-pressed="false">
+            <span class="segment-figure" aria-hidden="true"><%== snail_svg(4, layout: way) %></span>
+            <span class="segment-title"><%= title %></span>
+          </button>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
   <div class="desk-nav">
     <button type="button" class="btn btn--small" data-desk-step="-1" aria-label="Previous pair">‹</button>
-    <span class="desk-which" data-desk-which aria-live="polite">Pair 1 of <%= values.size / 2 %> · signs 1 and 2</span>
+    <span class="desk-which" data-desk-which aria-live="polite"><%= pathless_desk ? 'Choose a way to read' : "Pair 1 of #{values.size / 2} · signs 1 and 2" %></span>
     <button type="button" class="btn btn--small" data-desk-step="1" aria-label="Next pair">›</button>
   </div>
   <form class="desk-pair" data-desk-form>
-    <div class="desk-sign" data-desk-sign="0"><%== glyph_svg(values[0], css: 'glyph desk-glyph', title: 'The first sign of the pair') %></div>
+    <div class="desk-sign" data-desk-sign="0"><%== glyph_svg(values[0], css: 'glyph desk-glyph', title: 'The first sign of the pair') unless pathless_desk %></div>
     <label class="visually-hidden" for="desk-first">What the first sign reads</label>
     <input type="number" id="desk-first" class="input desk-value" min="0" max="9999" inputmode="numeric" autocomplete="off" placeholder="first" data-desk-value="0">
     <span class="desk-op" aria-hidden="true">+</span>
-    <div class="desk-sign" data-desk-sign="1"><%== glyph_svg(values[1], css: 'glyph desk-glyph', title: 'The second sign of the pair') %></div>
+    <div class="desk-sign" data-desk-sign="1"><%== glyph_svg(values[1], css: 'glyph desk-glyph', title: 'The second sign of the pair') unless pathless_desk %></div>
     <label class="visually-hidden" for="desk-second">What the second sign reads</label>
     <input type="number" id="desk-second" class="input desk-value" min="0" max="9999" inputmode="numeric" autocomplete="off" placeholder="second" data-desk-value="1">
     <span class="desk-op" aria-hidden="true">=</span>
     <output class="desk-letter" data-desk-letter aria-label="The letter the pair makes">?</output>
     <button type="submit" class="btn btn--primary btn--small" data-desk-read>Read</button>
   </form>
-  <p class="desk-feedback" data-desk-feedback aria-live="polite">Type what each sign reads: the page adds them and finds the letter on the tablet. Guided, a tap on a sign shows its value.</p>
+  <p class="desk-feedback" data-desk-feedback aria-live="polite"><%= pathless_desk ? 'The plate says nothing of where it begins. Choose a way: the pairs form along it, and each reads as a letter on the tablet, or does not.' : 'Type what each sign reads: the page adds them and finds the letter on the tablet. Guided, a tap on a sign shows its value.' %></p>
   <p class="desk-text" data-desk-text aria-live="polite"><%= '·' * (values.size / 2) %></p>
+  <% if pathless_desk %>
+    <p class="desk-notebook" data-desk-notebook aria-live="polite">The notebook: what each way gave, and where it broke.</p>
+  <% end %>
   <p class="lectio-standing desk-standing"><span data-desk-rank>Novice</span> · <span data-desk-streak>0</span> in a row · best <span data-desk-best>0</span></p>
 </section>

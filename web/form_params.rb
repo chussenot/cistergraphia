@@ -65,6 +65,17 @@ module FormParams
     @condition = RUNGS.key?(params[:condition]) ? params[:condition] : 'intact'
     @weathered, @broken = CONDITIONS.fetch(@condition)
     @condition_error = condition_problem
+    @pathless = params[:path] == 'withheld'
+    @path_error = path_problem if @pathless
+  end
+
+  # What cannot be pathless, in the library's words (@path_error goes back
+  # to the form): a sealed plate, a grille plate, a damaged one (not yet)
+  def path_problem
+    return Cistergraphia::Pathless::NOT_SEALED if passphrase
+    return Cistergraphia::Pathless::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
+
+    Cistergraphia::Pathless::NOT_DAMAGED if @weathered || @broken
   end
 
   # What cannot be, in the library's words (@condition_error goes back to the
@@ -87,7 +98,7 @@ module FormParams
 
   # What sends the form back, to explain
   def form_errors
-    [@passphrase_error, @grille_error, @decoy_error, @condition_error]
+    [@passphrase_error, @grille_error, @decoy_error, @condition_error, @path_error]
   end
 
   # The rung sent back with an error: invalid, and focused when its error is
@@ -103,7 +114,9 @@ module FormParams
   # fragments to @pieces
   def inscribe_plate
     return damaged_plate if @broken || @weathered
-    return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout) + [@layout] unless @decoy
+    unless @decoy
+      return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout, pathless: @pathless) + [@layout]
+    end
 
     given = @layout unless params[:grille].to_s.strip.empty? # a shared key is kept; a new one may be redrawn
     Cistergraphia::TwoReaders.inscribe(@message, @decoy, passphrase: passphrase, grille: given)
