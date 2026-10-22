@@ -1166,6 +1166,10 @@ input[type="number"] { font-variant-numeric: lining-nums; font-size: 1.3rem; }
   .entry-end > .btn--primary { width: 100%; }
   .tabula { grid-template-columns: repeat(5, minmax(0, 1fr)); row-gap: var(--space-3); }
   .actions .btn { flex: 1 1 auto; }
+  /* The primary action and a toggle take a line each; the quiet exports share the line
+     between them where they fit (390 px), one line each on the smallest phones */
+  .actions .btn--primary, .actions [aria-pressed] { flex-basis: 100%; }
+  .actions .btn--quiet { padding-inline: var(--space-2); white-space: nowrap; }
 }
 
 /* ---------- Print: the plate alone, black on white ---------- */
