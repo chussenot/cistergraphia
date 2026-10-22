@@ -300,13 +300,20 @@ const FLOWS = [
     ]
   },
   {
+    page: 'desk',
+    open: bringToRead(plateFile, '[data-desk]'),
+    steps: [
+      { name: 'misread a pair', act: async (p) => { await p.fill('#desk-first', '1'); await p.fill('#desk-second', '2'); await p.click('[data-desk-read]'); } },
+      { name: 'tap a sign for its value', act: (p) => p.click('[data-desk-sign="0"]') },
+      { name: 'step through the pairs', act: async (p) => { for (let i = 0; i < 3; i += 1) await p.click('[data-desk-step="1"]'); await p.click('[data-desk-step="-1"]'); } },
+      { name: 'read unaided', act: async (p) => { await p.click('[data-desk-set-mode="unaided"]'); await p.fill('#desk-first', '7'); await p.fill('#desk-second', '7'); await p.click('[data-desk-read]'); } },
+      { name: 'turn the plate', act: (p) => p.click('[data-action="turn-plate"]') },
+      { name: 'back to guided', act: (p) => p.click('[data-desk-set-mode="guided"]') }
+    ]
+  },
+  {
     page: 'decoded',
-    open: async (page) => {
-      await page.goto(`${baseUrl}/decode`);
-      await page.setInputFiles('#file', plateFile);
-      await page.click('.entry [type="submit"]');
-      await page.waitForSelector('[data-transcription]');
-    },
+    open: bringToRead(plateFile, '[data-transcription]', true),
     steps: [
       { name: 'copy the text', act: (p) => p.click('[data-action="copy-text"]') }
     ]
@@ -402,15 +409,8 @@ const PAGES = [
   { page: 'rejoin', open: bringToRead(brokenFile, '[data-rejoin]') },
   { page: 'edition', open: bringToRead(weatheredFile, '[data-transcription]', true) },
   { page: 'read', open: (page) => page.goto(`${baseUrl}/decode`) },
-  {
-    page: 'decoded',
-    open: async (page) => {
-      await page.goto(`${baseUrl}/decode`);
-      await page.setInputFiles('#file', plateFile);
-      await Promise.all([page.waitForURL('**/decode'), page.click('.entry [type="submit"]')]);
-      await page.waitForSelector('[data-transcription]');
-    }
-  },
+  { page: 'desk', open: bringToRead(plateFile, '[data-desk]') },
+  { page: 'decoded', open: bringToRead(plateFile, '[data-transcription]', true) },
   { page: 'about', open: (page) => page.goto(`${baseUrl}/about`) }
 ];
 

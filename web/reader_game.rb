@@ -15,10 +15,35 @@ module ReaderGame
 
     @weathered = Cistergraphia::Lacunae.weathered?(svg)
     @broken = Cistergraphia::Fragments.broken?(svg)
-    @svg_content = PlateFile.clean(svg) if @broken || @weathered
+    @svg_content = PlateFile.clean(svg)
     return false unless @svg_content
 
-    !(@broken ? lay_board(svg) : lay_bench(svg)).nil?
+    laid = if @broken then lay_board(svg)
+           elsif @weathered then lay_bench(svg)
+           else lay_desk(svg)
+           end
+    !laid.nil?
+  end
+
+  # The reading desk: an intact game plate, along the layout that reads it as
+  # letters (or the grille given; a grille plate without its key is for the
+  # decoder to ask for). A sealed plate reads as no letters: not a game
+  def lay_desk(svg)
+    Cistergraphia::Grille.check(svg, submitted_grille)
+    @layout = submitted_grille || Cistergraphia::Layout::KEYLESS.find { |layout| letters(svg, layout) }
+    return unless @layout && (@values = letters(svg, @layout))
+
+    @desk = true
+    @size = Integer.sqrt(@values.size)
+  end
+
+  # The plate's values along a layout when every pair reads as a letter, else nil
+  def letters(svg, layout)
+    sequence = Cistergraphia::SVG.read(svg, layout: layout)
+    Cistergraphia.decipher(sequence)
+    sequence
+  rescue Cistergraphia::DecodeError
+    nil
   end
 
   # The board: the fragments in the order the file lists them
