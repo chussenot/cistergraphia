@@ -21,9 +21,11 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - run: bundle exec rake test
-      - run: bundle exec rubocop
-      - run: bundle exec rake test:sound
+      - run: bundle exec rake test | tee /tmp/test.log && tail -1 /tmp/test.log >> "$GITHUB_STEP_SUMMARY"
+      - run: bundle exec rubocop | tee /tmp/rubocop.log && tail -1 /tmp/rubocop.log >> "$GITHUB_STEP_SUMMARY"
+      - run: bundle exec rake test:sound | tee /tmp/sound.log && grep -E '^# (pass|fail)' /tmp/sound.log >> "$GITHUB_STEP_SUMMARY"
+      - run: bundle exec rake test:coverage | grep -E '^Coverage'
+        if: matrix.ruby == '4.0'
 
   # Keeps docs/security-study.md honest: the game must stay breakable, secret mode must not leak
   cryptanalysis:
@@ -35,7 +37,7 @@ jobs:
           ruby-version: '4.0'
           bundler-cache: true
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq wamerican wfrench
-      - run: experiments/cryptanalysis/run.sh --check
+      - run: experiments/cryptanalysis/run.sh --check | tee /tmp/crypt.log && (grep -E 'character accuracy' /tmp/crypt.log | tail -4 >> "$GITHUB_STEP_SUMMARY" || true)
 
   # Keeps docs/design.md honest: nothing on a page moves under the reader
   stability:
@@ -48,4 +50,4 @@ jobs:
           bundler-cache: true
       - run: npm install --no-save --no-package-lock playwright@1.56.1
       - run: npx playwright install --with-deps chromium
-      - run: bundle exec rake ui:stability
+      - run: bundle exec rake ui:stability | tee /tmp/stability.log && tail -1 /tmp/stability.log >> "$GITHUB_STEP_SUMMARY"
