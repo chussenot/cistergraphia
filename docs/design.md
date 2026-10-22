@@ -31,7 +31,16 @@ Three ideas carry the design:
    The hand is seeded, so nothing changes between visits: on a plate by each sign's place,
    on the page by each stroke, so a stroke looks the same in every sign that has it and a
    morphing sign keeps the strokes it shares. Small signs get optical weight (`--weight`, a
-   stroke the colour of the fill) so they stay legible.
+   stroke the colour of the fill) so they stay legible; so do large plates (`--plate-weight`,
+   by grid size), whose strokes would otherwise be hairlines at screen size.
+5. **Three materials, three roles.** The plate is clay: a tablet of pale fired clay, the
+   signs pressed into it and inked, one rectangle with a rim, chipped where it is worn,
+   its fragments the same clay with worn edges. The grille is parchment: a pierced sheet
+   laid over the plate, lighter than it, showing the plate through its holes. Everything
+   else is paper, the library's own: the leaves, the inputs, the tiles of the desk and the
+   bench, the board a broken plate is laid out on. A new surface is one of the three or it
+   does not belong. The file stays black on white for the decoder; the page gives the
+   plate its material with CSS alone.
 
 ## Tokens
 
@@ -45,7 +54,10 @@ All values are CSS custom properties in [`public/css/app.css`](../public/css/app
 | `--ink-soft` | `#62574a` | `#b3a894` | secondary text, control borders | 6–7.6 : 1 |
 | `--rubric` | `#a3301c` | `#e8826b` | game accent | 6–6.7 : 1 |
 | `--woad` | `#2b4a74` | `#93b3e3` | secret accent | 7.7–8.5 : 1 |
-| `--rule` | `#d9cdb6` | `#3b352d` | ruling lines (decorative only) | |
+| `--rule` | `#d9cdb6` | `#3b352d` | ruling lines (decorative only), the grille's edge | |
+| `--clay` | `#e4d8c1` | `#3a3229` | the plate and its fragments | ink on clay 9 : 1 |
+| `--clay-edge` | `#c4b08c` | `#5a4b3b` | the plate's rim, the hatch of a break | |
+| `--sheet` | `#f7f2e8` | `#26221e` | the grille laid on a plate | |
 | `--accent` | rubric, or woad when `body[data-mode="secret"]` | | everything mode-coloured | |
 
 Every text colour passes WCAG AA, most of them AAA. Control borders use `--ink-soft` to meet
@@ -70,13 +82,13 @@ and the passphrase.
 | Mode cards (`.mode`, About) | Native radios styled as two index cards; the first letter is a red or blue initial |
 | Fields | Labels in small capitals; vellum-filled inputs; a focus ring in the mode colour |
 | Buttons | Primary uses the mode colour; secondary is outlined; quiet is link-like; all are at least 48 px tall |
-| Plate (`.plate-frame`) | The signs pressed in wedges (`Cistergraphia::Stylus`: head 12, head length 14, tail 6, variation 6, in glyph units), in ink colours (CSS only), inside a double frame, scaled to fit the viewport |
+| Plate (`.plate-frame`) | A tablet of clay (`--clay`, a `--clay-edge` rim: the file's white ground, recoloured by CSS) on a paper mount (the double frame), scaled to fit the viewport. The signs pressed in wedges (`Cistergraphia::Stylus`: head 12, head length 14, tail 6, variation 6, in glyph units) in ink; from 7 signs a side they get optical weight (`.plate--medium`, 1.5 units; `.plate--large` from 10, 3 units) so that a large plate's strokes stay strokes. A lacuna is a chip: the pale body (`--paper`) under a hatch in the rim's colour. A broken plate's file is the tray, not a plate: its ground stays transparent and the fragments (`.sherd`) carry the clay |
 | Drop zone | Large dashed target; works by drag, click or keyboard |
 | Transcription | The decoded text with a plain two-line initial (`initial-letter`, with a float fallback). Read with the abbot's key, the novice's message follows under its own heading, in a quieter ink (`.transcription--second`). A weathered plate's text is an edition in the Leiden conventions: restorations `[r]` in rubric (`.leiden-restored`), doubts `[b/l]` dotted under (`.leiden-doubt`); the reveal keeps each letter's class |
 | Toast | A polite live region, instead of `alert()` |
 | Live preview (`.preview`) | Under the message, a strip of fixed height: each letter as one sign while typing, before the split and the layout. It scrolls sideways and follows the caret. Its three states (empty, signs, sealed) share one cell, so it never changes size |
 | Passphrase, grille key (`.slot`) | Below the message, unfolded by CSS (`:has`): the grille key and the novice's message when Grille is chosen (both optional: a grille already shared, empty draws a new one; a second message for a second reader), the passphrase in secret mode. Only the button below them moves, over `--dur-mode` |
-| Grille (`.grille-sheet`) | The plate's stencil (`Cistergraphia::SVG.stencil`, the same file as Download the stencil) laid exactly over the plate, in parchment colours; its N turns with it. Grille plates have square cells (170 × 170, the sign centred) so that a quarter turn lands on the grid again. A plate with two readers carries two stencils, the abbot's and the novice's, which share no hole; a segmented control (`.grille-choice`) picks the one laid |
+| Grille (`.grille-sheet`) | The plate's stencil (`Cistergraphia::SVG.stencil`, the same file as Download the stencil) laid exactly over the plate, as a parchment lighter than the clay (`--sheet`, edged in `--rule`), the plate showing through its holes; its N turns with it, and on screen the N and the key grow with the plate's size class (the printed stencil keeps the file's sizes). Grille plates have square cells (170 × 170, the sign centred) so that a quarter turn lands on the grid again. A plate with two readers carries two stencils, the abbot's and the novice's, which share no hole; a segmented control (`.grille-choice`) picks the one laid |
 | Playground (About) | Any number from 0 to 9,999 drawn as a sign, with its reading ("1 thousand · 0 hundreds · …") and preset years |
 | Index of dates (About) | A timeline whose exact years are written as signs; centuries get an em dash |
 | Tablet (About) | The 27 letters as index cards: sign, letter in the mode colour, value |
@@ -183,7 +195,7 @@ a corner first dries any wet ink: the only red left is what you should look at.
 | Plate (Rongorongo) | **Turn the plate**: the plate rotates half round, as the readers of Rapa Nui turned their tablets; the turned rows now read upright, and walking follows | Why every other row is upside down |
 | Plate (Grille) | **Lay the grille**, then **Turn it to E, S, W**: the parchment turns a quarter at a time and the signs under its holes are lit, "The grille at E: signs 26 to 50 of 100, row by row"; walking says which turn reads a sign. **Download the stencil** to print and cut, **Copy the key**. With two readers: **Abbot / Novice** picks the grille, each lights only its own signs; both stencils download, each key copies | How a turning grille reads every cell once, and that without it the plate is an anagram; with two readers, that one plate holds two messages for two keys |
 | Transcription | The decoded message appears letter by letter after its initial | The payoff of decoding |
-| Plate (weathered) | The lacunae are hatched in the leaf's parchment, under the wedges; walking a worn sign says "worn: part of this sign is lost", never its value. **Ask the decoder** prints the edition | That a lost stroke is recovered by balancing its pair, and where the words must decide |
+| Plate (weathered) | The lacunae are chips in the clay, hatched, under the wedges; walking a worn sign says "worn: part of this sign is lost", never its value. **Ask the decoder** prints the edition | That a lost stroke is recovered by balancing its pair, and where the words must decide |
 | Restoration bench (`.bench`) | Under a weathered plate: choose a lacuna on the plate (its whole cell when the sign has one lacuna, its corner when it has several) or step with ‹ ›; a line counts how many are restored ("7 of 32 restored"); ten digits drawn in the lacuna's place, those the surviving strokes rule out disabled; press one and its strokes are pressed in rubric where the surface is lost. The pair is weighed in two short lines ("0045 + 000? = ?", "Press a digit to balance it.") and the edition so far updates in Leiden style. A sign wholly lost is four lacunae, one per place. With tally signs, a third line checks the lacuna's row and column in its place ("Tallies, tens: row ✓, column ?"). The page only knows what the file shows: it says whether things balance, never whether a restoration is right | Restoration as the puzzle: the checksum narrows a lacuna, the words (or the tallies) settle it |
 | Plate (broken, `.plate--broken`) | The board, ruled in the leaf's colour, and the tray: two to four fragments of clay (`.sherd`), worn on every edge, lying slightly askew, some turned half round. The file has the tray below the board (a phone shows it so); on a wide screen the script lays it beside the board in a frame of fixed height, so the whole puzzle is in view at once and nothing on the page moves when it does. With the script a fragment is dragged, or picked (tap or Enter) and laid by choosing the cell for its top-left corner; a dashed ghost (`.ghost`) shows the cells it would land on, grey when it would hang over the edge; arrow keys move it a cell at a time, **T**, a double click or **Turn half round** turns it; everything snaps to the cells. The plate is not walked: it is in pieces | That shapes do not rejoin a plate, the sums do |
 | Rejoining (`.rejoin`) | Under a broken plate: the tools, then one two-line status ("On the board: 2 of 3 fragments.", "Covered: 38 of 50 pairs balance.", "Whole again: every pair balances.") and, once whole, what it reads. A weathered broken plate shows its lacunae on the fragments; a worn sign is weighed by every digit its strokes allow, and whole again the plate reads as the decoder's edition ("It reads, restored: la[b/l]ora") and **Restore it** comes alive: it posts the file back (`rejoined=1`) and the bench opens on the plate drawn whole from its own fragments, each moved to its place, the ruined plate's last step and where it is won. No bench on a plate still in pieces. The page holds what each fragment shows, read upright and turned, never where it goes: it weighs the pairs along both reading paths only once the board is covered | The khipu rejoined by arithmetic, as a game |

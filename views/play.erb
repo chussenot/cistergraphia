@@ -69,10 +69,10 @@ Constraints:
   <% if @broken %>
     <%== erb :_board, layout: false, locals: { svg: @svg_content, fragments: @fragments, size: @size, worn: @weathered } %>
   <% elsif @desk %>
-    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil } %>
+    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size } %>
     <%== erb :_desk, layout: false, locals: { values: @values, tablet: Cistergraphia::CHARACTERS } %>
   <% else %>
-    <%== erb :_plate, layout: false, locals: { svg: @plate_svg || @svg_content, cells: plate_cells_json(@values, @layout, @damage), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil } %>
+    <%== erb :_plate, layout: false, locals: { svg: @plate_svg || @svg_content, cells: plate_cells_json(@values, @layout, @damage), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size } %>
     <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally } %>
   <% end %>
 

@@ -73,6 +73,14 @@ module ViewHelpers
 
   LAYOUT_NAMES = { phaistos: 'Phaistos', rongorongo: 'Rongorongo' }.freeze
 
+  # The plate's size class, for optical weight on the page: a large plate's strokes
+  # are hairlines at screen size without it (see .plate--large in app.css)
+  def plate_size_class(size)
+    return ' plate--large' if size >= 10
+
+    size >= 7 ? ' plate--medium' : ''
+  end
+
   def layout_name(layout)
     return LAYOUT_NAMES.fetch(layout) unless layout.is_a?(Cistergraphia::Grille)
 
