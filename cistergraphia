@@ -63,7 +63,7 @@ parser = OptionParser.new do |opts|
   opts.on('-g', '--grille KEY', "The grille's key (#{Cistergraphia::Grille::EXAMPLE}): writes or reads under it") { |g| options[:grille] = g }
   opts.on('--stencil FILE', 'Also write the grille as a stencil to print and cut') { |f| options[:stencil] = f }
   opts.on('--decoy MESSAGE', "A second message, for a novice's grille (implies a grille)") { |d| options[:decoy] = d }
-  opts.on('-w', '--weathered', 'Game mode: some strokes lost, to restore') { options[:weathered] = true }
+  opts.on('-w', '--weathered', 'Game mode: a worn plate, some strokes lost to restore') { options[:weathered] = true }
   opts.on('-b', '--broken', 'Game mode: the plate in fragments, to rejoin (the snail only)') { options[:broken] = true }
   opts.on('-t', '--tally', 'Game mode: row and column sums (with -w, whole signs may be lost)') do
     options[:tally] = true

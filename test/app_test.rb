@@ -425,7 +425,7 @@ class AppTest < Minitest::Test
     post '/decode', svg: '<svg xmlns="http://www.w3.org/2000/svg"><circle r="4"/></svg>'
 
     assert_equal 400, last_response.status
-    assert_includes last_response.body, 'No Cistergraphia symbols found'
+    assert_includes last_response.body, 'No signs found on this plate'
   end
 
   def test_secret_mode_round_trip_through_the_web
@@ -597,7 +597,7 @@ class AppTest < Minitest::Test
 
     post '/decode', svg: svg, decipher: '1'
     assert_predicate last_response, :ok?
-    assert_includes last_response.body, 'Restored from a weathered plate'
+    assert_includes last_response.body, 'Restored from a worn plate'
     assert_match(%r{<span class="leiden-(restored|doubt)">\[[^<]*\]</span>}, last_response.body)
   end
 
@@ -671,7 +671,7 @@ class AppTest < Minitest::Test
 
     post '/decode', svg: svg, decipher: '1'
     assert_predicate last_response, :ok?
-    assert_includes last_response.body, 'Rejoined from a broken, weathered plate'
+    assert_includes last_response.body, 'Rejoined from a ruined plate'
     assert_match(%r{<span class="leiden-(restored|doubt)">\[[^<]*\]</span>}, last_response.body)
   end
 
@@ -765,7 +765,7 @@ class AppTest < Minitest::Test
 
     post '/decode', svg: carried, decipher: '1'
     assert_predicate last_response, :ok?
-    assert_includes last_response.body, 'Restored from a weathered plate'
+    assert_includes last_response.body, 'Restored from a worn plate'
     assert_equal Cistergraphia.decode(svg), Cistergraphia.decode(carried) # the file shown is the file brought
   end
 

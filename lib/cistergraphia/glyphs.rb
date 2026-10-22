@@ -81,7 +81,7 @@ module Cistergraphia
     # Turns the strokes of one symbol (relative to its origin) back into a number
     def read(strokes)
       strokes = strokes.map(&CANONICAL)
-      raise DecodeError, 'Symbol without a stem' unless strokes.delete(CANONICAL.call(STEM))
+      raise DecodeError, 'A sign without its stem' unless strokes.delete(CANONICAL.call(STEM))
 
       strokes.group_by { |stroke| STROKE_PLACES.fetch(stroke) { raise DecodeError, "Unknown stroke #{stroke}" } }
              .sum do |place, place_strokes|

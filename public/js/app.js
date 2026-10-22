@@ -380,7 +380,8 @@
     const total = RUNGS.reduce((sum, rung) => sum + record[rung], 0);
     if (!total) return '';
     const parts = RUNGS.filter((rung) => record[rung]).map((rung) => `${record[rung]} ${rung}`);
-    return `${total} ${total === 1 ? 'plate' : 'plates'} read: ${parts.join(', ')}.`;
+    const listed = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0];
+    return `${total} ${total === 1 ? 'plate' : 'plates'} read, ${listed}.`;
   }
   let recordedHere = false;
   function recordWin() {
@@ -396,8 +397,10 @@
   function initRecord() {
     const line = $('[data-record="read"]');
     if (!line) return;
+    // One line of standing: the rank Lectio or the desk earned, then the plates read
     const text = recordLine(storedRecord());
-    line.textContent = text ? `Your scriptorium: ${text}` : '';
+    const rank = rankFor(storedBest()).name;
+    line.textContent = text ? `Your scriptorium: ${rank} · ${text}` : (storedBest() ? `Your scriptorium: ${rank}.` : '');
   }
 
   // ---------- The plate: inked along the snail, walkable sign by sign ----------
@@ -743,7 +746,7 @@
   }
 
   // The exported file is the plain SVG the decoder reads: the server's own,
-  // as Read it back sends it, never the shown plate (ink, highlight and walk
+  // as Ask the decoder sends it, never the shown plate (ink, highlight and walk
   // are added to it for display). Its classes are part of the file: a
   // weathered plate's lacunae, read without theirs, would be taken for strokes
   function plainSvgSource() {

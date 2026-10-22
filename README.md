@@ -1,15 +1,15 @@
 Cistergraphia
 =============
 
-**Spiral it. Flip it. Seal it like a spy with your passphrase!**
+**Every script draws a circle around its readers.**
 *Your secrets, in a monk's handwriting.*
 
 ![Cistergraphia: your secrets, in a monk's handwriting](docs/social-preview.png)
 
-Every script draws a circle around its readers. Latin bound a continent of clerks, shorthand a
-profession, the invented alphabet of a schoolyard two friends. Cistergraphia borrows one of the
-smallest circles in the history of writing, the numerals of the Cistercian monks, and opens it
-just wide enough for you and the person you are writing to.
+Latin bound a continent of clerks, shorthand a profession, the invented alphabet of a schoolyard
+two friends. Cistergraphia borrows one of the smallest circles in the history of writing, the
+numerals of the Cistercian monks, and opens it just wide enough for you and the person you are
+writing to.
 
 Why a monks' numeral?
 ---------------------
