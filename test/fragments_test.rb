@@ -168,8 +168,8 @@ class FragmentsTest < Minitest::Test
 
   def test_a_sign_worn_past_one_corner_is_refused
     x, y = C::Layout.origin(0, 0)
-    stem = C::SVG.relative(C::Glyphs::STEM, -x, -y)
-    everywhere = C::Weathering::POSITIONS.values.flatten(1).map { |stroke| C::SVG.relative(stroke, -x, -y) }
+    stem = C::Layout.relative(C::Glyphs::STEM, -x, -y)
+    everywhere = C::Weathering::POSITIONS.values.flatten(1).map { |stroke| C::Layout.relative(stroke, -x, -y) }
 
     assert_equal 10, Fragments::Reading.readings([stem], everywhere.first(5), 0, 0).first.size # one corner
     error = assert_raises(C::DecodeError) { Fragments::Reading.readings([stem], everywhere, 0, 0) }

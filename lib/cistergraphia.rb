@@ -123,12 +123,12 @@ module Cistergraphia
   # 100 two-letter ones) is drawn again with new random splits, so the
   # decoder's layout detection is never wrong. Secret plates need no check: the
   # wrong layout fails authentication instead of yielding a false message.
-  def inscribe(message, passphrase: nil, layout: :phaistos, tally: false)
-    grille = layout.is_a?(Grille)
+  def inscribe(message, passphrase: nil, layout: :phaistos, tally: false, pathless: false)
+    Pathless.check(passphrase, layout) if pathless
     100.times do
-      sequence = encode(message, passphrase: passphrase, even: grille)
-      svg = to_svg(sequence, layout: layout, tally: tally)
-      return [sequence, svg] if passphrase || grille || unambiguous?(svg, layout)
+      sequence = encode(message, passphrase: passphrase, even: layout.is_a?(Grille))
+      svg = to_svg(sequence, layout: layout, tally: tally, pathless: pathless)
+      return [sequence, svg] if passphrase || layout.is_a?(Grille) || unambiguous?(svg, layout)
     end
     raise Error, 'Could not draw an unambiguous plate for this message'
   end
@@ -146,8 +146,8 @@ module Cistergraphia
   end
 
   # Renders a sequence as an SVG document along a layout's reading path
-  def to_svg(sequence, layout: :phaistos, tally: false)
-    SVG.render(sequence, layout: layout, tally: tally)
+  def to_svg(sequence, layout: :phaistos, tally: false, pathless: false)
+    SVG.render(sequence, layout: layout, tally: tally, pathless: pathless)
   end
 
   # Converts a message into a sequence of numbers using the TABLET mapping
@@ -202,6 +202,7 @@ require_relative 'cistergraphia/glyphs'
 require_relative 'cistergraphia/stylus'
 require_relative 'cistergraphia/grille'
 require_relative 'cistergraphia/layout'
+require_relative 'cistergraphia/pathless'
 require_relative 'cistergraphia/svg'
 require_relative 'cistergraphia/secret'
 require_relative 'cistergraphia/two_readers'

@@ -149,7 +149,7 @@ module Cistergraphia
     # The lost stroke positions of some signs as hidden lines, in their own layer
     def lost_lines(signs)
       lines = signs.flat_map do |_, lost, turned, (x, y)|
-        lost.map { |stroke| SVG.line_tag(SVG.relative(turned ? Glyphs.turn(stroke) : stroke, -x, -y)) }
+        lost.map { |stroke| SVG.line_tag(Layout.relative(turned ? Glyphs.turn(stroke) : stroke, -x, -y)) }
       end
       %(  <g class="#{CLASS}" stroke="black" stroke-width="2" display="none">\n#{lines.join("\n")}\n  </g>)
     end

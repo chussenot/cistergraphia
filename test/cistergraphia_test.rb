@@ -180,6 +180,38 @@ class CistergraphiaTest < Minitest::Test
     end
   end
 
+  def test_a_pathless_plate_lies_in_grid_order_and_still_reads_along_its_way
+    sequence, svg = Cistergraphia.inscribe('Meet me at the old abbey', layout: :leap, pathless: true)
+
+    assert Cistergraphia::Pathless.pathless?(svg)
+    refute Cistergraphia::Pathless.pathless?(Cistergraphia.inscribe('abbey').last)
+    cells = Cistergraphia::SVG.lines(svg).map { |line| Cistergraphia::Layout.cell_of(line) }.uniq
+
+    assert_equal cells.sort, cells, 'the file holds the signs row by row, not in reading order'
+    assert_equal sequence, Cistergraphia::SVG.read(svg, layout: :leap)
+    assert_equal 'meet me at the old abbey', Cistergraphia.decode(svg), 'the decoder still finds the way'
+  end
+
+  def test_a_pathless_plate_is_pressed_by_its_cells_not_by_its_way
+    # The same numbers at the same cells, laid along two ways: the same wedges
+    # (seeded by the cell), so the hand's tremor tells nothing of the order
+    numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    grid = Cistergraphia::Layout.path(4, :leap).zip(numbers).to_h { |(row, col, _), num| [[row, col], num] }
+    along_furrows = Cistergraphia::Layout.path(4, :furrows).map { |row, col, _| grid[[row, col]] }
+    wedges = ->(seq, way) { Cistergraphia::SVG.render(seq, layout: way, pathless: true).scan(/<path d="[^"]+"/) }
+
+    assert_equal wedges.call(numbers, :leap), wedges.call(along_furrows, :furrows)
+    refute_equal wedges.call(numbers, :leap), Cistergraphia::SVG.render(numbers, layout: :leap).scan(/<path d="[^"]+"/),
+                 'a plate with its way told is pressed in reading order'
+  end
+
+  def test_pathless_plates_are_games_without_a_key
+    assert_raises(Cistergraphia::Error) { Cistergraphia.inscribe('abbey', passphrase: 'molesme', pathless: true) }
+    grille = Cistergraphia::Grille.new('K7Q2M-ZXB4P')
+
+    assert_raises(Cistergraphia::Error) { Cistergraphia.inscribe('abbey', layout: grille, pathless: true) }
+  end
+
   def test_unknown_layouts_are_refused
     assert_raises(Cistergraphia::Error) { Cistergraphia.to_svg([1], layout: :spiral) }
   end

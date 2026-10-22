@@ -57,6 +57,19 @@ class CliTest < Minitest::Test
     end
   end
 
+  def test_a_pathless_plate_is_announced_read_back_and_refused_where_it_cannot_be
+    out, _, status = cli('-m', MESSAGE, '-l', 'unwinding', '--pathless', '-o', plate('pathless'))
+    assert_equal [0, true], [status, out.start_with?('Pathless: the plate says nothing of where it begins')]
+    assert_includes File.read(plate('pathless')), 'class="pathless"'
+    out, _, status = cli('-d', plate('pathless'))
+    assert_equal [0, MESSAGE], [status, out.strip]
+    _, err, status = cli('-m', MESSAGE, '--pathless', '-w', '-o', plate('no'))
+    assert_equal [1, Cistergraphia::Pathless::NOT_DAMAGED], [status, err.strip]
+    _, err, status = cli('-m', MESSAGE, '--pathless', '-s', '-o', plate('no'),
+                         env: { 'CISTERGRAPHIA_PASSPHRASE' => 'abbey of molesme' })
+    assert_equal [1, Cistergraphia::Pathless::NOT_SEALED], [status, err.strip]
+  end
+
   def test_a_worn_plate_says_its_lacunae_and_reads_back_as_an_edition
     out, _, status = cli('-m', MESSAGE, '-w', '-o', plate('worn'))
     assert_equal 0, status

@@ -19,19 +19,18 @@ module Cistergraphia
 
     # Renders the sequence as a standalone SVG document along a layout's path
     # (with the strokes lost to weathering taken away: damage is Weathering's)
-    def render(sequence, layout: :phaistos, damage: {}, tally: false)
+    def render(sequence, layout: :phaistos, damage: {}, tally: false, pathless: false)
       width, height, cols, _rows = Layout.dimensions(sequence, layout, tally: tally)
+      signs = Layout.placed(sequence, cols, layout, pathless: pathless)
 
       <<~SVG
-        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}">
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}"#{%( class="#{Pathless::CLASS}") if pathless}>
           <rect width="100%" height="100%" fill="white"/>
           #{Lacunae.patches(cols, layout, damage)}
           <g fill="black">
-        #{pressed(sequence, cols, layout, damage).map { |outline| %(    <path d="#{outline}"/>) }.join("\n")}
+        #{pressed(signs, layout, damage).map { |outline| %(    <path d="#{outline}"/>) }.join("\n")}
           </g>
-          <g stroke="black" stroke-width="2" display="none">
-        #{strokes(sequence, cols, layout, damage).map { |line| line_tag(line) }.join("\n")}
-          </g>
+        #{lines_layer(signs, layout, damage)}
         #{Lacunae.hidden(cols, layout, damage)}
         #{Tally::Plate.layer(sequence, cols, layout) if tally}
         </svg>
@@ -39,13 +38,13 @@ module Cistergraphia
     end
 
     # Every stroke pressed by the hand, as SVG path data (one wedge each), sign
-    # by sign in reading order. A turned sign is pressed upright, then turned
-    # with its cell, as the scribe wrote it with the tablet turned. The hand is
-    # seeded by the sign's place in the reading order, so the same plate is
-    # always pressed the same way.
-    def pressed(sequence, cols, layout, damage = {})
-      Layout.path(cols, layout).zip(sequence).each_with_index.flat_map do |((row, col, turned), num), index|
-        press(Lacunae.strokes(num, damage.fetch(index, [])), turned, Layout.origin(row, col, layout), Random.new(index))
+    # by sign (Layout.placed: in reading order, the hand seeded by the sign's
+    # place in it, so the same plate is always pressed the same way). A turned
+    # sign is pressed upright, then turned with its cell, as the scribe wrote
+    # it with the tablet turned
+    def pressed(signs, layout, damage = {})
+      signs.flat_map do |(row, col, turned), num, index, seed|
+        press(Lacunae.strokes(num, damage.fetch(index, [])), turned, Layout.origin(row, col, layout), Random.new(seed))
       end
     end
 
@@ -58,14 +57,20 @@ module Cistergraphia
       end
     end
 
-    # Absolute strokes of every symbol in reading order, turned where the path says so
-    def strokes(sequence, cols, layout, damage = {})
-      Layout.path(cols, layout).zip(sequence).each_with_index.flat_map do |((row, col, turned), num), index|
+    # Absolute strokes of every symbol, turned where the path says so
+    def strokes(signs, layout, damage = {})
+      signs.flat_map do |(row, col, turned), num, index, _|
         x, y = Layout.origin(row, col, layout)
         Lacunae.strokes(num, damage.fetch(index, [])).map do |stroke|
-          relative(turned ? Glyphs.turn(stroke) : stroke, -x, -y)
+          Layout.relative(turned ? Glyphs.turn(stroke) : stroke, -x, -y)
         end
       end
+    end
+
+    # The strokes as hidden lines: what the decoder reads (lines, not wedges)
+    def lines_layer(signs, layout, damage)
+      lines = strokes(signs, layout, damage).map { |line| line_tag(line) }.join("\n")
+      %(  <g stroke="black" stroke-width="2" display="none">\n#{lines}\n  </g>)
     end
 
     def line_tag((x1, y1, x2, y2))
@@ -124,11 +129,6 @@ module Cistergraphia
       raise DecodeError, "#{cells.size} symbols do not form a square grid" unless size**2 == cells.size
 
       size
-    end
-
-    def relative(line, x, y)
-      x1, y1, x2, y2 = line
-      [x1 - x, y1 - y, x2 - x, y2 - y]
     end
 
     # Every <line> of the document as [x1, y1, x2, y2] integers: the strokes,

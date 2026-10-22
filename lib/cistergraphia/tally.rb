@@ -181,7 +181,7 @@ module Cistergraphia
 
       def hidden(num, row, col, layout)
         x, y = Layout.origin(row, col, layout)
-        Glyphs.strokes(num).map { |stroke| SVG.line_tag(SVG.relative(stroke, -x, -y)) }
+        Glyphs.strokes(num).map { |stroke| SVG.line_tag(Layout.relative(stroke, -x, -y)) }
       end
 
       # Two thin rules in the gutters, between the grid and its tallies
