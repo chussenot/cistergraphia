@@ -27,6 +27,7 @@ end", "every pair balances", "Whole again"), or to Decipher if the reader gave u
 | Intact, pathless | 8 × 8 | Leap, withheld | | | | n/a | | which way first; how many tried before the right one |
 | Worn | 6 × 6 | Phaistos | | | | / | | |
 | Worn | 10 × 10 | Phaistos | | | | / | | |
+| Worn, pathless | 8 × 8 | Furrows, withheld | | | | / | | which way first; whether the edition's [?] marks were read as the sign of a wrong way |
 | Broken | 10 × 10 | Phaistos | | | | n/a | | |
 | Ruined | 10 × 10 | Phaistos | | | | / | | |
 

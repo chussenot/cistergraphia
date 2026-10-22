@@ -3,30 +3,41 @@ The restoration bench under a weathered plate (app.js, initBench). Its first
 state is drawn here exactly as the script draws it, so nothing moves when the
 script arrives. The page holds only what the file shows (see BenchHelpers).
 Locals: entries (the lacunae), values (every sign's value, nil where a lacuna
-is), damage ({ index => lost strokes }), tally ({ rows:, cols:, corner: } or nil)
+is), damage ({ index => lost strokes }), tally ({ rows:, cols:, corner: } or nil),
+pathless (a pathless plate: the way is to find; the bench asks which, lays the
+lacunae along the way chosen and keeps a notebook of the ways tried; entries
+is then empty, worn holds what each worn cell may hold, either way up, and the
+edition waits at its longest, [.] for every pair, so that no way's can be taller)
 %>
+<% pathless_bench = defined?(pathless) ? pathless : false %>
 <% first = entries.first %>
-<section class="bench awaits-script" aria-labelledby="bench-title" data-bench
+<% count = pathless_bench ? pathless_lacunae(worn) : entries.size %>
+<section class="bench awaits-script" aria-labelledby="bench-title" data-bench<%= ' data-bench-pathless' if pathless_bench %>
          data-lacunae="<%= JSON.generate(entries) %>" data-glyph-table="<%= glyph_table_json %>"<% if tally %>
-         data-tally="<%= JSON.generate(tally) %>"<% end %>>
+         data-tally="<%= JSON.generate(tally) %>"<% end %><% if pathless_bench %>
+         data-bench-worn="<%= JSON.generate(worn) %>"<% end %>>
   <div class="bench-head">
     <h2 id="bench-title" class="index-heading">Restore it</h2>
     <div class="bench-nav">
       <button type="button" class="btn btn--small" data-bench-step="-1" aria-label="Previous lacuna">‹</button>
-      <span class="bench-which" data-bench-which aria-live="polite">Lacuna 1 of <%= entries.size %>: the <%= place_name(first[:place]) %></span>
+      <span class="bench-which" data-bench-which aria-live="polite"><%= first ? "Lacuna 1 of #{count}: the #{place_name(first[:place])}" : 'Choose a way to restore' %></span>
       <button type="button" class="btn btn--small" data-bench-step="1" aria-label="Next lacuna">›</button>
     </div>
   </div>
+  <% if pathless_bench %><%== erb :_ways, layout: false, locals: { at: 'bench' } %><% end %>
   <div class="bench-palette" role="group" aria-label="Digits to press into the lacuna">
     <% 10.times do |digit| %>
-      <button type="button" class="bench-digit" data-digit="<%= digit %>" aria-pressed="false"<%= ' disabled' unless first[:digits].include?(digit) %>>
-        <%== glyph_svg(digit * first[:place], css: 'glyph bench-glyph', title: "#{digit} in the #{place_name(first[:place])}") %><span><%= digit %></span>
+      <button type="button" class="bench-digit" data-digit="<%= digit %>" aria-pressed="false"<%= ' disabled' unless first && first[:digits].include?(digit) %>>
+        <%== glyph_svg(digit * (first ? first[:place] : 1), css: 'glyph bench-glyph', title: "#{digit} in the #{place_name(first ? first[:place] : 1)}") %><span><%= digit %></span>
       </button>
     <% end %>
   </div>
-  <p class="bench-balance" aria-live="polite"><span class="bench-sum" data-bench-sum><%= bench_sum(values, entries, first) %></span>
-    <span class="bench-verdict" data-bench-verdict><%= bench_verdict(values, first) %></span><% if tally %>
-    <span class="bench-verdict" data-bench-tally><%= bench_tallies(first) %></span><% end %>
-    <span class="bench-verdict" data-bench-count>0 of <%= entries.size %> restored</span></p>
-  <p class="bench-edition" data-bench-edition><%= bench_edition(values, damage) %></p>
+  <p class="bench-balance" aria-live="polite"><span class="bench-sum" data-bench-sum><%= first ? bench_sum(values, entries, first) : '? + ? = ?' %></span>
+    <span class="bench-verdict" data-bench-verdict><%= first ? bench_verdict(values, first) : 'Choose a way: the pairs form along it.' %></span><% if tally %>
+    <span class="bench-verdict" data-bench-tally><%= first ? bench_tallies(first) : 'Tallies: row ?, column ?' %></span><% end %>
+    <span class="bench-verdict" data-bench-count>0 of <%= count %> restored</span></p>
+  <p class="bench-edition" data-bench-edition><%= first ? bench_edition(values, damage) : '[.]' * (values.size / 2) %></p>
+  <% if pathless_bench %>
+    <p class="bench-notebook" data-bench-notebook aria-live="polite">The notebook: what each way gave.</p>
+  <% end %>
 </section>

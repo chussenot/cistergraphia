@@ -59,6 +59,11 @@ Dir.mktmpdir do |dir|
   _, pathless = Cistergraphia.inscribe(MESSAGE, layout: :leap, pathless: true)
   File.write(File.join(dir, 'pathless.svg'), pathless)
   answers[:pathless] = { way: 'leap', breaks: breaks(pathless) }
+  # A worn pathless plate along the furrows: the bench finds the way, then restores it
+  values, worn_pathless, = Cistergraphia::Lacunae.inscribe(MESSAGE, layout: :furrows, pathless: true,
+                                                                    random: Random.new(5))
+  File.write(File.join(dir, 'worn-pathless.svg'), worn_pathless)
+  answers[:worn_pathless] = { way: 'furrows', values: values }
   File.write(File.join(dir, 'answers.json'), JSON.generate(answers))
 
   ok = UiHarness.serve(dir) { |base_url| UiHarness.run_script('play.js', base_url, dir) }

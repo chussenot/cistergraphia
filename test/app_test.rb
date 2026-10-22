@@ -198,10 +198,11 @@ class AppTest < Minitest::Test
     assert_equal 'ora et labora', Cistergraphia.decode(svg)
   end
 
-  def test_a_plate_cannot_be_pathless_sealed_under_a_grille_or_damaged
+  def test_a_plate_cannot_be_pathless_sealed_under_a_grille_or_broken
     { { mode: 'secret', passphrase: 'abbey of molesme' } => Cistergraphia::Pathless::NOT_SEALED,
       { layout: 'grille' } => Cistergraphia::Pathless::NOT_UNDER_A_GRILLE,
-      { condition: 'worn' } => Cistergraphia::Pathless::NOT_DAMAGED }.each do |fields, reason|
+      { condition: 'broken' } => Cistergraphia::Pathless::NOT_BROKEN,
+      { condition: 'ruined' } => Cistergraphia::Pathless::NOT_BROKEN }.each do |fields, reason|
       post '/generate', { message: 'Ora et labora', path: 'withheld' }.merge(fields)
 
       assert_equal 422, last_response.status, fields
@@ -223,6 +224,65 @@ class AppTest < Minitest::Test
     post '/decode', svg: svg, decipher: '1'
 
     assert_includes last_response.body, 'ora et labora', 'the decoder still answers'
+  end
+
+  def test_a_worn_pathless_plate_brought_to_read_opens_at_a_bench_without_its_way
+    sequence, svg, damage = worn_pathless_plate
+    post '/decode', svg: svg
+    body = last_response.body
+
+    ['data-play="pathless"', 'data-bench-pathless', 'Which way does it run?', 'Choose a way to restore',
+     'data-bench-notebook', '<dd>Worn, pathless</dd>', '<dd>Withheld: one of the five ways</dd>'].each do |said|
+      assert_includes body, said
+    end
+    assert_equal 5, body.scan('data-bench-way=').size
+    assert_empty JSON.parse(CGI.unescapeHTML(body[/data-lacunae="([^"]*)"/, 1])), 'no lacuna is placed along a way'
+    assert_match(/data-bench-count>0 of \d+ restored</, body)
+    assert_worn_cells_show_only_the_file(body, sequence, damage)
+  end
+
+  def test_a_worn_pathless_plate_is_still_read_by_the_decoder
+    _, svg, = worn_pathless_plate
+    post '/decode', svg: svg, decipher: '1'
+
+    assert_match(%r{\[[a-z /]+\]}, last_response.body, 'the decoder prints the edition')
+  end
+
+  def worn_pathless_plate
+    Cistergraphia::Lacunae.inscribe('the brothers will gather in the chapter house', layout: :furrows, pathless: true,
+                                                                                     random: Random.new(3))
+  end
+
+  # The worn cells go to the page in grid order, each with what it may hold
+  # either way up, never with a place along the way; the cells too
+  def assert_worn_cells_show_only_the_file(body, sequence, damage)
+    worn = JSON.parse(CGI.unescapeHTML(body[/data-bench-worn="([^"]*)"/, 1]))
+    path = Cistergraphia::Layout.path(Integer.sqrt(sequence.size), :furrows)
+
+    assert_equal(damage.keys.map { |index| path[index][0, 2] }.sort, worn.map { |cell| [cell['row'], cell['col']] })
+    worn.each { |cell| assert_worn_cell_shows_only_the_file(cell) }
+    cells = JSON.parse(CGI.unescapeHTML(body[/data-plate-cells="([^"]*)"/, 1]))
+
+    assert_equal cells.sort, cells, 'the cells go to the page in grid order, not along the way'
+    assert_equal damage.size, cells.count { |cell| cell[2].nil? }, 'worn signs are not valued'
+  end
+
+  def assert_worn_cell_shows_only_the_file(cell)
+    refute cell.key?('sign')
+    readings = %w[upright turned].filter_map { |side| cell[side] }
+
+    refute_empty readings, 'a worn cell reads as a sign at least one way up'
+    readings.flatten.each { |entry| assert_lacuna_shows_only_the_file(entry) }
+  end
+
+  def test_a_worn_plate_can_be_pathless_from_the_form
+    post '/generate', message: 'Ora et labora', condition: 'worn', path: 'withheld'
+    _cells, _layout, svg = plate_of(last_response.body)
+
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, '<dd>Withheld: the reader finds it</dd>'
+    assert Cistergraphia::Pathless.pathless?(svg)
+    assert Cistergraphia::Lacunae.weathered?(svg)
   end
 
   # The grid beside the cells: the same cells, both readings; the way unnamed

@@ -19,6 +19,9 @@ module Cistergraphia
   #   of a break stay visible), roughened with the sign's own seed so the same
   #   plate always looks the same. The hatch is made of rects: the decoder
   #   reads every <line> outside the lacunae layer
+  # - On a pathless plate the patches and the lost lines lie in grid order and
+  #   are seeded by the cell, as the signs are (Pathless): the file tells
+  #   nothing of the way, and the reader's bench finds it
   #
   # Constraints:
   # - Game plates only (see Weathering)
@@ -39,8 +42,9 @@ module Cistergraphia
     # keyless plate that would also restore along the other layout is drawn
     # again, as Cistergraphia.inscribe does for intact plates
     # With tally signs, the plate may lose whole signs, which their row or column gives back.
-    def inscribe(message, layout: :phaistos, passphrase: nil, tally: false, random: Random.new)
-      refuse(passphrase, tally, layout)
+    # Pathless, the plate says nothing of its way (Pathless): the bench finds it
+    def inscribe(message, layout: :phaistos, passphrase: nil, tally: false, pathless: false, random: Random.new)
+      refuse(passphrase, tally, layout, pathless)
       grille = layout.is_a?(Grille)
       100.times do
         sequence, damage = weathered(message, layout, tally, random)
@@ -48,14 +52,17 @@ module Cistergraphia
 
         next unless grille || unambiguous?(sequence, damage, layout, tally)
 
-        return [sequence, SVG.render(sequence, layout: layout, damage: damage, tally: tally), damage]
+        svg = SVG.render(sequence, layout: layout, damage: damage, tally: tally, pathless: pathless)
+        return [sequence, svg, damage]
       end
       raise Error, 'Could not draw an unambiguous plate for this message'
     end
 
-    def refuse(passphrase, tally, layout)
+    def refuse(passphrase, tally, layout, pathless)
       raise Error, NOT_SEALED if passphrase
       raise Error, Tally::NOT_UNDER_A_GRILLE if tally && layout.is_a?(Grille)
+
+      Pathless.check(passphrase, layout) if pathless
     end
 
     # [sequence, damage] for a message: with tally signs, whole signs may be lost
@@ -120,17 +127,17 @@ module Cistergraphia
     end
 
     # The worn patches, drawn under the wedges ('' for an intact plate)
-    def patches(cols, layout, damage)
+    def patches(cols, layout, damage, pathless: false)
       return '' if damage.empty?
 
-      %(#{PATTERN}\n#{worn(signs(cols, layout, damage))})
+      %(#{PATTERN}\n#{worn(signs(cols, layout, damage, pathless: pathless))})
     end
 
-    # The worn patches of some signs ([index, lost strokes, turned, sign origin]
+    # The worn patches of some signs ([seed, lost strokes, turned, sign origin]
     # each), filled with the PATTERN the document defines once
     def worn(signs)
-      polygons = signs.flat_map do |index, lost, turned, origin|
-        random = Random.new(index)
+      polygons = signs.flat_map do |seed, lost, turned, origin|
+        random = Random.new(seed)
         Outline.shapes(lost).map do |shape|
           Outline.polygon(Outline.rough(shape, random).map { |point| Outline.place(point, turned, origin) })
         end
@@ -140,10 +147,10 @@ module Cistergraphia
     end
 
     # The lost stroke positions as hidden lines: what the decoder reads
-    def hidden(cols, layout, damage)
+    def hidden(cols, layout, damage, pathless: false)
       return '' if damage.empty?
 
-      lost_lines(signs(cols, layout, damage))
+      lost_lines(signs(cols, layout, damage, pathless: pathless))
     end
 
     # The lost stroke positions of some signs as hidden lines, in their own layer
@@ -154,48 +161,16 @@ module Cistergraphia
       %(  <g class="#{CLASS}" stroke="black" stroke-width="2" display="none">\n#{lines.join("\n")}\n  </g>)
     end
 
-    # [index, lost strokes, turned, sign origin] of every damaged sign
-    def signs(cols, layout, damage)
-      Layout.path(cols, layout).each_with_index.filter_map do |(row, col, turned), index|
-        [index, damage[index], turned, Layout.origin(row, col, layout)] if damage.key?(index)
-      end
-    end
+    # [seed, lost strokes, turned, sign origin] of every damaged sign, in
+    # reading order and seeded by the sign's place in it; on a pathless plate
+    # in grid order, each seeded by its cell (Pathless.seed)
+    def signs(cols, layout, damage, pathless: false)
+      worn = Layout.path(cols, layout).each_with_index.filter_map do |(row, col, turned), index|
+        next unless damage.key?(index)
 
-    # What a weathered plate's file shows of itself, for a page that must hold
-    # no more than the file (the reader's): the layout it reads along, its
-    # damaged signs with their lost positions and the values their surviving
-    # strokes allow, and every sign's value where no lacuna leaves it open
-    module Survey
-      module_function
-
-      # The keyless layout along which the plate restores, or nil
-      def layout(svg)
-        Layout::KEYLESS.find { |layout| edition(svg, layout) }
+        [pathless ? Pathless.seed(row, col, cols) : index, damage[index], turned, Layout.origin(row, col, layout)]
       end
-
-      def edition(svg, layout)
-        Weathering::Edition.text(Lacunae.restored(svg, layout))
-      rescue DecodeError
-        nil
-      end
-
-      # [{ index:, lost:, candidates: }] of every damaged sign in reading order:
-      # its lost stroke positions (canonical, upright) and what it can still be
-      def damaged(svg, layout)
-        strokes = Lacunae.cells(svg, :strokes, layout)
-        lost = Lacunae.cells(svg, :lacunae, layout)
-        Layout.path(SVG.grid_size(strokes), layout).each_with_index.filter_map do |(row, col, turned), index|
-          gone = lost[[row, col]] or next
-          seen = Layout.upright(strokes.fetch([row, col]), row, col, turned, layout)
-          gone = Layout.upright(gone, row, col, turned, layout).map(&Glyphs::CANONICAL)
-          { index: index, lost: gone, candidates: Weathering.candidates(seen, gone) }
-        end
-      end
-
-      # Every sign's value as the file shows it: nil for a sign a lacuna touched
-      def values(svg, layout)
-        Lacunae.read(svg, layout).map { |candidates, worn| worn ? nil : candidates.first }
-      end
+      pathless ? worn.sort_by(&:first) : worn
     end
 
     # A weathered plate read along another layout, from the data: what the

@@ -472,11 +472,11 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
      damaged one: Withheld is greyed, and its note gives the reason */
   .entry:has(input[name="mode"][value="secret"]:checked) .segment--path-withheld,
   .entry:has(input[name="layout"][value="grille"]:checked) .segment--path-withheld,
-  .entry:has(input[name="condition"]:not([value="intact"]):checked) .segment--path-withheld { opacity: 0.5; }
+  .entry:has(input[name="condition"]:is([value="broken"], [value="ruined"]):checked) .segment--path-withheld { opacity: 0.5; }
   .entry:has(input[name="mode"][value="secret"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note:not(.field-error),
   .entry:has(input[name="layout"][value="grille"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note:not(.field-error),
-  .entry:has(input[name="condition"]:not([value="intact"]):checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note:not(.field-error) { visibility: hidden; }
-  .entry:has(input[name="condition"]:not([value="intact"]):checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-damaged"],
+  .entry:has(input[name="condition"]:is([value="broken"], [value="ruined"]):checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note:not(.field-error) { visibility: hidden; }
+  .entry:has(input[name="condition"]:is([value="broken"], [value="ruined"]):checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-broken"],
   .entry:has(input[name="layout"][value="grille"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-grille"],
   .entry:has(input[name="mode"][value="secret"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-sealed"] { visibility: visible; }
   /* A condition sent back with an error: the error takes its note's place
@@ -964,13 +964,14 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .desk-standing { visibility: hidden; } /* the ranks are earned unaided */
 /* A pathless plate: the question, the five ways to lay (figures as labels, as
    on the form), the notebook of what each gave; every part keeps its size */
-.desk-ways-ask { display: grid; gap: var(--space-2); }
-.desk-question { margin: 0; font-family: var(--sans); font-size: 0.9rem; color: var(--ink-soft); }
-.desk-ways { grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); }
-.desk-ways .segment { border: 0; background: transparent; font: inherit; }
-.desk-ways .segment[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), inset 0 -2px 0 var(--accent); }
+.ways-ask { display: grid; gap: var(--space-2); } /* a pathless plate's question, at the desk or the bench */
+.ways-question { margin: 0; font-family: var(--sans); font-size: 0.9rem; color: var(--ink-soft); }
+.ways { grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); }
+.ways .segment { border: 0; background: transparent; font: inherit; }
+.ways .segment[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), inset 0 -2px 0 var(--accent); }
 .desk-sign:empty::after { content: '?'; font-family: var(--mono); color: var(--ink-soft); } /* waiting for a way */
-.desk-notebook { margin: 0; font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); overflow-wrap: anywhere; min-height: 2.8em; min-height: 2lh; }
+.desk-notebook, .bench-notebook { margin: 0; font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); overflow-wrap: anywhere; min-height: 2.8em; min-height: 2lh; }
+.bench-notebook { min-height: 4.2em; min-height: 3lh; } /* five short lines fit three on a phone */
 .desk[data-desk-mode="unaided"] .desk-standing { visibility: visible; }
 [data-desk-rank] { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; }
 

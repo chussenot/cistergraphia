@@ -214,6 +214,69 @@ class WeatheringTest < Minitest::Test
     assert_equal damage.keys.sort, C::Lacunae::Survey.damaged(svg, grille).map { |sign| sign[:index] }.sort
   end
 
+  # A worn pathless plate: the file tells nothing of the way, and says what each worn cell may hold
+  def test_a_worn_pathless_plate_lies_in_grid_order_patches_and_lost_lines_included
+    _, svg, = Lacunae.inscribe(MESSAGES[1], layout: :leap, pathless: true, random: Random.new(5))
+
+    assert C::Pathless.pathless?(svg)
+    assert Lacunae.weathered?(svg)
+    assert faithful?(C.decode(svg), MESSAGES[1]), 'the decoder still finds the way and prints the edition'
+    %i[strokes lacunae].each do |layer|
+      cells = C::SVG.lines(svg, layer: layer).map { |line| C::Layout.cell_of(line) }.uniq
+
+      assert_equal cells.sort, cells, "the #{layer} lie in grid order"
+    end
+  end
+
+  def test_a_pathless_plates_patches_are_seeded_by_the_cell_not_by_the_way
+    sequence, _, damage = Lacunae.inscribe(MESSAGES[1], layout: :leap, pathless: true, random: Random.new(5))
+    size = Integer.sqrt(sequence.size)
+    along_furrows = redrawn(damage, size, :leap, :furrows)
+
+    assert_equal Lacunae.patches(size, :leap, damage, pathless: true),
+                 Lacunae.patches(size, :furrows, along_furrows, pathless: true)
+    refute_equal Lacunae.patches(size, :leap, damage), Lacunae.patches(size, :furrows, along_furrows),
+                 'a plate with its way told is worn in reading order'
+  end
+
+  # The same cells worn the same way, as a plate along another way would index them
+  def redrawn(damage, size, from, onto)
+    by_cell = damage.to_h { |index, lost| [C::Layout.path(size, from)[index][0, 2], lost] }
+    C::Layout.path(size, onto).each_with_index.filter_map do |(row, col, _), index|
+      [index, by_cell[[row, col]]] if by_cell.key?([row, col])
+    end.to_h
+  end
+
+  def test_the_grid_and_the_survey_say_what_a_worn_cell_may_hold_but_never_the_way
+    sequence, svg, damage = Lacunae.inscribe(MESSAGES[1], layout: :rongorongo, pathless: true, random: Random.new(5))
+    path = C::Layout.path(Integer.sqrt(sequence.size), :rongorongo)
+    worn_cells = damage.keys.map { |index| path[index][0, 2] }.sort
+    grid_worn = C::Pathless.grid(svg).select { |_, _, upright, turned| upright.nil? && turned.nil? }
+
+    assert_equal worn_cells, grid_worn.map { |row, col, *| [row, col] }.sort
+    survey = Lacunae::Survey.worn_cells(svg)
+
+    assert_equal(worn_cells, survey.map { |row, col, *| [row, col] })
+    survey.each { |cell| assert_worn_cell_shows_the_file(cell, path, sequence, damage) }
+  end
+
+  # Read the way it was written, a worn cell's lost value is among its
+  # candidates and its lost positions are the file's
+  def assert_worn_cell_shows_the_file((row, col, upright, turned), path, sequence, damage)
+    index = path.index { |cell| cell[0, 2] == [row, col] }
+    reading = path[index][2] ? turned : upright
+
+    assert_includes reading[:candidates], sequence[index]
+    assert_equal damage[index].sort, reading[:lost].sort
+  end
+
+  def test_a_pathless_plate_cannot_be_sealed_or_under_a_grille_even_worn
+    assert_raises(C::Error) { Lacunae.inscribe('relics', layout: C::Grille.new('K7Q2M-ZXB4P'), pathless: true) }
+    error = assert_raises(C::Error) { Lacunae.inscribe('relics', passphrase: 'abbey', pathless: true) }
+
+    assert_equal Lacunae::NOT_SEALED, error.message
+  end
+
   # Small plates have few words to carry a doubt: they lose one pair in two
   def test_small_plates_lose_one_pair_in_two_and_large_ones_one_in_three
     assert_equal 4, C::Weathering.target_for(8, nil) # 4 × 4
