@@ -306,8 +306,9 @@ async function budgets() {
   const ctx = await context({ reducedMotion: 'no-preference' });
   const page = await ctx.newPage();
   await page.addInitScript(() => {
-    window.__long = [];
-    try { new PerformanceObserver((list) => list.getEntries().forEach((e) => window.__long.push(Math.round(e.duration)))).observe({ type: 'longtask', buffered: true }); } catch (e) { window.__long = null; }
+    // Only where the engine reports long tasks (Chromium); elsewhere the check is skipped, not passed empty
+    window.__long = (PerformanceObserver.supportedEntryTypes || []).includes('longtask') ? [] : null;
+    if (window.__long) new PerformanceObserver((list) => list.getEntries().forEach((e) => window.__long.push(Math.round(e.duration)))).observe({ type: 'longtask', buffered: true });
   });
   const sizes = {};
   page.on('response', async (res) => { const file = new URL(res.url()).pathname; if (/\.(js|css)$/.test(file)) { try { sizes[file] = (await res.body()).length; } catch (e) { /* gone */ } } });

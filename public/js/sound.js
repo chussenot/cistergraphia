@@ -81,6 +81,11 @@
   let lastBite = 0;
   let bellUntil = 0;
   let sleep = null;
+  const voices = new Set(); // the teardown timers of the voices still sounding
+
+  // A promise the page need not wait for: resume() and suspend() reject once
+  // the reader has left the page (Firefox: "Navigated away from page")
+  const quietly = (promise) => { if (promise && promise.catch) promise.catch(() => {}); };
 
   function level() {
     return night.matches ? 0.4 : 0.8; // Vigils, the night office, 6 dB quieter
@@ -109,9 +114,9 @@
   // The context wakes for a sound and sleeps after a while without one
   function awake() {
     if (!instrument()) return null;
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') quietly(ctx.resume());
     clearTimeout(sleep);
-    sleep = setTimeout(() => { if (ctx && ctx.state === 'running') ctx.suspend(); }, IDLE);
+    sleep = setTimeout(() => { if (ctx && ctx.state === 'running') quietly(ctx.suspend()); }, IDLE);
     return ctx;
   }
 
@@ -121,9 +126,22 @@
     const panner = ctx.createStereoPanner();
     panner.pan.value = pan;
     gain.connect(panner).connect(master);
-    setTimeout(() => { gain.disconnect(); panner.disconnect(); }, ((until - ctx.currentTime) * 1000) + 100);
+    const timer = setTimeout(() => {
+      voices.delete(timer);
+      gain.disconnect();
+      panner.disconnect();
+    }, ((until - ctx.currentTime) * 1000) + 100);
+    voices.add(timer);
     return gain;
   }
+
+  // Leaving the page: nothing left to tear down once the page is gone, and a
+  // voice's nodes may no longer be touched (Firefox throws on them)
+  window.addEventListener('pagehide', () => {
+    voices.forEach(clearTimeout);
+    voices.clear();
+    clearTimeout(sleep);
+  });
 
   function noise(when, until) {
     const source = ctx.createBufferSource();
@@ -316,7 +334,7 @@
       enabled = !enabled;
       try { localStorage.setItem(KEY, enabled ? 'on' : 'off'); } catch (error) { /* private mode: for this page */ }
       if (enabled) awake(); // the press is the gesture the browser asks for
-      else if (ctx) ctx.suspend();
+      else if (ctx) quietly(ctx.suspend());
       show();
     });
   }

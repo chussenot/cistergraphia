@@ -18,7 +18,7 @@ maintenance cost, not confidence.
 | Coverage (`test/coverage.rb`) | A change does not arrive without its test: lines run in `lib`, `web` and `app.rb`, floor 97 % | `bundle exec rake test:coverage` | yes |
 | Node unit (`test/sound_test.js`) | What a sound is, from what made it | `bundle exec rake test:sound` | yes |
 | Layout stability (`test/ui/stability.js`) | Nothing on a page moves under the reader: 77 interactions, 13 page states, 4 viewports, JS on and off | `bundle exec rake ui:stability` | Chromium |
-| Behaviour (`test/ui/play.js`) | The reader who does the work gets the message: the desk, the bench, the board, Lectio, the record, the preview, the grille; silence by default; zero axe violations; the budgets | `bundle exec rake ui:play` | Chromium |
+| Behaviour (`test/ui/play.js`) | The reader who does the work gets the message: the desk, the bench, the board, Lectio, the record, the preview, the grille; silence by default; zero axe violations; the budgets | `bundle exec rake ui:play` | Chromium, Firefox, WebKit |
 | Cryptanalysis (`experiments/cryptanalysis/run.sh --check`) | The game stays breakable and the seal does not leak: the security study kept honest | `run.sh --check` | yes |
 | Lint (`rubocop`) | Ruby style and the complexity ceilings | `bundle exec rubocop` | yes |
 | Experiments (`experiments/weathering`) | The design's numbers (restorability, fragments, tally, the share by size) | by hand, when the ladder changes | no |
@@ -53,8 +53,9 @@ chases the number.
 - **Prove outcomes, not just stillness.** The two browser suites share one boot
   (`test/ui/harness.rb`): the harness measures what moves, the behaviour suite reads what the
   page says.
-- **One browser is not the web.** Behaviour is meant to run on three engines
-  (`BROWSER=firefox|webkit`); layout on one, since its measure is layout, not engines. A feature
+- **One browser is not the web.** Behaviour runs on three engines in CI, Chromium, Firefox and
+  WebKit (`BROWSER=firefox|webkit` locally); a check an engine cannot make is skipped and says so,
+  never passed empty. Layout runs on one, since its measure is layout, not engines. A feature
   that needs a CSS or Web API feature names its oldest supported Safari.
 - **No retries.** A flake is a bug in the test or the page. CI never retries a job; a red job
   gets a one-line diagnosis in the PR before any push.

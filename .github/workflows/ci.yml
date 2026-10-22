@@ -43,15 +43,25 @@ jobs:
   # message; silence by default; no axe violation; the budgets
   behaviour:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v5
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '4.0'
           bundler-cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.1-${{ matrix.browser }}
       - run: npm install --no-save --no-package-lock playwright@1.56.1 axe-core@4.10.2
-      - run: npx playwright install --with-deps chromium
-      - run: bundle exec rake ui:play
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: bundle exec rake ui:play | tee /tmp/play.log && tail -1 /tmp/play.log >> "$GITHUB_STEP_SUMMARY"
+        env:
+          BROWSER: ${{ matrix.browser }}
 
   # Keeps docs/design.md honest: nothing on a page moves under the reader
   stability:
