@@ -89,6 +89,8 @@ def orders(n):
     while m:
         spiral += m[0]
         m = [list(x) for x in zip(*m[1:])][::-1]
+    # The Zodiac's diagonal: one down, two across, wrapping; a new start per orbit
+    leap = [(i, (s + 2 * i) % n) for s in range(n) for i in range(n)]
     symmetries = {
         'id': lambda r, c: (r, c), 'transpose': lambda r, c: (c, r),
         'flip-h': lambda r, c: (r, n - 1 - c), 'flip-v': lambda r, c: (n - 1 - r, c),
@@ -96,7 +98,7 @@ def orders(n):
         'rot270': lambda r, c: (n - 1 - c, r), 'anti-transpose': lambda r, c: (n - 1 - c, n - 1 - r),
     }
     out = {}
-    bases = {'row-major': row, 'boustrophedon': snake, 'spiral': spiral}
+    bases = {'row-major': row, 'boustrophedon': snake, 'spiral': spiral, 'leap': leap}
     for (bname, base), (sname, f), rev in itertools.product(bases.items(), symmetries.items(), (False, True)):
         seq = [f(r, c) for r, c in base]
         out[f"{bname}/{sname}{'/reversed' if rev else ''}"] = seq[::-1] if rev else seq

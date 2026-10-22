@@ -7,6 +7,7 @@ modes. Conclusions and sources: [docs/security-study.md](../../docs/security-stu
 |---|---|---|---|
 | [`blind-llm/`](blind-llm/) | An LLM agent with a shell, given only 10 SVGs | 10/10 messages in ~2.5 min | not run (nothing to reason about) |
 | [`crack.py`](crack.py) | A script: public Cistercian glyphs + word lists | 100% from **one** SVG; 10/10 | stops at step 2; 0% |
+| [`crack.py`](crack.py) on pathless plates along the leap | The same script; the file withholds the way | 100% from one SVG; 10/10, as along the snail | not run (the same seal) |
 | [`blind-llm-grille/`](blind-llm-grille/) | The same agent, 10 SVGs under the Grille layout | 10/10 messages in ~26 min | not run |
 | [`crack_grille.py`](crack_grille.py) | A script that knows the scheme (Kerckhoffs) but not the grille's key | 10/10 from single SVGs; plates up to 16 × 16, sometimes 18 × 18; shared keys fall | 0%: every branch dies at once |
 
@@ -16,10 +17,13 @@ modes. Conclusions and sources: [docs/security-study.md](../../docs/security-stu
 
 1. **Glyphs:** the longest vertical strokes are stems, the common horizontal stroke length is
    the cell unit, and strokes are matched to the standard Cistercian digits.
-2. **Route and marker:** it tries 48 reading routes (row, boustrophedon and spiral, in every
-   rotation and reflection, forwards and backwards), times 2 ways of dropping the most frequent
-   value. It keeps the hypotheses where neighbouring values sum to a multiple of 10. That
-   happens 100% of the time in game mode, against 10% by chance.
+2. **Route and marker:** it tries 64 reading routes (row, boustrophedon, spiral and the
+   Zodiac's leap, one down and two across wrapping, in every rotation and reflection, forwards
+   and backwards: the five ways a plate can run are among them), times 2 ways of dropping the
+   most frequent value. It keeps the hypotheses where neighbouring values sum to a multiple
+   of 10. That happens 100% of the time in game mode, against 10% by chance. A pathless plate,
+   whose file lays its signs in grid order and withholds the way, is read the same: the script
+   never looked at the file's order, only at where each sign sits.
 3. **Pairs → characters:** it sums each pair; the most frequent sum is the space.
 4. **Substitution:** a dictionary-scored search over all substitutions, plus a second search
    restricted to "larger value = later letter" (the shortcut the blind LLM found). It keeps
