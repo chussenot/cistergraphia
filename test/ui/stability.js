@@ -61,9 +61,11 @@ function snapshot(anchorSelector) {
   window.__stability = { marks, anchor, anchorTop: anchor ? anchor.getBoundingClientRect().top + scrollY : null };
 }
 
-// The largest movement among the snapshot's elements, and who moved. With an
-// anchor, only what sits above it counts: the anchor itself and what is in it
-// are the deliberate movement, and its containers may grow (only their tops count).
+// The largest movement among the snapshot's elements, and who moved: the three
+// that moved most, each with how far its top and its bottom went, so a move is
+// diagnosable from the log (a bottom alone: it grew; both: what is above it did).
+// With an anchor, only what sits above it counts: the anchor itself and what is
+// in it are the deliberate movement, and its containers may grow (only their tops count).
 function measure() {
   const { marks, anchor, anchorTop } = window.__stability;
   const name = (el) => {
@@ -71,7 +73,7 @@ function measure() {
     const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30);
     return `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${cls}${text ? ` "${text}"` : ''}`;
   };
-  let worst = { moved: 0, who: '' };
+  const movers = [];
   for (const [el, top, bottom] of marks) {
     if (!el.isConnected) continue;
     const r = el.getBoundingClientRect();
@@ -80,9 +82,11 @@ function measure() {
     const dTop = Math.abs(r.top + scrollY - top);
     const dBottom = anchor && el.contains(anchor) ? 0 : Math.abs(r.bottom + scrollY - bottom);
     const moved = Math.max(dTop, dBottom);
-    if (moved > worst.moved) worst = { moved: Math.round(moved * 10) / 10, who: name(el) };
+    if (moved > 1) movers.push({ moved, dTop, dBottom, el }); // TOLERANCE, as the report applies it
   }
-  return worst;
+  movers.sort((a, b) => b.moved - a.moved);
+  const say = (m) => `${name(m.el)} (top ${Math.round(m.dTop)}, bottom ${Math.round(m.dBottom)})`;
+  return { moved: movers.length ? Math.round(movers[0].moved * 10) / 10 : 0, who: movers.slice(0, 3).map(say).join('; ') };
 }
 
 // For JS on vs off: the top and bottom of every box, by its path in the DOM

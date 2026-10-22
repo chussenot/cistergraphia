@@ -65,8 +65,18 @@ async function preview() {
   const page = await ctx.newPage();
   await page.goto(`${baseUrl}/`);
   await page.fill('#message', 'Ora et labora!');
-  await page.waitForTimeout(300);
-  expectEqual('preview', 'one sign per letter, a space for the rest', await page.locator('[data-preview-signs] li').count(), 'ora et labora'.length);
+  // The strip is drawn on the next frame: wait for it, not for a duration
+  // (WebKit on a cold runner took longer than 300 ms); when it never comes,
+  // say how many signs there are and whether a frame fires at all
+  const expected = 'ora et labora'.length;
+  const drawn = await page.waitForFunction((n) => document.querySelectorAll('[data-preview-signs] li').length === n, expected, { timeout: 5000 })
+    .then(() => true, () => false);
+  const detail = drawn ? '' : await page.evaluate(() => new Promise((resolve) => {
+    const count = document.querySelectorAll('[data-preview-signs] li').length;
+    requestAnimationFrame(() => resolve(`${count} signs; a frame fires; ${document.visibilityState}`));
+    setTimeout(() => resolve(`${count} signs; no frame in 1 s; ${document.visibilityState}`), 1000);
+  }));
+  check('preview', `one sign per letter, a space for the rest (${expected})`, drawn, detail);
   expectEqual('preview', 'the counter counts what was typed', await text(page, '[data-count]'), '14');
   await ctx.close();
 }
@@ -306,8 +316,9 @@ async function budgets() {
   const ctx = await context({ reducedMotion: 'no-preference' });
   const page = await ctx.newPage();
   await page.addInitScript(() => {
-    window.__long = [];
-    try { new PerformanceObserver((list) => list.getEntries().forEach((e) => window.__long.push(Math.round(e.duration)))).observe({ type: 'longtask', buffered: true }); } catch (e) { window.__long = null; }
+    // Only where the engine reports long tasks (Chromium); elsewhere the check is skipped, not passed empty
+    window.__long = (PerformanceObserver.supportedEntryTypes || []).includes('longtask') ? [] : null;
+    if (window.__long) new PerformanceObserver((list) => list.getEntries().forEach((e) => window.__long.push(Math.round(e.duration)))).observe({ type: 'longtask', buffered: true });
   });
   const sizes = {};
   page.on('response', async (res) => { const file = new URL(res.url()).pathname; if (/\.(js|css)$/.test(file)) { try { sizes[file] = (await res.body()).length; } catch (e) { /* gone */ } } });
