@@ -68,7 +68,8 @@ module Cistergraphia
     # Whether the plate restores along its own layout only, checked from the
     # data (parsing the file it would make costs more than all the rest)
     def unambiguous?(sequence, damage, layout, tally)
-      (Layout::KEYLESS - [layout]).none? { |other| Along.edition(sequence, damage, layout, other, tally) }
+      Layout.others(layout, Integer.sqrt(sequence.size))
+            .none? { |other| Along.edition(sequence, damage, layout, other, tally) }
     end
 
     # The restored text of a weathered plate, in the Leiden conventions
