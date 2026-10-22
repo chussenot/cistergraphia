@@ -108,16 +108,17 @@ module Cistergraphia
       end
     end
 
-    # A fragment as the file shows it: its size, and each cell's sign read
-    # upright and turned half round, as candidate values (one for an intact
-    # sign; nil where it does not read), and whether a lacuna took part of it
-    # ({ [row, col] => [upright, turned, worn] })
-    Fragment = Struct.new(:rows, :cols, :readings) do
+    # A fragment as the file shows it: its size, each cell's sign read upright
+    # and turned half round, as candidate values (one for an intact sign; nil
+    # where it does not read), and whether a lacuna took part of it
+    # ({ [row, col] => [upright, turned, worn] }), and the stroke positions the
+    # lacunae took ({ [row, col] => canonical upright strokes }, for the bench)
+    Fragment = Struct.new(:rows, :cols, :readings, :lost) do
       include Cells
 
       # Its size from the cells it has, its last row and column
-      def self.of(readings)
-        new(*readings.keys.transpose.map { |side| side.max + 1 }, readings)
+      def self.of(readings, lost = {})
+        new(*readings.keys.transpose.map { |side| side.max + 1 }, readings, lost)
       end
     end
 
@@ -125,6 +126,13 @@ module Cistergraphia
     # edition, if weathered), and where each fragment goes ([fragment index,
     # row, col, turned], in file order)
     Rejoining = Struct.new(:layout, :message, :places)
+
+    # A broken plate rejoined, for the bench: the layout it reads along, every
+    # sign's value in reading order (nil where a lacuna leaves it open), the
+    # lacunae ({ index => lost strokes, canonical and upright }), what each
+    # worn sign may hold, and the plate drawn whole from the file's own
+    # fragments, each moved to its place
+    Whole = Struct.new(:layout, :signs, :damage, :candidates, :svg)
 
     module_function
 
@@ -171,6 +179,12 @@ module Cistergraphia
       found.first
     end
 
+    # A weathered broken plate rejoined (one way, or DecodeError), for the bench
+    def rejoined(svg)
+      fragments = read(svg)
+      Rejoined.of(svg, fragments, rejoin(svg))
+    end
+
     # The fragments of a broken plate, in the order the file lists them
     def read(svg)
       root = SVG.parse(svg).root
@@ -193,10 +207,16 @@ module Cistergraphia
         raise DecodeError, 'A fragment has no signs' if cells.empty?
 
         lost = by_cell(group, :lacunae)
-        fragment = Fragment.of(cells.to_h { |cell, strokes| [cell, readings(strokes, lost.fetch(cell, []), *cell)] })
+        fragment = Fragment.of(cells.to_h { |cell, strokes| [cell, readings(strokes, lost.fetch(cell, []), *cell)] },
+                               cells.to_h { |cell, _| [cell, gone(lost, cell)] })
         raise DecodeError, 'A fragment has lost a sign' unless fragment.cells.size == fragment.readings.size
 
         fragment
+      end
+
+      # A cell's lost stroke positions, canonical and upright in the fragment's frame
+      def gone(lost, (row, col))
+        Layout.upright(lost.fetch([row, col], []), row, col, false, :phaistos).map(&Glyphs::CANONICAL)
       end
 
       # A fragment's lines in one layer (:strokes, or :lacunae), as SVG.lines reads a plate's, by cell
@@ -402,6 +422,82 @@ module Cistergraphia
 
       def mark(board, fragment, row, col, value)
         board[row, fragment.rows].each { |cells| cells.fill(value, col, fragment.cols) }
+      end
+    end
+
+    # The plate whole again: what the bench needs, from the fragments laid where
+    # the one rejoining puts them (each sign's value or candidates, its lost
+    # strokes turned as the fragment lies), and the drawing
+    module Rejoined
+      module_function
+
+      def of(svg, fragments, rejoining)
+        signs = signs(laid(fragments, rejoining), Join.side(fragments), rejoining.layout)
+        damage, candidates = lacunae(signs)
+        Whole.new(rejoining.layout, signs.map { |candidates, worn| worn ? nil : candidates.first }, damage, candidates,
+                  drawing(svg, fragments, rejoining.places))
+      end
+
+      # [{ index => lost strokes }, { index => candidates }] of the worn signs
+      def lacunae(signs)
+        worn = signs.each_with_index.select { |(_, worn), _| worn }
+        [worn.to_h { |(_, _, lost), index| [index, lost] },
+         worn.to_h { |(candidates, _, _), index| [index, candidates] }]
+      end
+
+      # Every sign along the path, as #sign reads it
+      def signs(laid, side, layout)
+        Layout.path(side, layout).map { |row, col, turned| sign(laid, row, col, turned) }
+      end
+
+      # The fragments where the rejoining puts them
+      def laid(fragments, rejoining)
+        tiling = rejoining.places.map { |index, row, col, _| [index, row, col] }
+        owner = Join.owners(fragments, tiling, Join.side(fragments))
+        Join::Laid.new(fragments, tiling, owner, rejoining.places.map(&:last))
+      end
+
+      # [candidates, worn?, lost strokes upright on the plate] of the sign in a cell
+      def sign(laid, row, col, turned)
+        index, top, left = laid.owner[row][col]
+        [*laid.sign(row, col, turned), lost(laid.fragments[index], [row - top, col - left], laid.turns[index])]
+      end
+
+      # A fragment cell's lost strokes as they lie on the plate: turned with the fragment
+      def lost(fragment, cell, turned)
+        lost = fragment.lost.fetch(turned ? fragment.opposite(*cell) : cell, [])
+        turned ? lost.map { |stroke| Glyphs::CANONICAL.call(Glyphs.turn(stroke)) } : lost
+      end
+
+      # The file's fragment groups moved onto the plate's grid: translated to
+      # their cells, turned half round about their own middle where they lie turned
+      def drawing(svg, fragments, places)
+        groups = groups(svg)
+        moved = places.map do |index, row, col, turned|
+          groups[index].add_attribute('transform', transform(fragments[index], [row, col], turned))
+          groups[index].to_s
+        end
+        Tray.document(*canvas(Join.side(fragments)), "  #{Lacunae::PATTERN}", moved)
+      end
+
+      # [width, height] of a whole plate of this side
+      def canvas(side)
+        Layout.cell(:phaistos).map { |length| (length * side) + (2 * Layout::PADDING) }
+      end
+
+      def groups(svg)
+        groups = []
+        SVG.parse(svg, quoted: true).root.each_recursive do |node|
+          groups << node if node.name == 'g' && node.attributes['class'] == CLASS
+        end
+        groups
+      end
+
+      def transform(fragment, (row, col), turned)
+        width, height = Layout.cell(:phaistos)
+        middle = "#{BOARD + (fragment.cols * width / 2.0)} #{BOARD + (fragment.rows * height / 2.0)}"
+        turn = turned ? " rotate(180 #{middle})" : ''
+        "translate(#{col * width} #{row * height})#{turn}"
       end
     end
 

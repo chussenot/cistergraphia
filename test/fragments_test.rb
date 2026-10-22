@@ -175,4 +175,37 @@ class FragmentsTest < Minitest::Test
     error = assert_raises(C::DecodeError) { Fragments::Reading.readings([stem], everywhere, 0, 0) }
     assert_match(/past one corner/, error.message)
   end
+
+  # Rejoined, for the bench: every sign's value or nothing, the lacunae as the
+  # generator laid them (turned with their fragments), and the plate drawn whole
+  def test_a_ruined_plate_rejoined_gives_the_bench_its_lacunae_and_a_whole_drawing
+    [3, 4, 7].each do |seed|
+      sequence, svg, pieces, damage = Fragments.inscribe('the brothers will gather in the chapter house',
+                                                         weathered: true, random: Random.new(seed))
+      whole = Fragments.rejoined(svg)
+
+      assert_equal :phaistos, whole.layout
+      assert_equal sequence.each_with_index.map { |num, i| damage.key?(i) ? nil : num }, whole.signs
+      assert_equal damage.transform_values(&:sort), whole.damage.transform_values(&:sort)
+      assert(whole.candidates.all? { |index, candidates| candidates.include?(sequence[index]) })
+      assert_whole_drawing(whole.svg, pieces)
+    end
+  end
+
+  # The fragments moved into place, turned where they lie turned: a plate, not a board and a tray
+  def assert_whole_drawing(svg, pieces)
+    assert_equal pieces.size, svg.scan('<g class="fragment"').size
+    assert_equal pieces.count(&:turned), svg.scan('rotate(180 ').size
+    refute_includes svg, 'class="board"'
+  end
+
+  def test_only_a_plate_that_rejoins_one_way_is_rejoined
+    _, svg, = Fragments.inscribe('ora et labora', random: Random.new(3))
+    assert_equal :phaistos, Fragments.rejoined(svg).layout # intact fragments: no lacunae
+    assert_empty Fragments.rejoined(svg).damage
+
+    halves = svg.scan(%r{<g class="fragment".*?</g>\n  </g>}m)
+    lost = halves.first ? svg.sub(halves.first, '') : svg
+    assert_raises(C::DecodeError) { Fragments.rejoined(lost) }
+  end
 end

@@ -1,6 +1,8 @@
 <%#
 A broken plate: the board, the tray, and the rejoining panel (app.js, initFragments).
-Locals: svg, fragments (Fragments.read), size, worn (whether the plate is weathered too)
+Locals: svg, fragments (Fragments.read), size, worn (whether the plate is weathered
+too: then "Restore it", enabled once the board is whole, posts the file back with
+rejoined=1 and the bench opens on the plate rejoined)
 %>
 <figure class="plate plate--broken">
   <div class="plate-frame" id="svg-display" data-plate role="group"
@@ -9,7 +11,7 @@ Locals: svg, fragments (Fragments.read), size, worn (whether the plate is weathe
     <%== svg %>
   </div>
   <figcaption>
-    <span class="plate-reading"><span class="plate-reading-rest">The board above, the fragments below. Their edges are worn: only the sums show where each one goes.<%= ' Some signs are worn too: a join holds when every pair can balance, whatever its lacunae held.' if worn %></span></span>
+    <span class="plate-reading"><span class="plate-reading-rest">The board above, the fragments below. Their edges are worn: only the sums show where each one goes.<%= ' Some signs are worn too: a join holds when every pair can balance, whatever its lacunae held. Whole again, the bench opens on it.' if worn %></span></span>
     <span class="plate-hint awaits-script" data-plate-hint>Drag a fragment onto the board, or pick it and then the cell for its top-left corner. Arrow keys move a picked fragment; T or a double click turns it. Turn and swap them until every pair balances.</span>
   </figcaption>
 </figure>
@@ -20,6 +22,13 @@ Locals: svg, fragments (Fragments.read), size, worn (whether the plate is weathe
     <div class="rejoin-tools">
       <button type="button" class="btn btn--small" data-rejoin-turn disabled>Turn half round</button>
       <button type="button" class="btn btn--small" data-rejoin-reset>Back to the tray</button>
+      <% if worn %>
+        <form method="post" action="/decode" class="rejoin-restore">
+          <input type="hidden" name="svg" value="<%= svg %>">
+          <input type="hidden" name="rejoined" value="1">
+          <button type="submit" class="btn btn--small btn--primary" data-rejoin-restore disabled>Restore it</button>
+        </form>
+      <% end %>
     </div>
   </div>
   <p class="rejoin-status" data-rejoin-status aria-live="polite">On the board: 0 of <%= fragments_count(fragments.size) %>.</p>

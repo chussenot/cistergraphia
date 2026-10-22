@@ -22,8 +22,11 @@ Design Decisions:
 Constraints:
 - Weathered plates under a grille play once the key is given; broken plates
   follow the snail. Sealed plates are not games
+- A ruined plate is the board first, then (rejoined=1, from the board once
+  whole) the bench on the plate drawn whole from its own fragments; the file
+  carried on to the decoder is still the broken one
 %>
-<% rung = if @broken then @weathered ? 'ruined' : 'broken'
+<% rung = if @broken || @rejoined then @weathered ? 'ruined' : 'broken'
           elsif @desk then 'intact'
           else 'worn'
           end %>
@@ -33,10 +36,12 @@ Constraints:
                                             elsif @desk then 'A plate to read'
                                             else 'A plate to restore'
                                             end %></h1>
-  <% if @desk %>
+  <% if @rejoined %>
+    <p class="lede">Whole again: the fragments are rejoined, and the plate has lost <%= @entries.size %> <%= @entries.size == 1 ? 'stroke position' : 'stroke positions' %>, hatched where the surface is worn. Now restore it: press the lost digits back in, each pair of signs must sum to a value on the tablet, and where two or three letters balance, the words decide.</p>
+  <% elsif @desk %>
     <p class="lede">The plate is whole: <%= @values.size / 2 %> pairs of signs, each summing to a letter on the tablet. Read it pair by pair: type what each sign reads and the page adds them. Guided, a tap on a sign shows its value; unaided, a wrong reading is marked, never corrected, and three in a row earn the Lectio’s ranks.</p>
   <% elsif @broken && @weathered %>
-    <p class="lede">The plate came in <%= fragments_count(@fragments.size) %>, worn where the surface is hatched. Lay them on the board, turned where need be: a join holds when every pair of signs can balance, whatever its lacunae held. Whole again, it reads as an edition, its doubts in brackets for you to settle.</p>
+    <p class="lede">The plate came in <%= fragments_count(@fragments.size) %>, worn where the surface is hatched. Lay them on the board, turned where need be: a join holds when every pair of signs can balance, whatever its lacunae held. Whole again, it reads as an edition, and the bench opens on it to restore what is lost.</p>
   <% elsif @broken %>
     <p class="lede">The plate came in <%= fragments_count(@fragments.size) %>. Lay them on the board, turned where need be: only one arrangement makes every pair of signs balance, and the shapes alone will not tell you which.</p>
   <% else %>
@@ -49,6 +54,8 @@ Constraints:
     <div><dt>Layout</dt><dd><%= @broken ? 'Phaistos' : layout_name(@layout) %></dd></div>
     <% if @broken %>
       <div><dt>Condition</dt><dd><%= @weathered ? "Ruined: #{fragments_count(@fragments.size)}, worn" : "Broken, in #{fragments_count(@fragments.size)}" %></dd></div>
+    <% elsif @rejoined %>
+      <div><dt>Condition</dt><dd>Ruined, rejoined: worn</dd></div>
     <% elsif @desk %>
       <div><dt>Condition</dt><dd>Intact</dd></div>
     <% else %>
@@ -65,7 +72,7 @@ Constraints:
     <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil } %>
     <%== erb :_desk, layout: false, locals: { values: @values, tablet: Cistergraphia::CHARACTERS } %>
   <% else %>
-    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout, @damage), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil } %>
+    <%== erb :_plate, layout: false, locals: { svg: @plate_svg || @svg_content, cells: plate_cells_json(@values, @layout, @damage), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil } %>
     <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally } %>
   <% end %>
 
