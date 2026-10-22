@@ -15,12 +15,19 @@ Design Decisions:
   two pages play the same
 - "Decipher it" posts the same file back with decipher=1: the solver, for a
   reader who wants the answer, or has one to check
+- A plate won (read to the end, every pair balanced, whole again) is counted
+  in the scriptorium record, by rung (data-play), kept in the browser; the
+  reserved line says so
 
 Constraints:
 - Weathered plates under a grille play once the key is given; broken plates
   follow the snail. Sealed plates are not games
 %>
-<section class="leaf" aria-labelledby="play-title">
+<% rung = if @broken then @weathered ? 'ruined' : 'broken'
+          elsif @desk then 'intact'
+          else 'worn'
+          end %>
+<section class="leaf" aria-labelledby="play-title" data-play="<%= rung %>">
   <p class="folio-mark" aria-hidden="true">fol. 1<sup>v</sup></p>
   <h1 id="play-title" class="rubric"><%= if @broken then @weathered ? 'A plate to rejoin and restore' : 'A plate to rejoin'
                                             elsif @desk then 'A plate to read'
@@ -61,6 +68,8 @@ Constraints:
     <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout, @damage), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil } %>
     <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally } %>
   <% end %>
+
+  <p class="record" data-record="play" aria-live="polite"></p>
 
   <form class="readback" method="post" action="/decode">
     <h2 class="index-heading">Or ask the decoder</h2>

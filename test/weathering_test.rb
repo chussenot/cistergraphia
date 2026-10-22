@@ -213,4 +213,15 @@ class WeatheringTest < Minitest::Test
     assert_nil C::Lacunae::Survey.edition(svg, C::Grille.new('00000-00000'))
     assert_equal damage.keys.sort, C::Lacunae::Survey.damaged(svg, grille).map { |sign| sign[:index] }.sort
   end
+
+  # Small plates have few words to carry a doubt: they lose one pair in two
+  def test_small_plates_lose_one_pair_in_two_and_large_ones_one_in_three
+    assert_equal 4, C::Weathering.target_for(8, nil) # 4 × 4
+    assert_equal 9, C::Weathering.target_for(18, nil) # 6 × 6
+    assert_equal 10, C::Weathering.target_for(32, nil) # 8 × 8
+    assert_equal 16, C::Weathering.target_for(50, nil) # 10 × 10
+    assert_equal 4, C::Weathering.target_for(8, []) # tally signs: one in two throughout
+    _, _, damage = C::Lacunae.inscribe('ora et', random: Random.new(3))
+    assert_operator damage.size, :>=, 3 # a 4 × 4 plate, 8 pairs: 4 asked for, as many as are fair
+  end
 end

@@ -272,6 +272,10 @@ code { font-family: var(--mono); font-size: 0.82em; background: var(--vellum); p
 }
 .rubric--small { font-size: 1.55rem; margin-bottom: var(--space-4); }
 
+/* The scriptorium record: one reserved line, filled by the script */
+.record { margin: 0 0 var(--space-5); min-height: 1.4em; min-height: 1lh; font-family: var(--sans); font-size: 0.85rem; letter-spacing: 0.02em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.lede + .record { margin-top: calc(-1 * var(--space-4)); }
+
 .lede {
   font-style: italic;
   color: var(--ink-soft);

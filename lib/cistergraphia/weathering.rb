@@ -15,8 +15,10 @@ module Cistergraphia
   #   balance restores it, or narrows it to at most MAX_DOUBT letters, never a
   #   space, and at most one doubtful letter per word. The reader's sense of
   #   the language settles the doubts; the server needs no word list
-  # - One lacuna per pair at most, about one pair in SHARE: the stem always
-  #   survives, so every sign keeps its place on the grid
+  # - One lacuna per pair at most, about one pair in SHARE (one in SMALL_SHARE
+  #   under SMALL_PLATE pairs: measured, three small plates in four left no
+  #   doubt at all, a lesson rather than a puzzle; experiments/weathering/by_size.rb):
+  #   the stem always survives, so every sign keeps its place on the grid
   # - The edition follows the Leiden conventions of epigraphy: [r] restored,
   #   [b/l] restored with a doubt the balance cannot settle
   # - Damage is { sequence index => lost strokes }, strokes canonical and
@@ -26,6 +28,8 @@ module Cistergraphia
   # - Game plates only: a sealed plate that loses one stroke no longer opens
   module Weathering
     SHARE = 3 # about one pair in three loses something
+    SMALL_SHARE = 2 # one pair in two on a small plate, which has few words to carry a doubt
+    SMALL_PLATE = 32 # pairs: under 8 × 8
     TALLIED_SHARE = 2 # one pair in two, with tally signs to restore whole signs
     MAX_DOUBT = 3    # letters a doubtful lacuna may leave
     NULL = ''        # what a null pair (noise, 9999) reads as
@@ -57,7 +61,8 @@ module Cistergraphia
 
     # How many pairs to damage
     def target_for(pairs, lines)
-      [pairs / (lines ? TALLIED_SHARE : SHARE), 1].max
+      share = (lines && TALLIED_SHARE) || (pairs < SMALL_PLATE && SMALL_SHARE) || SHARE
+      [pairs / share, 1].max
     end
 
     def try_whole_or_lacuna(sequence, start, (words, doubted, cords), random)
