@@ -6,6 +6,10 @@ module Figures
   ORDER_LABELS = {
     phaistos: 'Reading order: a clockwise spiral from the top-left corner',
     rongorongo: 'Reading order: rows from the bottom left, every other row running back upside down',
+    leap: 'Reading order: one row down and two columns across at every sign, wrapping at the edge; when the orbit ' \
+          'closes, a new start one column to the right',
+    furrows: 'Reading order: down the first column, up the next, from the left',
+    unwinding: 'Reading order: from the centre outward, counter-clockwise, to the top-right corner',
     grille: 'Reading order: the signs under the grille’s holes, row by row, then the grille turned a quarter ' \
             'clockwise, four times'
   }.freeze
@@ -19,10 +23,15 @@ module Figures
   end
 
   def snail_marks(cells)
-    path = %(<polyline points="#{points(cells)}" pathLength="1"/>)
     dots = cells.map { |x, y, turned| %(<circle cx="#{x}" cy="#{y}" r="2.2"#{' class="turned"' if turned}/>) }.join
     start_x, start_y = cells.first
-    %(#{path}#{dots}<circle class="snail-start" cx="#{start_x}" cy="#{start_y}" r="4"/>)
+    %(#{snail_lines(cells)}#{dots}<circle class="snail-start" cx="#{start_x}" cy="#{start_y}" r="4"/>)
+  end
+
+  # The line through the cells, broken where a step wraps across the grid (the leap)
+  def snail_lines(cells)
+    runs = cells.slice_when { |(x1, y1), (x2, y2)| Math.hypot(x2 - x1, y2 - y1) > 50 }
+    runs.map { |run| %(<polyline points="#{points(run)}" pathLength="1"/>) }.join
   end
 
   # Rongorongo: reverse boustrophedon. Lines read left to right from the bottom;

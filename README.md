@@ -46,6 +46,12 @@ scripts kept their gestures long after they lost their readers:
 - On **Rapa Nui**, the readers of rongorongo turned the tablet half round at the end of every
   line, so that every other line stood upside down.
 
+Three more ways run the grid with no script behind them, only a habit of reading: the **leap**, the
+Zodiac's step (one down, two across, wrapping at the edge), the reading order that took fifty-one
+years to find; the **furrows**, boustrophedon by columns, as the ox turns at the end of the field; the
+**unwinding**, from the centre outward, as Evans first read the disc. The decoder tries all five and
+keeps the one that reads.
+
 Their meanings are lost; their movements are not. A Cistergraphia plate keeps the movement and
 lends it to your words: it coils inward like the disc, or climbs and turns like the tablets. The
 hand remembers what the alphabet forgot.
@@ -126,6 +132,7 @@ bundle install
 bundle exec rackup                                      # then open http://localhost:9292
 ./cistergraphia -m "Meet me at the old abbey after vespers"
 ./cistergraphia -m "Vespers at six" -g K7Q2M-ZXB4P --stencil grille.svg  # -l grille draws a new key
+./cistergraphia -m "Vespers at six" -l leap -o plate.svg          # or rongorongo, furrows, unwinding: -d finds the way
 ./cistergraphia -d tmp/inline.svg -g K7Q2M-ZXB4P                          # read it under its grille
 ./cistergraphia -m "The relics are under the third stone" --decoy "Vespers at six" -g K7Q2M-ZXB4P
                                      # two readers: K7Q2M-ZXB4P reads both, the novice's key only the decoy

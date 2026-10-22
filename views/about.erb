@@ -63,10 +63,13 @@ Design Decisions:
     </section>
 
     <section class="layouts-origin" id="layouts" aria-labelledby="layouts-title">
-      <h2 id="layouts-title" class="index-heading">Three ways to read a plate</h2>
-      <p>A plate is laid out along one of three reading paths. Two take their movement from an
+      <h2 id="layouts-title" class="index-heading">Six ways to read a plate</h2>
+      <p>A plate is laid out along one of six reading paths. Two take their movement from an
         undeciphered script that turns as it is read: a clay disc from Crete, and the wooden tablets of
-        Rapa Nui. The third comes from the cipher-makers themselves: a pierced sheet that turns over the page.</p>
+        Rapa Nui. Three are ways a text can run over a grid: a cipher’s diagonal step that took fifty-one
+        years to find, the ploughman’s turn, and a spiral read from its centre. The last comes from the
+        cipher-makers themselves: a pierced sheet that turns over the page. The decoder tries the first
+        five and keeps the one that reads; the grille needs its key.</p>
 
       <h3 class="layout-title">Phaistos: the spiral</h3>
       <div class="turnings">
@@ -105,6 +108,49 @@ Design Decisions:
       <p>About two dozen wooden objects carry rongorongo, first reported by Eugène Eyraud in 1864. The
         script is undeciphered, and many scholars think it is proto-writing rather than true writing. Its
         reader turns the text at every line, and so does the reader of a Rongorongo plate.</p>
+
+      <h3 class="layout-title">Leap: the Zodiac’s step</h3>
+      <div class="turnings">
+        <figure>
+          <%== snail_svg(6, layout: :leap) %>
+          <figcaption><b>The Leap layout.</b> One row down and two columns across at every sign, wrapping at
+            the edge; when the orbit closes, after one sign in every row, the next starts a column to the right.</figcaption>
+        </figure>
+      </div>
+      <p>In November 1969 the Zodiac killer mailed a cipher of 340 characters to the <em>San Francisco
+        Chronicle</em>. It was read in December 2020, by David Oranchak, Sam Blake and Jarl Van Eycke, and
+        the FBI confirmed their solution: a homophonic substitution, one letter under several symbols,
+        laid along a diagonal, one row down and two columns across, wrapping at the edge, in three
+        sections. They found the order by machine, trying some 650,000 candidate ways of reading the
+        grid. A plate’s pairs are homophones too, since a letter is any two signs that add to its value;
+        the leap lends them the Zodiac’s step.</p>
+
+      <h3 class="layout-title">Furrows: the ploughman’s turn</h3>
+      <div class="turnings">
+        <figure>
+          <%== snail_svg(4, layout: :furrows) %>
+          <figcaption><b>The Furrows layout.</b> Down the first column, up the next, from the left; no sign
+            turned.</figcaption>
+        </figure>
+      </div>
+      <p><em>Boustrophedon</em> is Greek for “as the ox turns”: at the end of a line the next runs back the
+        other way, as a ploughman turns at the end of a furrow. Archaic Greek inscriptions were often cut
+        so; the law code of Gortyn, on Crete, in the fifth century BC, runs boustrophedon down twelve
+        columns of stone. The furrows take the turn but not the line: where the turning tablet climbs the
+        rows, the furrows walk the columns.</p>
+
+      <h3 class="layout-title">Unwinding: from the centre</h3>
+      <div class="turnings">
+        <figure>
+          <%== snail_svg(4, layout: :unwinding) %>
+          <figcaption><b>The Unwinding layout.</b> From the centre outward, counter-clockwise, to the
+            top-right corner.</figcaption>
+        </figure>
+      </div>
+      <p>Arthur Evans first proposed reading the Phaistos Disc from the centre outward, before settling
+        on the rim inward. The unwinding keeps his first thought. It is not the snail backwards: the
+        snail read in reverse pairs the same signs and gives the message in reverse. The unwinding is
+        the snail turned a quarter and read backwards, so it pairs none of them.</p>
 
       <h3 class="layout-title">Grille: the turning parchment</h3>
       <div class="turnings">
@@ -266,6 +312,8 @@ Design Decisions:
     <li><a href="https://glossographia.wordpress.com/2013/07/09/cistercian-number-magic-of-the-boy-scouts/">Glossographia: Cistercian number magic of the boy scouts</a>.</li>
     <li><a href="https://en.wikipedia.org/wiki/Rongorongo">Rongorongo</a> and <a href="https://en.wikipedia.org/wiki/Boustrophedon">Boustrophedon</a>, Wikipedia, and the sources they cite.</li>
     <li><a href="https://en.wikipedia.org/wiki/Phaistos_Disc">Phaistos Disc</a> and <a href="https://en.wikipedia.org/wiki/Lead_Plaque_of_Magliano">Lead Plaque of Magliano</a>, Wikipedia, and the sources they cite.</li>
+    <li>David Oranchak, Sam Blake and Jarl Van Eycke, <a href="https://arxiv.org/abs/2403.17350">The Solution of the Zodiac Killer’s 340-Character Cipher</a>, 2024; <a href="https://www.theregister.com/2020/12/12/zodiac_killers_cipher_solved/">the FBI’s confirmation</a>, December 2020.</li>
+    <li><a href="https://en.wikipedia.org/wiki/Gortyn_code">Gortyn code</a>, Wikipedia, and the sources it cites.</li>
     <li>Gary Urton and Carrie J. Brezine, <a href="https://www.sciencenews.org/article/knotted-strings-and-inca-accounts">Khipu accounting in ancient Peru</a>, <em>Science</em> 309, 2005.</li>
     <li>Manuel Medrano and Ashok Khosla, <a href="https://www.cambridge.org/core/journals/latin-american-antiquity/article/abs/how-can-data-science-contribute-to-understanding-the-khipu-code/E2D0E68A0515F3F9582A23C63693F4CE">How Can Data Science Contribute to Understanding the Khipu Code?</a>, <em>Latin American Antiquity</em> 36, 2025.</li>
     <li><a href="https://saxa-loquuntur.nl/tools/epigraphic-sigla.html">Epigraphic sigla</a>: the Leiden conventions.</li>

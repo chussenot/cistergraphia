@@ -62,25 +62,46 @@ Constraints:
           </div>
         </fieldset>
 
-        <fieldset class="choice">
+        <fieldset class="choice choice--ways">
           <legend>Layout</legend>
-          <div class="segments">
-            <label class="segment">
-              <input type="radio" name="layout" value="phaistos"<%= ' checked' unless @layout == :rongorongo || grille_chosen? %> aria-describedby="note-phaistos">
+          <div class="segments segments--ways">
+            <label class="segment segment--way">
+              <input type="radio" name="layout" value="phaistos"<%= ' checked' unless %i[rongorongo leap furrows unwinding].include?(@layout) || grille_chosen? %> aria-describedby="note-phaistos">
+              <span class="segment-figure" aria-hidden="true"><%== snail_svg(4) %></span>
               <span class="segment-title">Phaistos</span>
             </label>
-            <label class="segment">
+            <label class="segment segment--way">
               <input type="radio" name="layout" value="rongorongo"<%= ' checked' if @layout == :rongorongo %> aria-describedby="note-rongorongo">
+              <span class="segment-figure" aria-hidden="true"><%== snail_svg(4, layout: :rongorongo) %></span>
               <span class="segment-title">Rongorongo</span>
             </label>
-            <label class="segment">
+            <label class="segment segment--way">
+              <input type="radio" name="layout" value="leap"<%= ' checked' if @layout == :leap %> aria-describedby="note-leap">
+              <span class="segment-figure" aria-hidden="true"><%== snail_svg(4, layout: :leap) %></span>
+              <span class="segment-title">Leap</span>
+            </label>
+            <label class="segment segment--way">
+              <input type="radio" name="layout" value="furrows"<%= ' checked' if @layout == :furrows %> aria-describedby="note-furrows">
+              <span class="segment-figure" aria-hidden="true"><%== snail_svg(4, layout: :furrows) %></span>
+              <span class="segment-title">Furrows</span>
+            </label>
+            <label class="segment segment--way">
+              <input type="radio" name="layout" value="unwinding"<%= ' checked' if @layout == :unwinding %> aria-describedby="note-unwinding">
+              <span class="segment-figure" aria-hidden="true"><%== snail_svg(4, layout: :unwinding) %></span>
+              <span class="segment-title">Unwinding</span>
+            </label>
+            <label class="segment segment--way">
               <input type="radio" name="layout" value="grille"<%= ' checked' if grille_chosen? %> aria-describedby="note-grille">
+              <span class="segment-figure" aria-hidden="true"><%== grille_order_svg %></span>
               <span class="segment-title">Grille</span>
             </label>
           </div>
           <div class="choice-notes">
             <p class="choice-note" id="note-phaistos" data-note="phaistos">The snail: clockwise from the top-left corner, coiling to the centre.</p>
             <p class="choice-note" id="note-rongorongo" data-note="rongorongo">From the bottom up, turning the plate half round at every line.</p>
+            <p class="choice-note" id="note-leap" data-note="leap">The Zodiac’s step: one down, two across, wrapping at the edge; a new start a column to the right when the orbit closes.</p>
+            <p class="choice-note" id="note-furrows" data-note="furrows">Down the first column and up the next, from the left, as the ox turns at the end of the field.</p>
+            <p class="choice-note" id="note-unwinding" data-note="unwinding">From the centre outward, counter-clockwise, to the top-right corner.</p>
             <p class="choice-note" id="note-grille" data-note="grille">Row by row, as on a page, through a pierced parchment turned four times.</p>
           </div>
         </fieldset>
@@ -101,7 +122,7 @@ Constraints:
             <p class="choice-note" id="note-worn" data-note="worn">Some strokes are lost. Press the digits back in: each pair must balance, and the words settle the doubts.</p>
             <p class="choice-note" id="note-broken" data-note="broken">The plate in two to four pieces, some turned. Only the sums say where each one goes.</p>
             <p class="choice-note" id="note-ruined" data-note="ruined">Broken and worn. Rejoin it by what each worn sign may hold, then restore the whole.</p>
-            <p class="choice-note" id="note-snail" data-note="snail">Broken plates follow the snail: along the rows, a turned plate balances just as well. Choose Phaistos, or a plate in one piece.</p>
+            <p class="choice-note" id="note-snail" data-note="snail">Broken plates follow the snail: the board rejoins the fragments along it. Choose Phaistos, or a plate in one piece.</p>
             <p class="choice-note" id="note-unweathered" data-note="unweathered">A sealed plate cannot weather or break: with one stroke lost, it would never open again.</p>
             <p class="choice-note field-error" id="condition-error" aria-live="polite"><%= @condition_error %></p>
           </div>
@@ -204,6 +225,19 @@ Constraints:
         <%== snail_svg(4, layout: :rongorongo) %>
         <figcaption><b>Rongorongo.</b> From the bottom left, then turn the plate half round for each next line.
           Hollow points are signs written upside down.</figcaption>
+      </figure>
+      <figure class="order" data-layout-note="leap">
+        <%== snail_svg(6, layout: :leap) %>
+        <figcaption><b>Leap.</b> One down, two across, wrapping at the edge; when the orbit closes, a new start one column
+          to the right. The Zodiac’s step.</figcaption>
+      </figure>
+      <figure class="order" data-layout-note="furrows">
+        <%== snail_svg(4, layout: :furrows) %>
+        <figcaption><b>Furrows.</b> Down the first column, up the next, from the left, as the ox turns at the end of the field.</figcaption>
+      </figure>
+      <figure class="order" data-layout-note="unwinding">
+        <%== snail_svg(4, layout: :unwinding) %>
+        <figcaption><b>Unwinding.</b> From the centre outward, counter-clockwise, to the top-right corner.</figcaption>
       </figure>
       <figure class="order" data-layout-note="grille">
         <%== grille_order_svg %>
