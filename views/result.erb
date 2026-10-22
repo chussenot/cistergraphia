@@ -10,9 +10,10 @@ Design Decisions:
   plain black-on-white file that the decoder reads
 - Strokes are inked in reading order and dry from rubric to ink (JS), so the
   snail is visible; the plate can be walked sign by sign (pointer or arrow keys)
-- The scribe's job is to send: Download SVG leads, right under the specs. The
-  lede says what Read will open for the reader; the bench and the board below
-  are a preview of that puzzle
+- The scribe's job is to send: Download SVG leads, right under the specs, the
+  other exports quiet beside it; "Inscribe another" waits at the foot with the
+  decoder, as "Read another" does on the reader's page. The lede says what Read
+  will open for the reader; the bench and the board below are a preview
 - "Ask the decoder" posts the same SVG to /decode with decipher=1: the
   decoder's answer, since the scribe knows it (a reader's plate opens as its puzzle)
 - Rongorongo plates can be turned half round (JS, CSS only): the turned rows
@@ -89,12 +90,11 @@ Constraints:
 
   <div class="actions">
     <button type="button" class="btn btn--primary" data-action="download-svg">Download SVG</button>
-    <button type="button" class="btn" data-action="download-png">Download PNG</button>
-    <button type="button" class="btn" data-action="copy-svg">Copy SVG code</button>
+    <button type="button" class="btn btn--quiet" data-action="download-png">Download PNG</button>
+    <button type="button" class="btn btn--quiet" data-action="copy-svg">Copy the file</button>
     <% if @layout == :rongorongo %>
       <button type="button" class="btn awaits-script" data-action="turn-plate" aria-pressed="false">Turn the plate</button>
     <% end %>
-    <a class="btn btn--quiet" href="/">Inscribe another</a>
   </div>
 
   <% if @pieces %>
@@ -145,6 +145,7 @@ Constraints:
         </div>
       <% end %>
       <button type="submit" class="btn">Decipher it</button>
+      <a class="btn btn--quiet" href="/">Inscribe another</a>
     </div>
   </form>
 </section>
