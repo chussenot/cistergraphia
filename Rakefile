@@ -41,4 +41,9 @@ namespace :ui do
   task :stability do
     ruby 'test/ui/stability.rb'
   end
+
+  desc 'The behaviour suite: the reader who does the work gets the message (needs Node, Playwright, axe-core)'
+  task :play do
+    ruby 'test/ui/play.rb'
+  end
 end
