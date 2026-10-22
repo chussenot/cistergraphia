@@ -116,7 +116,7 @@ module Cistergraphia
 
     # Side of the square grid the cells form
     def grid_size(cells)
-      raise DecodeError, 'No Cistergraphia symbols found' if cells.empty?
+      raise DecodeError, 'No signs found on this plate' if cells.empty?
 
       size = Integer.sqrt(cells.size)
       raise DecodeError, "#{cells.size} symbols do not form a square grid" unless size**2 == cells.size

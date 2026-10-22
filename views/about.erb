@@ -11,7 +11,7 @@ Design Decisions:
 - Exact years in the timeline are written as Cistercian signs
 - History follows the Wikipedia article and David A. King (2001); vague or
   unverifiable claims are left out
-- Weathered plates: the khipu sums and the Leiden edition behind them, sourced;
+- Damaged plates: the khipu sums and the Leiden edition behind them, sourced;
   tally signs, and how their carry-free sums depart from the khipus'; broken
   plates, and why only the snail can be rejoined by its sums
 - Three ways to read a plate: each layout with where it comes from, sourced
@@ -27,7 +27,7 @@ Design Decisions:
 %>
 <div class="spread spread--about">
   <article class="leaf" aria-labelledby="about-title">
-    <p class="folio-mark" aria-hidden="true">fol. 3<sup>r</sup></p>
+    <p class="folio-mark" aria-hidden="true">fol. 4<sup>r</sup></p>
     <h1 id="about-title" class="rubric">About the ciphers</h1>
     <p class="lede">A forgotten number notation of the Middle Ages, and the game built on it.</p>
 
@@ -161,24 +161,24 @@ Design Decisions:
         <a href="https://github.com/chussenot/cistergraphia/blob/master/docs/security-study.md">security study</a>.</p>
     </section>
 
-    <section aria-labelledby="weathered-title">
-      <h2 id="weathered-title" class="index-heading">Weathered plates</h2>
+    <section aria-labelledby="damaged-title">
+      <h2 id="damaged-title" class="index-heading">Damaged plates: worn, broken, ruined</h2>
       <p>Most old records reach us damaged. The Inka kept accounts on knotted cords, khipus, where
         the values of some cords reappear as their sums on others: in 2005 Gary Urton and Carrie Brezine
         read seven khipus from Puruchuco as linked this way, across three levels of administration. Such
         arithmetic outlives damage. In 2024 Manuel Medrano and Ashok Khosla rejoined two fragments of a
         broken khipu from arithmetic relations between its cords.</p>
       <p>A Cistergraphia plate carries the same kind of check. The two signs of a pair must add up to a
-        value on the tablet. A weathered plate has lost some strokes, hatched where its surface is
+        value on the tablet. A worn plate has lost some strokes, hatched where its surface is
         broken. Restore them so that every pair balances. Often only one digit fits. Sometimes two or three
-        letters fit, and the words decide: <em>la[b/l]ora</em> can only be <em>labora</em>. Read
-        it back and the decoder prints its edition the way epigraphers have since the Leiden conventions
+        letters fit, and the words decide: <em>la[b/l]ora</em> can only be <em>labora</em>. Ask the
+        decoder and it prints its edition the way epigraphers have since the Leiden conventions
         of 1931: <em>[r]</em> for a restored letter, <em>[b/l]</em> for a doubt left to the reader. Under a
-        weathered plate, a bench lets you press the lost digits back in and weighs each pair as you go.</p>
+        worn plate, the bench lets you press the lost digits back in and weighs each pair as you go.</p>
       <p>A plate made at the command line (<code>--tally</code>) can also carry tally signs, as the khipus carried their sums: one at the end of every row,
         one under every column, in rubric past a ruled cord. Each place is added on its own, without carrying,
         the way a monk could check a column by eye; the khipus kept true sums, and this is a departure from
-        them. With tally signs a weathered plate can lose whole signs: a row with one sign missing gives it
+        them. With tally signs a worn plate can lose whole signs: a row with one sign missing gives it
         back.</p>
       <p>A plate can also come broken, in two to four fragments laid in a tray, some turned half round,
         under an empty board the size of the plate. The breaks run straight along the grid and every edge is
@@ -186,10 +186,29 @@ Design Decisions:
         the fragments cover the board, only one balances every pair, as the arithmetic of Medrano and Khosla
         showed which fragments of a khipu belonged together. Only a Phaistos plate breaks: the snail crosses
         every break, while the rows of a Rongorongo plate keep their pairs to themselves, and the whole plate
-        turned half round would balance just as well. A broken plate can be weathered too: then a worn sign
+        turned half round would balance just as well. A ruined plate is broken and worn: then a worn sign
         counts as every digit it may have held, the join still holds only one way, and the plate, whole again,
-        reads as an edition.</p>
-      <p>Only a game plate can weather or break. A sealed plate that loses one stroke would never open again.</p>
+        opens on the bench to be restored.</p>
+      <p>Only a game plate can wear or break. A sealed plate that loses one stroke would never open again.</p>
+    </section>
+
+    <section aria-labelledby="scriptorium-title">
+      <h2 id="scriptorium-title" class="index-heading">The scriptorium</h2>
+      <p>A plate is written to be sent. The scribe inscribes it, chooses its path and its condition, and
+        downloads it; the reader brings the file to Read, and the page recognises what it is from the
+        file alone. A sealed plate asks for its passphrase. A game plate opens as its puzzle, in the
+        scriptorium, where the reader works at one of three pieces of furniture.</p>
+      <p><b>Intact</b> plates are read at the desk, pair by pair: the two signs shown large, their numbers
+        typed, their sum found on the tablet, the text growing below. Guided, a tap on a sign shows its
+        value; unaided, a wrong reading is marked and never corrected, and three right pairs in a row earn
+        the ranks of Lectio. <b>Worn</b> plates are restored at the bench: each lacuna takes a digit, each
+        pair is weighed, and the words settle what the balance cannot. <b>Broken</b> plates are rejoined on
+        the board, where only the sums say where each fragment goes. <b>Ruined</b> plates are rejoined
+        first, then restored.</p>
+      <p>The decoder is one click below each puzzle, for a reader who wants the answer or has one to
+        check. Plates read are counted in your scriptorium, by condition, in this browser only: a record
+        of an exchange, not a score. There are no timers, no sounds and no scores on the plate. The reward
+        is the message.</p>
     </section>
   </article>
 

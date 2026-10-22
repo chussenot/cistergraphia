@@ -1,6 +1,6 @@
 <%#
-Cistergraphia: a plate to play (fol. 1v, turned)
-===============================================
+Cistergraphia: the scriptorium (fol. 2v)
+========================================
 
 Purpose:
 - The reader's game. A game plate brought to Read opens as its puzzle: the
@@ -20,7 +20,7 @@ Design Decisions:
   reserved line says so
 
 Constraints:
-- Weathered plates under a grille play once the key is given; broken plates
+- Worn plates under a grille play once the key is given; broken plates
   follow the snail. Sealed plates are not games
 - A ruined plate is the board first, then (rejoined=1, from the board once
   whole) the bench on the plate drawn whole from its own fragments; the file
@@ -31,7 +31,7 @@ Constraints:
           else 'worn'
           end %>
 <section class="leaf" aria-labelledby="play-title" data-play="<%= rung %>">
-  <p class="folio-mark" aria-hidden="true">fol. 1<sup>v</sup></p>
+  <p class="folio-mark" aria-hidden="true">fol. 2<sup>v</sup></p>
   <h1 id="play-title" class="rubric"><%= if @broken then @weathered ? 'A plate to rejoin and restore' : 'A plate to rejoin'
                                             elsif @desk then 'A plate to read'
                                             else 'A plate to restore'
@@ -79,7 +79,7 @@ Constraints:
   <p class="record" data-record="play" aria-live="polite"></p>
 
   <form class="readback" method="post" action="/decode">
-    <h2 class="index-heading">Or ask the decoder</h2>
+    <h2 class="index-heading">Ask the decoder</h2>
     <input type="hidden" name="svg" value="<%= @svg_content %>">
     <input type="hidden" name="decipher" value="1">
     <% if grille? %><input type="hidden" name="grille" value="<%= @layout %>"><% end %>

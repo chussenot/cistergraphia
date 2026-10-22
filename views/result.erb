@@ -1,5 +1,5 @@
 <%#
-Cistergraphia: the plate (fol. 2r)
+Cistergraphia: the plate (fol. 1v)
 ==================================
 
 Purpose:
@@ -13,22 +13,22 @@ Design Decisions:
 - The scribe's job is to send: Download SVG leads, right under the specs. The
   lede says what Read will open for the reader; the bench and the board below
   are a preview of that puzzle
-- "Read it back" posts the same SVG to /decode with decipher=1: the decoder's
-  answer, since the scribe knows it (a reader's damaged plate opens as its puzzle)
+- "Ask the decoder" posts the same SVG to /decode with decipher=1: the
+  decoder's answer, since the scribe knows it (a reader's plate opens as its puzzle)
 - Rongorongo plates can be turned half round (JS, CSS only): the turned rows
   then read upright, as the readers of Rapa Nui turned their tablets
 - A grille's plate shows its key, and its grille: the stencil (the server's,
   embedded once) is laid over the plate and turned N, E, S, W, lighting the
   signs under its holes; the same file downloads, to print and cut. The key
-  goes along with "Read it back"
-- A weathered plate shows its lacunae; walking a worn sign says it is worn,
+  goes along with the decoder
+- A worn plate shows its lacunae; walking a worn sign says it is worn,
   never its value (the page must not hold the answer)
-- The restoration bench (weathered plates): choose a lacuna on the plate (a
+- The restoration bench (worn plates): choose a lacuna on the plate (a
   sign with one lacuna is chosen by its whole cell) or step through them,
   press a digit back in, and the pair is weighed; a count says how many are
   restored. The page
   only knows what the file shows, so it says whether pairs balance, never
-  whether a restoration is right: the words, and Read it back, decide. Its
+  whether a restoration is right: the words, and the decoder, decide. Its
   first state is drawn by the server, so nothing moves when the script arrives
 - A broken plate shows its board and, below it, the tray of fragments. With
   the script, the fragments move: drag one, or pick it and then a cell of
@@ -36,7 +36,7 @@ Design Decisions:
   cell, T or a double click turns it half round. Once they cover the board,
   the page weighs every pair along both reading paths, and says how many
   balance. The page holds what the file shows, never where a fragment goes.
-  A weathered broken plate is weighed by what each worn sign may hold; whole
+  A ruined plate is weighed by what each worn sign may hold; whole
   again, it reads as an edition (there is no bench on a plate in pieces)
 - Nothing moves while you walk or turn the plate: the live reading takes the
   resting caption's place, and the script-only controls have their space from
@@ -46,8 +46,8 @@ Constraints:
 - Copy/download need JS; the inline SVG can always be saved from the page
 %>
 <section class="leaf" aria-labelledby="plate-title">
-  <p class="folio-mark" aria-hidden="true">fol. 2<sup>r</sup></p>
-  <h1 id="plate-title" class="rubric"><%= @secret ? 'Your sealed Cistergraphia' : 'Your Cistergraphia' %></h1>
+  <p class="folio-mark" aria-hidden="true">fol. 1<sup>v</sup></p>
+  <h1 id="plate-title" class="rubric"><%= @secret ? 'Your sealed plate' : 'Your plate' %></h1>
 
   <p class="message-echo"><span class="visually-hidden">Message: </span><q><%= @message %></q></p>
   <% if @decoy %>
@@ -130,7 +130,7 @@ Constraints:
 
 
   <form class="readback" method="post" action="/decode">
-    <h2 class="index-heading">Read it back</h2>
+    <h2 class="index-heading">Ask the decoder</h2>
     <input type="hidden" name="svg" value="<%= @svg_content %>">
     <input type="hidden" name="decipher" value="1">
     <% if grille? %><input type="hidden" name="grille" value="<%= @layout %>"><% end %>
@@ -144,7 +144,7 @@ Constraints:
           </div>
         </div>
       <% end %>
-      <button type="submit" class="btn">Decode this plate</button>
+      <button type="submit" class="btn">Decipher it</button>
     </div>
   </form>
 </section>

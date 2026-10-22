@@ -29,9 +29,9 @@ module Cistergraphia
     PATTERN = '<defs><pattern id="worn" width="8" height="8" patternUnits="userSpaceOnUse" ' \
               'patternTransform="rotate(45)"><rect width="8" height="8" fill="#ece6da"/>' \
               '<rect width="2" height="8" fill="#b3a993"/></pattern></defs>'
-    SEALED = 'A weathered plate is a game plate: read it without a passphrase'
-    NOT_SEALED = 'A sealed plate cannot be weathered: with one stroke lost, it would never open again'
-    NOT_TWO_READERS = 'A plate for two readers cannot be weathered yet'
+    SEALED = 'A worn plate is a game plate: read it without a passphrase'
+    NOT_SEALED = 'A sealed plate cannot wear: with one stroke lost, it would never open again'
+    NOT_TWO_READERS = 'A plate for two readers cannot wear yet'
 
     module_function
 

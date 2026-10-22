@@ -1,17 +1,17 @@
 <%#
-Cistergraphia: Transcription (fol. 2v)
+Cistergraphia: Transcription (fol. 3r)
 ======================================
 
 Purpose:
 - Show the decoded message as a transcription, with a plain Cistercian initial
-- A weathered plate's text is an edition (Leiden conventions): restorations
+- A worn plate's text is an edition (Leiden conventions): restorations
   in rubric, doubts the balance cannot settle dotted, for the reader to choose
 - A broken plate is read once rejoined: the one arrangement whose pairs all balance
 %>
 <section class="leaf leaf--narrow" aria-labelledby="transcription-title">
-  <p class="folio-mark" aria-hidden="true">fol. 2<sup>v</sup></p>
-  <h1 id="transcription-title" class="rubric">Decoded message</h1>
-  <p class="lede"><% if @broken && @weathered %>Rejoined from a broken, weathered plate: of every way its fragments fit the board, turned or not, one lets every pair balance. Then restored, in the epigraphers’ notation: [r] the pair balances only one way; [b/l] it balances both ways, and the words decide.<% elsif @broken %>Rejoined from a broken plate: of every way its fragments fit the board, turned or not, one balances every pair.<% elsif @weathered %>Restored from a weathered plate, in the epigraphers’ notation: [r] the pair balances only one way; [b/l] it balances both ways, and the words decide.<% else %><%= @secret ? 'Unsealed with its passphrase: authentic and unaltered.' : 'Read back from the game: letters and spaces, as enciphered.' %><% end %>
+  <p class="folio-mark" aria-hidden="true">fol. 3<sup>r</sup></p>
+  <h1 id="transcription-title" class="rubric">Transcription</h1>
+  <p class="lede"><% if @broken && @weathered %>Rejoined from a ruined plate: of every way its fragments fit the board, turned or not, one lets every pair balance. Then restored, in the epigraphers’ notation: [r] the pair balances only one way; [b/l] it balances both ways, and the words decide.<% elsif @broken %>Rejoined from a broken plate: of every way its fragments fit the board, turned or not, one balances every pair.<% elsif @weathered %>Restored from a worn plate, in the epigraphers’ notation: [r] the pair balances only one way; [b/l] it balances both ways, and the words decide.<% else %><%= @secret ? 'Unsealed with its passphrase: authentic and unaltered.' : 'Read from an open plate: letters and spaces, as enciphered.' %><% end %>
     <% if @reader == :abbot %>Read with the abbot’s key: the novice’s message follows.<% elsif @reader == :novice %>Read with the novice’s key.<% end %></p>
 
   <p class="transcription" data-transcription><% if @weathered %><%== leiden_html(@message) %><% else %><%= @message %><% end %></p>
