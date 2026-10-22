@@ -18,9 +18,17 @@ class CliTest < Minitest::Test
     FileUtils.remove_entry(@dir)
   end
 
+  # [stdout, stderr, exit status]; Ruby's own warnings on stderr (an older
+  # bundler on a newer rubygems prints some at boot) are the machine's, not the CLI's
   def cli(*, env: {}, stdin: '')
     out, err, status = Open3.capture3(env, File.join(ROOT, 'cistergraphia'), *, chdir: ROOT, stdin_data: stdin)
-    [out, err, status.exitstatus]
+    [out, err.lines.grep_v(/\A\S+\.rb:\d+: warning: /).join, status.exitstatus]
+  end
+
+  # What a Leiden edition allows the message to be: [r] was restored, [b/l] is either
+  def allowed(edition)
+    parts = edition.strip.split(/\[([^\]]+)\]/) # the brackets' contents at the odd indices
+    /\A#{parts.each_with_index.map { |part, i| i.odd? ? "[#{part.delete('/')}]" : Regexp.escape(part) }.join}\z/
   end
 
   def plate(name)
@@ -48,8 +56,7 @@ class CliTest < Minitest::Test
     edition, _, status = cli('-d', plate('worn'))
     assert_equal 0, status
     assert_match(%r{\[[a-z /]+\]}, edition, 'restorations in brackets')
-    assert_equal MESSAGE, edition.strip.gsub(/\[(\w)\]/, '\1').gsub(%r{\[(\w)/\w\]}, '\1'),
-                 'the message, brackets aside'
+    assert_match allowed(edition), MESSAGE, 'the message, within what the edition allows'
   end
 
   def test_a_broken_plate_says_its_fragments_and_is_read_back_rejoined
@@ -64,7 +71,7 @@ class CliTest < Minitest::Test
     cli('-m', MESSAGE, '-t', '-w', '-o', plate('tallied'))
     edition, _, status = cli('-d', plate('tallied'))
     assert_equal 0, status
-    assert_equal MESSAGE, edition.strip.gsub(/\[(\w)\]/, '\1').gsub(%r{\[(\w)/\w\]}, '\1')
+    assert_match allowed(edition), MESSAGE
   end
 
   def test_a_grille_plate_gives_its_key_and_needs_it_to_read
