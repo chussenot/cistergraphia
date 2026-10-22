@@ -41,7 +41,9 @@ Chromium for the self-hosted EB Garamond cuts.
            box-shadow: 0 1px 2px rgb(43 36 28 / 0.06), 0 22px 48px -18px rgb(43 36 28 / 0.28),
                        inset 0 0 0 6px #fbf8f2, inset 0 0 0 7px #d9cdb6; }
   .plate svg { display: block; height: <%= height - 120 - 52 %>px; width: auto; }
-  .plate svg rect { fill: transparent; }
+  /* The plate is clay (--clay, --clay-edge in app.css), on the paper mount: the file's
+     white ground takes the clay and its rim, as on the plate page */
+  .plate svg rect { fill: #e4d8c1; stroke: #c4b08c; stroke-width: 3; }
   .plate svg path { fill: #2b241c; }
 </style>
 </head>
