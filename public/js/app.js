@@ -363,6 +363,43 @@
     standing();
   }
 
+  // ---------- The scriptorium record: plates read on this browser, by rung ----------
+  // Counts only, no times, no streaks: a record of a scribe's and a reader's
+  // exchange, not a leaderboard. The Read page shows it; a plate won on the
+  // reader's page (read to the end, every pair balanced, whole again) adds one
+  const RECORD_KEY = 'cistergraphia.record';
+  const RUNGS = ['intact', 'worn', 'broken', 'ruined'];
+  function storedRecord() {
+    const empty = Object.fromEntries(RUNGS.map((rung) => [rung, 0]));
+    try {
+      const stored = JSON.parse(localStorage.getItem(RECORD_KEY) || '{}');
+      return Object.fromEntries(RUNGS.map((rung) => [rung, Math.max(0, Math.trunc(Number(stored[rung])) || 0)]));
+    } catch (error) { return empty; }
+  }
+  function recordLine(record) {
+    const total = RUNGS.reduce((sum, rung) => sum + record[rung], 0);
+    if (!total) return '';
+    const parts = RUNGS.filter((rung) => record[rung]).map((rung) => `${record[rung]} ${rung}`);
+    return `${total} ${total === 1 ? 'plate' : 'plates'} read: ${parts.join(', ')}.`;
+  }
+  let recordedHere = false;
+  function recordWin() {
+    const rung = $('[data-play]')?.dataset.play;
+    if (!rung || !RUNGS.includes(rung) || recordedHere) return;
+    recordedHere = true;
+    const record = storedRecord();
+    record[rung] += 1;
+    try { localStorage.setItem(RECORD_KEY, JSON.stringify(record)); } catch (error) { /* private mode: not kept */ }
+    const line = $('[data-record="play"]');
+    if (line) line.textContent = `Entered in your scriptorium: ${recordLine(record)}`;
+  }
+  function initRecord() {
+    const line = $('[data-record="read"]');
+    if (!line) return;
+    const text = recordLine(storedRecord());
+    line.textContent = text ? `Your scriptorium: ${text}` : '';
+  }
+
   // ---------- The plate: inked along the snail, walkable sign by sign ----------
   function plateSvg() {
     return $('[data-plate] svg');
@@ -591,6 +628,7 @@
       const next = nextUnread();
       if (next < 0) {
         feedback.textContent = `Read to the end: “${text().trim()}”.`;
+        recordWin();
         return;
       }
       setTimeout(() => { show(next); inputs[0].focus(); }, reducedMotion ? 300 : 900);
@@ -977,6 +1015,7 @@
         .reduce((a, b) => (b.balanced > a.balanced ? b : a));
       if (best.balanced === best.pairs && best.text) {
         status.textContent = 'Whole again: every pair balances.';
+        recordWin();
         readingEl.textContent = best.text.includes('[')
           ? `It reads, restored: ${best.text}`
           : `It reads: ${best.text}`;
@@ -1301,6 +1340,7 @@
         return reading !== undefined && reading !== false;
       }).length;
       countEl.textContent = `${restored} of ${lacunae.length} restored`;
+      if (restored === lacunae.length) recordWin();
     }
 
     // Short lines that never wrap, even on the smallest phone: the sum, its verdict, the tallies
@@ -1383,6 +1423,7 @@
     initAnatomy();
     initPlayground();
     initLectio();
+    initRecord();
     inkPlate();
     initPlateWalk();
     initDesk();

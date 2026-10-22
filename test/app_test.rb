@@ -876,4 +876,32 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'data-transcription'
     assert_includes last_response.body, 'meet me at dawn'
   end
+
+  # --- The scriptorium record: a reserved line on Read, and the rung a won plate counts under
+
+  def test_the_read_page_reserves_a_line_for_the_scriptorium_record
+    get '/decode'
+
+    assert_includes last_response.body, '<p class="record" data-record="read" aria-live="polite"></p>'
+  end
+
+  def test_a_readers_page_names_its_rung_for_the_record
+    { Cistergraphia.inscribe('Meet me at dawn')[1] => 'intact',
+      Cistergraphia::Lacunae.inscribe('ora et labora', random: Random.new(3))[1] => 'worn',
+      Cistergraphia::Fragments.inscribe('ora et labora', random: Random.new(3))[1] => 'broken',
+      Cistergraphia::Fragments.inscribe('ora et labora', weathered: true, random: Random.new(3))[1] => 'ruined' }
+      .each do |svg, rung|
+      post '/decode', svg: svg
+
+      assert_includes last_response.body, %(data-play="#{rung}"), rung
+      assert_includes last_response.body, '<p class="record" data-record="play" aria-live="polite"></p>'
+    end
+  end
+
+  def test_the_scribes_preview_is_not_recorded
+    post '/generate', message: 'ora et labora', condition: 'worn'
+
+    refute_includes last_response.body, 'data-play='
+    refute_includes last_response.body, 'data-record='
+  end
 end

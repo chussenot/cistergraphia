@@ -1,0 +1,14 @@
+200 plates per side, seed 1098
+
+1. As the generator lays it: one pair in 3 (one in 2 under 32 pairs)
+side  pairs  lacunae  one in  restored by balance  doubts/plate   no doubt (a lesson)   one lacuna or none
+   4      8      4.0      2.0   86.7%      0.53    51.0%     0.0%
+   6     18      9.0      2.0   87.6%      1.12    26.5%     0.0%
+   8     32     10.0      3.2   85.6%      1.44    18.5%     0.0%
+  10     50     16.0      3.1   86.0%      2.24     3.5%     0.0%
+  14     98     32.0      3.1   86.1%      4.44     0.5%     0.0%
+
+2. The small plates with one pair in 3 throughout, as before the scaling
+side  pairs  lacunae  one in  restored by balance  doubts/plate   no doubt (a lesson)   one lacuna or none
+   4      8      2.0      4.0   87.5%      0.25    76.5%     0.0%
+   6     18      6.0      3.0   86.1%      0.84    34.5%     0.0%

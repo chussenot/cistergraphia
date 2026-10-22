@@ -72,7 +72,10 @@ a worn sign is weighed by every digit it may have held, and the plate, whole aga
 edition. The form offers these as a ladder, Intact, Worn, Broken, Ruined. Send a plate to someone
 and Read opens it as its puzzle, built from the file alone: the reading desk for an intact plate
 (read it pair by pair, guided or unaided), the bench to restore a worn one, the board to rejoin a
-broken one, the decoder's answer one click below.
+broken one, the decoder's answer one click below. Plates won are counted, by rung, in a
+scriptorium record kept in the browser. A small plate loses one pair in two, a large one one in
+three: measured ([experiments/weathering](experiments/weathering/README.md)), a small plate
+damaged one in three was a lesson rather than a puzzle.
 
 Why two ways to send it?
 ------------------------
