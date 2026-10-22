@@ -170,13 +170,28 @@ class AppTest < Minitest::Test
     assert_match(/anatomy-hint awaits-script/, body)                   # space kept until JS
   end
 
-  def test_index_offers_three_layouts
+  def test_index_offers_six_layouts
     get '/'
 
     assert_match(/name="layout" value="phaistos" checked/, last_response.body)
     assert_match(/name="layout" value="rongorongo"/, last_response.body)
     assert_match(/name="layout" value="grille"/, last_response.body)
-    assert_equal 3, last_response.body.scan('data-layout-note=').size # the key follows the choice
+    %w[leap furrows unwinding].each { |way| assert_match(/name="layout" value="#{way}"/, last_response.body) }
+    assert_equal 6, last_response.body.scan('data-layout-note=').size # the key follows the choice
+    assert_equal 6, last_response.body.scan('class="segment-figure"').size # each way shows its order
+  end
+
+  def test_a_plate_along_each_new_way_is_walked_along_it_and_read_back
+    %i[leap furrows unwinding].each do |way|
+      post '/generate', message: 'Ora et labora', layout: way.to_s
+      cells, layout, svg = plate_of(last_response.body)
+
+      walked = cells.map { |row, col, _, turned| [row, col, turned] }
+
+      assert_equal(Cistergraphia::Layout.path(layout['size'], way), walked)
+      assert_equal 'ora et labora', Cistergraphia.decode(svg), way
+      assert_includes last_response.body, "<dd>#{way.to_s.capitalize}</dd>"
+    end
   end
 
   def test_rongorongo_plate_is_walked_with_its_turned_rows
@@ -331,15 +346,15 @@ class AppTest < Minitest::Test
     assert_operator svg.bytesize, :<, CistergraphiaApp::MAX_SVG_BYTES
   end
 
-  def test_about_page_explains_the_three_layouts_and_their_origins
+  def test_about_page_explains_the_six_layouts_and_their_origins
     get '/about'
 
     body = last_response.body
-    assert_includes body, 'Three ways to read a plate'
+    ['Six ways to read a plate', 'Leap: the Zodiac’s step', 'https://arxiv.org/abs/2403.17350'].each { |s| assert_includes body, s }
     assert_includes body, 'reverse boustrophedon'
     %w[Phaistos_Disc Rongorongo Cardan_grille].each { |page| assert_includes body, "https://en.wikipedia.org/wiki/#{page}" }
     assert_equal 3, body.scan('<svg class="turning"').size # the disc, the tablet, Cardano's letter
-    assert_equal 2, body.scan('<svg class="snail"').size   # and each layout drawn from it
+    assert_equal 5, body.scan('<svg class="snail"').size   # and each keyless way drawn on the grid
     assert_equal 1, body.scan('<svg class="grille-order"').size
     assert_includes body, 'id="layouts"'                   # linked from the inscribe key
     refute_match(/why a snail|began with|the default/i, body) # neither layout comes first

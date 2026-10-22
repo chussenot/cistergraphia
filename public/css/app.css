@@ -449,6 +449,9 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .choice:has(input[value="secret"]:checked) [data-note="secret"],
   .choice:has(input[value="phaistos"]:checked) [data-note="phaistos"],
   .choice:has(input[value="rongorongo"]:checked) [data-note="rongorongo"],
+  .choice:has(input[value="leap"]:checked) [data-note="leap"],
+  .choice:has(input[value="furrows"]:checked) [data-note="furrows"],
+  .choice:has(input[value="unwinding"]:checked) [data-note="unwinding"],
   .choice:has(input[value="grille"]:checked) [data-note="grille"] { visibility: visible; }
   .choice:has(input[value="intact"]:checked) [data-note="intact"],
   .choice:has(input[value="worn"]:checked) [data-note="worn"],
@@ -468,6 +471,19 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .entry .choice-notes:has(.field-error:not(:empty)) .choice-note.choice-note:not(.field-error) { visibility: hidden; }
   .entry .choice-notes .choice-note.field-error:not(:empty) { visibility: visible; }
 }
+
+/* Layout: six ways, each a small figure of its reading order over its name,
+   two rows of three at every width (the leaf is never wide enough for six) */
+.segments--ways { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.segment--way { align-content: center; gap: 2px; padding: var(--space-2) 0 var(--space-1); }
+.segment--way .segment-title { font-size: 0.95rem; }
+.segment-figure { display: block; line-height: 0; }
+.segment-figure .snail, .segment-figure .grille-order { width: 2.4rem; }
+.segment-figure .snail polyline { stroke: currentColor; animation: none; stroke-dashoffset: 0; }
+.segment-figure .snail circle { fill: currentColor; }
+.segment-figure .snail circle.turned { fill: var(--vellum); stroke: currentColor; }
+.segment-figure .snail .snail-start { fill: var(--accent); }
+.segment-figure .grille-order text { display: none; }
 
 /* Condition: the ladder, four rungs in the leaf's width */
 .segments--ladder .segment-title { font-size: 1.05rem; }
@@ -670,6 +686,9 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 @supports selector(:has(*)) {
   body:has(input[name="layout"]:not([value="phaistos"]):checked) [data-layout-note="phaistos"],
   body:not(:has(input[name="layout"][value="rongorongo"]:checked)) [data-layout-note="rongorongo"],
+  body:not(:has(input[name="layout"][value="leap"]:checked)) [data-layout-note="leap"],
+  body:not(:has(input[name="layout"][value="furrows"]:checked)) [data-layout-note="furrows"],
+  body:not(:has(input[name="layout"][value="unwinding"]:checked)) [data-layout-note="unwinding"],
   body:not(:has(input[name="layout"][value="grille"]:checked)) [data-layout-note="grille"] { visibility: hidden; }
 }
 /* The grille over a 4 x 4 grid: its holes (paper) at N, each other cell

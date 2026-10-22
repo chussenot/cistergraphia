@@ -224,6 +224,8 @@ const FLOWS = [
       { name: 'show the passphrase', act: async (p) => { await p.fill('#passphrase', 'abbey of molesme'); await p.click('[data-reveal="passphrase"]'); } },
       { name: 'back to game', anchor: '.entry-end', act: (p) => p.click('label.segment--game') },
       { name: 'choose rongorongo', act: (p) => p.click('label.segment:has(input[value="rongorongo"])') },
+      { name: 'choose the leap', act: (p) => p.click('label.segment:has(input[value="leap"])') },
+      { name: 'choose the unwinding', act: (p) => p.click('label.segment:has(input[value="unwinding"])') },
       { name: 'choose grille', anchor: '.entry-end', act: (p) => p.click('label.segment:has(input[value="grille"])') },
       { name: 'type a grille key', act: (p) => p.fill('#grille', 'k7q2m-zxb4p') },
       { name: "type a novice's message", act: async (p) => { await p.click('#decoy'); await p.keyboard.type('Vespers at six'); } },
@@ -430,6 +432,7 @@ const PAGES = [
     }
   },
   { page: 'weathered', open: openSamePlate({ message: MESSAGE, condition: 'worn' }) },
+  { page: 'leap', open: openSamePlate({ message: MESSAGE, layout: 'leap' }) },
   { page: 'tallied', open: bringToRead(talliedFile, '[data-bench]') },
   { page: 'broken', open: openSamePlate({ message: MESSAGE, condition: 'broken' }) },
   { page: 'worn+broken', open: openSamePlate({ message: MESSAGE, condition: 'ruined' }) },

@@ -61,8 +61,7 @@ module Cistergraphia
     SEALED = 'A broken plate is a game plate: read it without a passphrase'
     NOT_SEALED = 'A sealed plate cannot be broken: its signs carry no sums to rejoin it by'
     NOT_UNDER_A_GRILLE = 'A plate under a grille cannot be broken yet'
-    NOT_ALONG_THE_ROWS = 'Only a Phaistos plate can be broken: a Rongorongo plate turned half round ' \
-                         'balances just as well, its lines in reverse order'
+    NOT_ALONG_THE_ROWS = 'Only a Phaistos plate can be broken: the board rejoins the fragments along the snail'
     NOT_TALLIED = 'A broken plate cannot carry tally signs yet'
     TOO_SMALL = 'Too short a message to break: a broken plate needs at least 4 × 4 signs'
 

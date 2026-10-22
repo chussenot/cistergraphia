@@ -24,7 +24,7 @@ module FormParams
   # the form to explain (@grille_error) and the plate is not made
   def chosen_layout
     case params[:layout]
-    when 'rongorongo' then :rongorongo
+    when 'rongorongo', 'leap', 'furrows', 'unwinding' then params[:layout].to_sym
     when 'grille' then grille_from(params[:grille]) || Cistergraphia::Grille.generate
     else :phaistos
     end

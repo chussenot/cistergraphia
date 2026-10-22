@@ -71,7 +71,9 @@ module ViewHelpers
     @description || DESCRIPTION
   end
 
-  LAYOUT_NAMES = { phaistos: 'Phaistos', rongorongo: 'Rongorongo' }.freeze
+  LAYOUT_NAMES = {
+    phaistos: 'Phaistos', rongorongo: 'Rongorongo', leap: 'Leap', furrows: 'Furrows', unwinding: 'Unwinding'
+  }.freeze
 
   # The plate's size class, for optical weight on the page: a large plate's strokes
   # are hairlines at screen size without it (see .plate--large in app.css)
