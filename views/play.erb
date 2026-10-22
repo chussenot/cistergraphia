@@ -3,9 +3,9 @@ Cistergraphia: a plate to play (fol. 1v, turned)
 ===============================================
 
 Purpose:
-- The reader's game. A weathered or broken game plate brought to Read opens as
-  its puzzle: the bench to restore it, the board to rejoin it. The decoder's
-  answer stays one click away, below
+- The reader's game. A game plate brought to Read opens as its puzzle: the
+  reading desk for an intact one, the bench to restore a worn one, the board
+  to rejoin a broken one. The decoder's answer stays one click away, below
 
 Design Decisions:
 - The page is built from the file alone, never from the message: which signs
@@ -22,8 +22,13 @@ Constraints:
 %>
 <section class="leaf" aria-labelledby="play-title">
   <p class="folio-mark" aria-hidden="true">fol. 1<sup>v</sup></p>
-  <h1 id="play-title" class="rubric"><%= @broken ? (@weathered ? 'A plate to rejoin and restore' : 'A plate to rejoin') : 'A plate to restore' %></h1>
-  <% if @broken && @weathered %>
+  <h1 id="play-title" class="rubric"><%= if @broken then @weathered ? 'A plate to rejoin and restore' : 'A plate to rejoin'
+                                            elsif @desk then 'A plate to read'
+                                            else 'A plate to restore'
+                                            end %></h1>
+  <% if @desk %>
+    <p class="lede">The plate is whole: <%= @values.size / 2 %> pairs of signs, each summing to a letter on the tablet. Read it pair by pair: type what each sign reads and the page adds them. Guided, a tap on a sign shows its value; unaided, a wrong reading is marked, never corrected, and three in a row earn the Lectio’s ranks.</p>
+  <% elsif @broken && @weathered %>
     <p class="lede">The plate came in <%= fragments_count(@fragments.size) %>, worn where the surface is hatched. Lay them on the board, turned where need be: a join holds when every pair of signs can balance, whatever its lacunae held. Whole again, it reads as an edition, its doubts in brackets for you to settle.</p>
   <% elsif @broken %>
     <p class="lede">The plate came in <%= fragments_count(@fragments.size) %>. Lay them on the board, turned where need be: only one arrangement makes every pair of signs balance, and the shapes alone will not tell you which.</p>
@@ -37,6 +42,8 @@ Constraints:
     <div><dt>Layout</dt><dd><%= @broken ? 'Phaistos' : layout_name(@layout) %></dd></div>
     <% if @broken %>
       <div><dt>Condition</dt><dd><%= @weathered ? "Ruined: #{fragments_count(@fragments.size)}, worn" : "Broken, in #{fragments_count(@fragments.size)}" %></dd></div>
+    <% elsif @desk %>
+      <div><dt>Condition</dt><dd>Intact</dd></div>
     <% else %>
       <div><dt>Condition</dt><dd><%= @tally ? 'Worn, with tally signs' : 'Worn' %></dd></div>
     <% end %>
@@ -47,6 +54,9 @@ Constraints:
 
   <% if @broken %>
     <%== erb :_board, layout: false, locals: { svg: @svg_content, fragments: @fragments, size: @size, worn: @weathered } %>
+  <% elsif @desk %>
+    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil } %>
+    <%== erb :_desk, layout: false, locals: { values: @values, tablet: Cistergraphia::CHARACTERS } %>
   <% else %>
     <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout, @damage), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil } %>
     <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally } %>
@@ -59,6 +69,9 @@ Constraints:
     <% if grille? %><input type="hidden" name="grille" value="<%= @layout %>"><% end %>
     <div class="readback-row">
       <button type="submit" class="btn">Decipher it</button>
+      <% if @layout == :rongorongo %>
+        <button type="button" class="btn awaits-script" data-action="turn-plate" aria-pressed="false">Turn the plate</button>
+      <% end %>
       <a class="btn btn--quiet" href="/decode">Read another</a>
     </div>
   </form>

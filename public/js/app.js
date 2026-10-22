@@ -409,6 +409,7 @@
     const isTurned = () => frame.classList.contains('is-turned');
 
     let current = -1;
+    let revealing = true; // the desk, unaided, walks the signs without saying what they read
     const show = (i) => {
       current = i;
       if (i < 0) {
@@ -431,8 +432,8 @@
       focus.classList.add('is-visible');
       const upsideDown = Boolean(turned) !== isTurned() ? ' · upside down: turn the plate' : '';
       const underGrille = layout.grille ? ` · under the grille at ${TURNS[Math.floor((4 * i) / cells.length)]}` : '';
-      const read = value === null ? 'worn: part of this sign is lost' : value;
-      readingEl.textContent = `Sign ${i + 1} of ${cells.length} · ${read}${upsideDown}${underGrille}`;
+      const read = value === null ? ' · worn: part of this sign is lost' : (revealing ? ` · ${value}` : '');
+      readingEl.textContent = `Sign ${i + 1} of ${cells.length}${read}${upsideDown}${underGrille}`;
       caption.classList.add('is-walking');
     };
 
@@ -481,6 +482,138 @@
       show(Math.min(Math.max(moves[event.key], 0), cells.length - 1));
     });
     $('[data-plate-hint]').classList.remove('awaits-script');
+    // For the desk: move the field, find a sign under a tap, say or keep the values
+    frame.plateWalk = { show, cellAt, reveal: (on) => { revealing = on; if (current >= 0) show(current); } };
+  }
+
+  // ---------- The reading desk: an intact plate, read pair by pair ----------
+  // The current pair is shown large; the reader types the two numbers; the
+  // page adds them and finds the letter on the tablet; the text grows below.
+  // Guided, a tap on a sign (on the plate or on the desk) shows its value.
+  // Unaided, a wrong value is marked and never corrected, the walk keeps the
+  // values to itself, and three right pairs in a row earn the Lectio's ranks
+  // (the same best, kept in the browser).
+  const DESK_MODE_KEY = 'cistergraphia.desk.mode';
+  function initDesk() {
+    const desk = $('[data-desk]');
+    const frame = $('[data-plate]');
+    if (!desk || !frame || !frame.dataset.plateCells || !Ink.glyphTable()) return;
+    const cells = JSON.parse(frame.dataset.plateCells);
+    const values = cells.map(([, , value]) => value);
+    const tablet = JSON.parse(desk.dataset.tablet);
+    const nullMark = Number(desk.dataset.null);
+    const pairs = values.length / 2;
+    const form = $('[data-desk-form]', desk);
+    const inputs = [0, 1].map((k) => $(`[data-desk-value="${k}"]`, desk));
+    const signs = [0, 1].map((k) => $(`[data-desk-sign="${k}"]`, desk));
+    const [which, letterEl, feedback, textEl] = ['which', 'letter', 'feedback', 'text'].map((n) => $(`[data-desk-${n}]`, desk));
+    const read = new Array(pairs).fill(null); // the letter of each pair once read ('' for a null pair)
+    let pair = 0;
+    let mode = 'guided';
+    let streak = 0;
+    let best = storedBest();
+    try { mode = localStorage.getItem(DESK_MODE_KEY) === 'unaided' ? 'unaided' : 'guided'; } catch (error) { /* keep guided */ }
+
+    const letterOf = (p) => {
+      const [a, b] = [values[2 * p], values[(2 * p) + 1]];
+      return b === nullMark ? '' : (tablet[a + b] ?? '?');
+    };
+    const text = () => read.map((letter) => (letter === null ? '·' : (letter === ' ' ? ' ' : letter))).join('');
+    const standing = () => {
+      $('[data-desk-rank]', desk).textContent = rankFor(streak).name;
+      $('[data-desk-streak]', desk).textContent = streak;
+      $('[data-desk-best]', desk).textContent = best;
+    };
+    const setMode = (next) => {
+      mode = next;
+      desk.dataset.deskMode = mode;
+      $$('[data-desk-set-mode]', desk).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.deskSetMode === mode)));
+      frame.plateWalk?.reveal(mode === 'guided');
+      try { localStorage.setItem(DESK_MODE_KEY, mode); } catch (error) { /* private mode */ }
+    };
+    const show = (p) => {
+      pair = Math.min(Math.max(p, 0), pairs - 1);
+      which.textContent = `Pair ${pair + 1} of ${pairs} · signs ${(2 * pair) + 1} and ${(2 * pair) + 2}`;
+      [0, 1].forEach((k) => {
+        signs[k].replaceChildren(Ink.glyph(values[(2 * pair) + k], { label: `The ${k ? 'second' : 'first'} sign of the pair`, inked: true }));
+        inputs[k].value = '';
+        inputs[k].removeAttribute('aria-invalid');
+      });
+      letterEl.textContent = read[pair] === null ? '?' : (read[pair] === '' ? '∅' : read[pair]);
+      frame.plateWalk?.show(2 * pair);
+    };
+    const nextUnread = () => {
+      for (let k = 1; k <= pairs; k += 1) if (read[(pair + k) % pairs] === null) return (pair + k) % pairs;
+      return -1;
+    };
+    const reveal = (sign) => { // guided: a tapped sign shows its value in its box
+      if (mode !== 'guided') return;
+      const p = Math.floor(sign / 2);
+      if (p !== pair) show(p);
+      inputs[sign % 2].value = values[sign];
+      inputs[sign % 2].removeAttribute('aria-invalid');
+      inputs[sign % 2].focus();
+    };
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const typed = inputs.map((input) => (input.value.trim() === '' ? null : Math.trunc(Number(input.value))));
+      if (typed.some((v) => v === null)) {
+        feedback.textContent = 'Type what each sign reads.';
+        inputs[typed.indexOf(null)].focus();
+        return;
+      }
+      const wrong = [0, 1].filter((k) => typed[k] !== values[(2 * pair) + k]);
+      if (wrong.length) {
+        wrong.forEach((k) => inputs[k].setAttribute('aria-invalid', 'true'));
+        const which = wrong.length === 2 ? 'Neither sign reads' : `The ${wrong[0] ? 'second' : 'first'} sign does not read`;
+        feedback.textContent = `${which} that. Look again${mode === 'guided' ? ', or tap a sign to see it' : ''}.`;
+        if (mode === 'unaided') { streak = 0; standing(); }
+        inputs[wrong[0]].focus();
+        return;
+      }
+      const letter = letterOf(pair);
+      read[pair] = letter;
+      const [a, b] = [values[2 * pair], values[(2 * pair) + 1]];
+      if (letter === '') feedback.textContent = `${a} + ${b}: the second sign is ${nullMark}, a null pair. Nothing to read.`;
+      else feedback.textContent = `${a} + ${b} = ${a + b}: ${letter === ' ' ? 'a space' : `“${letter}”`}.`;
+      letterEl.textContent = letter === '' ? '∅' : letter;
+      textEl.textContent = text();
+      if (mode === 'unaided') {
+        const before = rankFor(streak).name;
+        streak += 1;
+        best = Math.max(best, streak);
+        storeBest(best);
+        const after = rankFor(streak).name;
+        if (after !== before) feedback.textContent += ` ${streak} in a row: you are now ${after === 'Abbot' ? 'an' : 'a'} ${after.toLowerCase()}.`;
+        standing();
+      }
+      const next = nextUnread();
+      if (next < 0) {
+        feedback.textContent = `Read to the end: “${text().trim()}”.`;
+        return;
+      }
+      setTimeout(() => { show(next); inputs[0].focus(); }, reducedMotion ? 300 : 900);
+    });
+
+    $$('[data-desk-step]', desk).forEach((button) => button.addEventListener('click', () => {
+      show((pair + Number(button.dataset.deskStep) + pairs) % pairs);
+    }));
+    $$('[data-desk-set-mode]', desk).forEach((button) => button.addEventListener('click', () => setMode(button.dataset.deskSetMode)));
+    signs.forEach((holder, k) => holder.addEventListener('click', () => reveal((2 * pair) + k)));
+    const svg = plateSvg();
+    svg.addEventListener('click', (event) => {
+      const i = frame.plateWalk?.cellAt(event) ?? -1;
+      if (i < 0) return;
+      if (mode === 'guided') reveal(i);
+      else show(Math.floor(i / 2));
+    });
+
+    // The first pair is the one the server drew: take it over, don't redraw it
+    [0, 1].forEach((k) => Ink.adopt($('svg', signs[k]), values[k]));
+    setMode(mode);
+    standing();
+    desk.classList.remove('awaits-script');
   }
 
   // ---------- The grille: a parchment laid on the plate, turned N, E, S, W ----------
@@ -1252,6 +1385,7 @@
     initLectio();
     inkPlate();
     initPlateWalk();
+    initDesk();
     initGrille();
     initBench();
     initFragments();

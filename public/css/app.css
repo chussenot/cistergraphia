@@ -888,6 +888,32 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 @supports (initial-letter: 2) {
   .transcription::first-letter { float: none; font-size: inherit; line-height: inherit; padding: 0 0.1em 0 0; initial-letter: 2; }
 }
+/* The reading desk, under an intact plate: the pair shown large, two numbers
+   to type, the letter, the text so far. Every part keeps its size whatever is
+   read, so nothing moves */
+.desk { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--rule); }
+.desk-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.desk-head .index-heading { margin: 0; }
+.desk-modes { display: inline-grid; min-width: 12rem; }
+.desk-modes .segment { border: 0; background: transparent; font: inherit; padding: 0 var(--space-4); }
+.desk-modes .segment[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), inset 0 -2px 0 var(--accent); }
+.desk-nav { display: flex; align-items: center; gap: var(--space-3); }
+.desk-which { font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); min-width: 13rem; font-variant-numeric: tabular-nums; }
+.desk-pair { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.desk-sign { display: grid; place-items: center; width: 3.4rem; height: 4.8rem; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--vellum); cursor: pointer; }
+.desk-sign .desk-glyph { width: 2.6rem; color: var(--ink); }
+.desk-sign .desk-glyph path { fill: currentColor; }
+.desk-value { width: 6.5rem; font-variant-numeric: tabular-nums; }
+.desk-value[aria-invalid="true"] { border-color: var(--rubric); box-shadow: inset 0 0 0 1px var(--rubric); }
+.desk-op { font-family: var(--mono); font-size: 1.2rem; color: var(--ink-soft); }
+.desk-letter { display: grid; place-items: center; min-width: 2.6rem; height: 2.6rem; padding: 0 var(--space-2); border-radius: var(--radius); background: var(--paper); border: 1px solid var(--rule); font-family: var(--mono); font-size: 1.25rem; color: var(--accent); }
+.desk-feedback { margin: 0; font-family: var(--sans); font-size: 0.9rem; color: var(--ink-soft); min-height: 2.8em; min-height: 2lh; }
+@media (max-width: 30rem) { .desk-feedback { min-height: 4.2em; min-height: 3lh; } } /* the longest answer, on a phone */
+.desk-text { margin: 0; font-family: var(--mono); font-size: 0.95rem; overflow-wrap: anywhere; color: var(--ink); min-height: 1.4em; min-height: 1lh; }
+.desk-standing { visibility: hidden; } /* the ranks are earned unaided */
+.desk[data-desk-mode="unaided"] .desk-standing { visibility: visible; }
+[data-desk-rank] { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; }
+
 /* The restoration bench, under a weathered plate: a lacuna to choose, ten
    digits to press, the pair weighed in two short lines, the edition so far.
    Every part keeps its size whatever is chosen, so nothing moves */

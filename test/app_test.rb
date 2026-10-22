@@ -77,7 +77,7 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, '<input type="hidden" name="decipher" value="1">' # the scribe knows the answer
     svg = CGI.unescapeHTML(last_response.body[/<input type="hidden" name="svg" value="([^"]*)"/, 1])
 
-    post '/decode', svg: svg
+    post '/decode', svg: svg, decipher: '1'
 
     assert_includes last_response.body, 'ora et labora'
   end
@@ -171,7 +171,7 @@ class AppTest < Minitest::Test
     assert_equal(Cistergraphia.boustrophedon_coordinates(layout['size']),
                  cells.map { |row, col, _, turned| [row, col, turned] })
 
-    post '/decode', svg: svg
+    post '/decode', svg: svg, decipher: '1'
 
     assert_includes last_response.body, 'ora et labora'
   end
@@ -253,7 +253,7 @@ class AppTest < Minitest::Test
     assert_equal 400, last_response.status
     assert_includes last_response.body, 'This plate was written under a grille: it needs its key.'
 
-    post '/decode', svg: svg, grille: 'k7q2m-zxb4p'
+    post '/decode', svg: svg, grille: 'k7q2m-zxb4p', decipher: '1'
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'vespers at six'
 
@@ -398,7 +398,7 @@ class AppTest < Minitest::Test
   end
 
   def test_decode_pasted_svg
-    post '/decode', svg: Cistergraphia.to_svg(Cistergraphia.encode('Meet me at dawn!'))
+    post '/decode', svg: Cistergraphia.to_svg(Cistergraphia.encode('Meet me at dawn!')), decipher: '1'
 
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'meet me at dawn'
@@ -407,7 +407,7 @@ class AppTest < Minitest::Test
   def test_decode_uploaded_svg
     file = Rack::Test::UploadedFile.new(StringIO.new(Cistergraphia.to_svg(Cistergraphia.encode('scriptorium'))),
                                         'image/svg+xml', original_filename: 'cipher.svg')
-    post '/decode', file: file
+    post '/decode', file: file, decipher: '1'
 
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'scriptorium'
@@ -415,7 +415,7 @@ class AppTest < Minitest::Test
 
   def test_decode_falls_back_to_pasted_svg_when_the_upload_is_empty
     empty = Rack::Test::UploadedFile.new(StringIO.new(''), 'image/svg+xml', original_filename: 'empty.svg')
-    post '/decode', file: empty, svg: Cistergraphia.to_svg(Cistergraphia.encode('abbey'))
+    post '/decode', file: empty, svg: Cistergraphia.to_svg(Cistergraphia.encode('abbey')), decipher: '1'
 
     assert_predicate last_response, :ok?
     assert_includes last_response.body, 'abbey'
@@ -806,13 +806,74 @@ class AppTest < Minitest::Test
     assert_includes body, '<g class="fragment"'
   end
 
-  def test_a_sealed_or_intact_plate_is_read_not_played
-    post '/decode', svg: Cistergraphia.to_svg(Cistergraphia.encode('ora et labora'))
-    assert_includes last_response.body, 'data-transcription'
+  def test_a_sealed_plate_is_read_not_played
+    post '/decode', svg: Cistergraphia.to_svg(Cistergraphia.encode('ora et labora', passphrase: 'abbey of molesme'))
+    assert_equal 400, last_response.status # not a game: the decoder asks for the passphrase
+    assert_includes last_response.body, 'secret mode'
+    refute_includes last_response.body, 'data-desk'
 
     _, svg, = Cistergraphia::Lacunae.inscribe('ora et labora', random: Random.new(3))
     post '/decode', svg: svg, passphrase: 'abbey of molesme'
     assert_equal 400, last_response.status # a weathered plate is never sealed: the decoder says so
     refute_includes last_response.body, 'data-bench'
+  end
+
+  # --- The reading desk: an intact game plate, read pair by pair
+
+  def test_an_intact_plate_brought_to_read_opens_on_the_desk
+    sequence, svg = Cistergraphia.inscribe('Meet me at dawn')
+
+    post '/decode', svg: svg
+    assert_predicate last_response, :ok?
+    body = last_response.body
+    assert_includes body, 'A plate to read'
+    assert_match(%r{<dt>Condition</dt><dd>Intact</dd>}, body)
+    assert_includes body, "Pair 1 of #{sequence.size / 2} · signs 1 and 2"
+    assert_equal 2, body.scan('class="glyph desk-glyph"').size
+    refute_match(/data-transcription|meet me at dawn/, body) # the text is the reader's to read
+  end
+
+  def test_the_desk_holds_the_tablet_and_the_signs_values
+    sequence, svg = Cistergraphia.inscribe('Meet me at dawn')
+
+    post '/decode', svg: svg
+    body = last_response.body
+    assert_equal Cistergraphia::CHARACTERS.transform_keys(&:to_s),
+                 JSON.parse(CGI.unescapeHTML(body[/data-tablet="([^"]*)"/, 1]))
+    values = JSON.parse(CGI.unescapeHTML(body[/data-plate-cells="([^"]*)"/, 1])).map { |cell| cell.fetch(2) }
+    assert_equal sequence, values
+    assert_includes body, 'data-glyph-table="' # the script draws the pairs from it
+  end
+
+  def test_the_desk_follows_the_layout_that_reads_the_plate
+    _, svg = Cistergraphia.inscribe('Meet me at dawn', layout: :rongorongo)
+
+    post '/decode', svg: svg
+    body = last_response.body
+    assert_includes body, 'data-desk'
+    assert_match(%r{<dt>Layout</dt><dd>Rongorongo</dd>}, body)
+    assert_includes body, 'data-action="turn-plate"'
+  end
+
+  def test_a_grille_plate_opens_on_the_desk_with_its_key
+    grille = Cistergraphia::Grille.new('K7Q2M-ZXB4P')
+    _, svg = Cistergraphia.inscribe('Vespers at six', layout: grille)
+
+    post '/decode', svg: svg, grille: grille.to_s
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, 'data-desk'
+    assert_match(%r{<dt>Layout</dt><dd>Grille</dd>}, last_response.body)
+    assert_includes last_response.body, %(<input type="hidden" name="grille" value="#{grille}">)
+  end
+
+  def test_the_desk_asks_the_decoder_with_the_same_file
+    _, svg = Cistergraphia.inscribe('Meet me at dawn')
+
+    post '/decode', svg: svg
+    carried = CGI.unescapeHTML(last_response.body[/<input type="hidden" name="svg" value="([^"]*)"/, 1])
+
+    post '/decode', svg: carried, decipher: '1'
+    assert_includes last_response.body, 'data-transcription'
+    assert_includes last_response.body, 'meet me at dawn'
   end
 end
