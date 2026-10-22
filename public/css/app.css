@@ -41,8 +41,9 @@
   --rule-faint: rgb(160 132 92 / 0.09);
   --rubric: #a3301c;      /* minium red: the game */
   --woad: #2b4a74;        /* woad blue: the secret */
-  --parchment: #e4d8c1;   /* the grille laid on a plate */
-  --parchment-edge: #c4b08c;
+  --clay: #e4d8c1;        /* the plate: a tablet of pale fired clay */
+  --clay-edge: #c4b08c;   /* its rim, and the hatch of a break */
+  --sheet: #f7f2e8;       /* the grille: a parchment laid on the plate */
   --on-accent: #fbf8f2;
   --accent: var(--rubric);  /* the current mode's colour */
   --accent-ring: rgb(163 48 28 / 0.15);
@@ -91,8 +92,9 @@
     --rule-faint: rgb(236 228 212 / 0.035);
     --rubric: #e8826b;
     --woad: #93b3e3;
-    --parchment: #3a3229;
-    --parchment-edge: #5a4b3b;
+    --clay: #3a3229;
+    --clay-edge: #5a4b3b;
+    --sheet: #26221e;
     --on-accent: #191714;
     --accent-ring: rgb(232 130 107 / 0.2);
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -16px rgb(0 0 0 / 0.6);
@@ -725,12 +727,19 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   place-items: center;
 }
 .plate-frame svg { display: block; width: auto; height: auto; max-width: 100%; max-height: min(78vh, 60rem); color: var(--ink); }
-.plate-frame svg > rect:first-child { fill: transparent; }
-.plate-frame svg path { fill: currentColor; stroke: none; } /* the pressed signs */
-/* A weathered plate's lacunae, hatched in the leaf's own parchment */
-.plate-frame svg .weathering { stroke: var(--parchment-edge); }
-.plate-frame svg pattern rect:first-child { fill: var(--parchment); }
-.plate-frame svg pattern rect + rect { fill: var(--parchment-edge); }
+/* The plate is a tablet of clay: the file's white ground takes the clay's colour and
+   its rim on the page (the file stays black on white, for the decoder). The signs
+   are pressed, then inked; a large plate's strokes get optical weight (--plate-weight,
+   by grid size, in the plate's own units) so they stay strokes, not hairlines */
+.plate-frame svg > rect:first-child { fill: var(--clay); stroke: var(--clay-edge); stroke-width: 3; }
+.plate-frame svg path { fill: currentColor; stroke: currentColor; stroke-width: var(--plate-weight, 0); stroke-linejoin: round; } /* the pressed signs */
+.plate--medium { --plate-weight: 1.5; }
+.plate--large { --plate-weight: 3; }
+/* A weathered plate's lacunae: a chip in the clay, its pale body showing, hatched as an
+   epigrapher hatches a break */
+.plate-frame svg .weathering { stroke: var(--clay-edge); }
+.plate-frame svg pattern rect:first-child { fill: var(--paper); }
+.plate-frame svg pattern rect + rect { fill: var(--clay-edge); }
 .plate-frame:focus-visible { outline-offset: 4px; }
 .plate-frame.is-turned svg { transform: rotate(180deg); }
 .plate-frame svg path { transition: color 0.3s var(--ease); }
@@ -749,7 +758,12 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   filter: drop-shadow(0 4px 10px rgb(43 36 28 / 0.25));
 }
 .plate-frame .grille-sheet.is-laid { opacity: 1; }
-.plate-frame .grille-sheet .stencil-sheet { fill: var(--parchment); stroke: var(--parchment-edge); stroke-width: 3; }
+.plate-frame .grille-sheet .stencil-sheet { fill: var(--sheet); stroke: var(--rule); stroke-width: 3; }
+/* On screen the sheet's N and its key grow with the plate (the printed stencil keeps the file's sizes) */
+.plate--medium .grille-sheet .stencil-north { font-size: 44px; }
+.plate--large .grille-sheet .stencil-north { font-size: 60px; }
+.plate--medium .grille-sheet .stencil-key { font-size: 28px; }
+.plate--large .grille-sheet .stencil-key { font-size: 40px; }
 .plate-frame .grille-sheet .stencil-north { fill: var(--accent); font-family: var(--serif); font-weight: 600; }
 .plate-frame .grille-sheet .stencil-key { fill: var(--ink-soft); font-family: var(--serif); }
 .grille-key { font-family: var(--mono); font-size: 0.95em; letter-spacing: 0.08em; }
@@ -943,20 +957,22 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .bench-verdict { font-family: var(--sans); font-size: 0.9rem; color: var(--ink-soft); white-space: nowrap; }
 .bench-edition { margin: 0; font-family: var(--mono); font-size: 0.95rem; overflow-wrap: anywhere; color: var(--ink); }
 .plate-frame svg .bench-target { fill: transparent; stroke: transparent; stroke-width: 3; cursor: pointer; }
-.plate-frame svg .bench-target:hover { stroke: var(--parchment-edge); }
+.plate-frame svg .bench-target:hover { stroke: var(--clay-edge); }
 .plate-frame svg .bench-target.is-current { stroke: var(--rubric); }
 .plate-frame svg path.restored { color: var(--rubric); }
-/* A broken plate: the board, the fragments in their tray, and the rejoining */
+/* A broken plate: the board, the fragments in their tray, and the rejoining. The file's
+   ground is the tray, not a plate: the fragments carry the clay */
 .plate--broken .plate-frame svg { max-height: none; width: 100%; }
+.plate--broken .plate-frame svg > rect:first-child { fill: transparent; stroke: none; }
 /* Wide screens: a box of fixed height, in which the script lays the tray beside
    the board (the file has it below), so the whole puzzle is in view at once
    and nothing moves when the script arrives */
 @media (min-width: 64rem) { .plate--broken .plate-frame svg { height: min(78vh, 60rem); } }
 .plate-frame svg .ghost { fill: var(--accent-ring); stroke: var(--rubric); stroke-width: 3; stroke-dasharray: 10 8; pointer-events: none; }
 .plate-frame svg .ghost.is-off { fill: transparent; stroke: var(--ink-soft); }
-.plate-frame svg .board { stroke: var(--parchment-edge); }
+.plate-frame svg .board { stroke: var(--clay-edge); }
 .plate-frame svg #board rect { fill: var(--paper); stroke: var(--rule); } /* the empty board: the leaf, ruled */
-.plate-frame svg .sherd { fill: var(--parchment); stroke: var(--parchment-edge); } /* the clay of a fragment */
+.plate-frame svg .sherd { fill: var(--clay); stroke: var(--clay-edge); } /* the clay of a fragment */
 .plate-frame.is-rejoining svg .fragment { cursor: grab; touch-action: none; outline: none; }
 .plate-frame.is-rejoining svg .fragment:active { cursor: grabbing; }
 .plate-frame svg .fragment.is-picked .sherd { stroke: var(--rubric); stroke-width: 5; }

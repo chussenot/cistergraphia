@@ -82,6 +82,14 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'ora et labora'
   end
 
+  def test_large_plates_get_optical_weight
+    post '/generate', message: 'Ora et labora'
+    assert_includes last_response.body, '<figure class="plate">' # 6 x 6: the hand as it is
+
+    post '/generate', message: 'Meet me at the old abbey after vespers, under the cloister arches by the well'
+    assert_includes last_response.body, '<figure class="plate plate--large">' # 14 x 14: strokes, not hairlines
+  end
+
   def test_live_preview_embeds_the_library_glyph_table
     get '/'
 

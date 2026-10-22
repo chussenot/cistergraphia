@@ -1,8 +1,8 @@
 <%#
 A plate, walkable: the figure the plate page and the reader's page share.
-Locals: svg, cells (plate_cells_json), geometry (plate_layout_json), layout, decoy
+Locals: svg, cells (plate_cells_json), geometry (plate_layout_json), layout, decoy, size (the grid's side)
 %>
-<figure class="plate">
+<figure class="plate<%= plate_size_class(size) %>">
   <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
        aria-label="The plate. Use the arrow keys to walk its signs in reading order."
        data-plate-cells="<%= cells %>" data-plate-layout="<%= geometry %>">

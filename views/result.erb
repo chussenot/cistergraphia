@@ -100,7 +100,7 @@ Constraints:
   <% if @pieces %>
     <%== erb :_board, layout: false, locals: { svg: @svg_content, fragments: @fragments, size: Integer.sqrt(@symbols), worn: !@damage.nil? } %>
   <% else %>
-    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@sequence, @layout, @damage || {}), geometry: plate_layout_json(@sequence, @layout), layout: @layout, decoy: @decoy } %>
+    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@sequence, @layout, @damage || {}), geometry: plate_layout_json(@sequence, @layout), layout: @layout, decoy: @decoy, size: Integer.sqrt(@symbols) } %>
   <% end %>
 
   <% if @damage && !@pieces %>
