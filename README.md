@@ -61,16 +61,17 @@ leaves, reads the other.
 Old records reach us damaged, and arithmetic outlives the damage: the Inka khipus repeat their
 cords' values as sums on higher cords, and in 2024 two fragments of a broken one were rejoined
 by that arithmetic alone. A weathered plate has lost some strokes. Each pair must still add up
-to a value on the tablet, so the restoration is the puzzle: on the plate page, press the lost
-digits back in and each pair is weighed. The decoder prints the edition the way epigraphers
-do: `[r]` restored, `[b/l]` for the words to decide. With tally signs, the sums of every row and
+to a value on the tablet, so the restoration is the puzzle: press the lost digits back in and
+each pair is weighed. The decoder prints the edition the way epigraphers do: `[r]` restored,
+`[b/l]` for the words to decide. With tally signs (the CLI's `--tally`), the sums of every row and
 column on a higher cord, a plate can lose whole signs and still be restored. A broken plate comes
 in two to four fragments, some turned half round, in a tray under an empty board: their edges are
 worn, so only the sums show where each one goes. Rejoin them on the page, or let the decoder try
 every arrangement and keep the one whose pairs all balance. A broken plate can be weathered too:
 a worn sign is weighed by every digit it may have held, and the plate, whole again, reads as an
-edition. Send a damaged plate to someone and Read opens it as its puzzle, built from the file
-alone: the bench to restore it, the board to rejoin it, the decoder's answer one click below.
+edition. The form offers these as a ladder, Intact, Worn, Broken, Ruined. Send a damaged plate
+to someone and Read opens it as its puzzle, built from the file alone: the bench to restore it,
+the board to rejoin it, the decoder's answer one click below.
 
 Why two ways to send it?
 ------------------------

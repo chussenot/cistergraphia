@@ -10,6 +10,9 @@ Design Decisions:
   plain black-on-white file that the decoder reads
 - Strokes are inked in reading order and dry from rubric to ink (JS), so the
   snail is visible; the plate can be walked sign by sign (pointer or arrow keys)
+- The scribe's job is to send: Download SVG leads, right under the specs. The
+  lede says what Read will open for the reader; the bench and the board below
+  are a preview of that puzzle
 - "Read it back" posts the same SVG to /decode with decipher=1: the decoder's
   answer, since the scribe knows it (a reader's damaged plate opens as its puzzle)
 - Rongorongo plates can be turned half round (JS, CSS only): the turned rows
@@ -51,11 +54,11 @@ Constraints:
     <p class="decoy-echo"><span class="label">For the novice</span> <q><%= @decoy %></q></p>
   <% end %>
   <% if @pieces && @damage %>
-    <p class="lede">Broken and weathered: <%= fragments_count(@pieces.size) %>, <%= @damage.size %> <%= @damage.size == 1 ? 'lacuna' : 'lacunae' %>. Rejoin them on the board: a join is right when every pair can balance, whatever its lacunae held. Whole again, the plate reads as an edition. Read it back to have the decoder do both.</p>
+    <p class="lede">Ruined: <%= fragments_count(@pieces.size) %>, <%= lacunae_count(@damage.size) %>. Download it and send it: Read opens it for your reader as the board, to rejoin by what each worn sign may hold, then as the edition to restore. Below, a preview of their puzzle.</p>
   <% elsif @pieces %>
-    <p class="lede">Broken: <%= fragments_count(@pieces.size) %>. Rejoin them on the board: a join is right when every pair of signs balances again. Read it back to have the decoder rejoin them.</p>
+    <p class="lede">Broken: <%= fragments_count(@pieces.size) %>. Download it and send it: Read opens it for your reader as the board, where only the sums say where each fragment goes. Below, a preview of their puzzle.</p>
   <% elsif @damage %>
-    <p class="lede">Weathered: <%= @damage.size %> <%= @damage.size == 1 ? 'lacuna' : 'lacunae' %>. Restore what is lost: each pair of signs must sum to a value on the tablet. Read it back to see the edition.</p>
+    <p class="lede">Worn: <%= lacunae_count(@damage.size) %>. Download it and send it: Read opens it for your reader as the bench, where each pair must balance again and the words settle the doubts. Below, a preview of their puzzle.</p>
   <% elsif @secret %>
     <p class="lede">Secret mode: sealed with your passphrase. Without it, this plate reveals nothing but its length.</p>
   <% elsif @normalized != @message %>
@@ -69,10 +72,12 @@ Constraints:
     <div><dt>Signs</dt><dd><%= @symbols %></dd></div>
     <div><dt>Grid</dt><dd><%= Integer.sqrt(@symbols) %> × <%= Integer.sqrt(@symbols) %></dd></div>
     <div><dt>Layout</dt><dd><%= layout_name(@layout) %></dd></div>
-    <% if @pieces %>
-      <div><dt>Condition</dt><dd>Broken, in <%= fragments_count(@pieces.size) %><%= ', and weathered' if @damage %></dd></div>
-    <% elsif @damage || @tally %>
-      <div><dt>Condition</dt><dd><%= [('Weathered' if @damage), ('tally signs' if @tally)].compact.join(', with ').capitalize %></dd></div>
+    <% if @pieces && @damage %>
+      <div><dt>Condition</dt><dd>Ruined: <%= fragments_count(@pieces.size) %>, worn</dd></div>
+    <% elsif @pieces %>
+      <div><dt>Condition</dt><dd>Broken, in <%= fragments_count(@pieces.size) %></dd></div>
+    <% elsif @damage %>
+      <div><dt>Condition</dt><dd>Worn</dd></div>
     <% end %>
     <% if grille? && @decoy %>
       <div><dt>Abbot’s key</dt><dd><code class="grille-key"><%= @layout %></code></dd></div>
@@ -82,15 +87,25 @@ Constraints:
     <% end %>
   </dl>
 
-<% if @pieces %>
-  <%== erb :_board, layout: false, locals: { svg: @svg_content, fragments: @fragments, size: Integer.sqrt(@symbols), worn: !@damage.nil? } %>
-<% else %>
-  <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@sequence, @layout, @damage || {}), geometry: plate_layout_json(@sequence, @layout), layout: @layout, decoy: @decoy } %>
-<% end %>
+  <div class="actions">
+    <button type="button" class="btn btn--primary" data-action="download-svg">Download SVG</button>
+    <button type="button" class="btn" data-action="download-png">Download PNG</button>
+    <button type="button" class="btn" data-action="copy-svg">Copy SVG code</button>
+    <% if @layout == :rongorongo %>
+      <button type="button" class="btn awaits-script" data-action="turn-plate" aria-pressed="false">Turn the plate</button>
+    <% end %>
+    <a class="btn btn--quiet" href="/">Inscribe another</a>
+  </div>
 
-<% if @damage && !@pieces %>
-  <%== erb :_bench, layout: false, locals: { entries: lacunae(@sequence, @layout, @damage), values: @sequence, damage: @damage, tally: (Cistergraphia::Tally.signs(@sequence, @layout) if @tally) } %>
-<% end %>
+  <% if @pieces %>
+    <%== erb :_board, layout: false, locals: { svg: @svg_content, fragments: @fragments, size: Integer.sqrt(@symbols), worn: !@damage.nil? } %>
+  <% else %>
+    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@sequence, @layout, @damage || {}), geometry: plate_layout_json(@sequence, @layout), layout: @layout, decoy: @decoy } %>
+  <% end %>
+
+  <% if @damage && !@pieces %>
+    <%== erb :_bench, layout: false, locals: { entries: lacunae(@sequence, @layout, @damage), values: @sequence, damage: @damage, tally: nil } %>
+  <% end %>
 
   <% if grille? %>
     <% grilles = plate_grilles %>
@@ -113,15 +128,6 @@ Constraints:
     <% end %>
   <% end %>
 
-  <div class="actions">
-    <button type="button" class="btn btn--primary" data-action="download-svg">Download SVG</button>
-    <button type="button" class="btn" data-action="download-png">Download PNG</button>
-    <button type="button" class="btn" data-action="copy-svg">Copy SVG code</button>
-    <% if @layout == :rongorongo %>
-      <button type="button" class="btn awaits-script" data-action="turn-plate" aria-pressed="false">Turn the plate</button>
-    <% end %>
-    <a class="btn btn--quiet" href="/">Inscribe another</a>
-  </div>
 
   <form class="readback" method="post" action="/decode">
     <h2 class="index-heading">Read it back</h2>

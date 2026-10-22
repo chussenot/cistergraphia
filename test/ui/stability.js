@@ -19,6 +19,7 @@ const { chromium } = require('playwright');
 const [baseUrl, plateFile, executablePath] = process.argv.slice(2);
 const weatheredFile = plateFile.replace(/\.svg$/, '-weathered.svg'); // written beside it by stability.rb
 const brokenFile = plateFile.replace(/\.svg$/, '-broken.svg'); // and this one
+const talliedFile = plateFile.replace(/\.svg$/, '-tallied.svg'); // and this one, with tally signs
 const VIEWPORTS = [
   { width: 320, height: 640 }, // the smallest phone
   { width: 390, height: 844 }, // a common phone
@@ -135,17 +136,7 @@ const bringToRead = (file, selector, decipher = false) => async (page) => {
 const openWeatheredPlate = async (page) => {
   await page.goto(`${baseUrl}/`);
   await page.fill('#message', MESSAGE);
-  await page.check('input[name="weathered"]');
-  await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
-  await page.waitForSelector('[data-plate] svg');
-};
-
-// A weathered plate with tally signs: whole signs may be lost
-const openTalliedPlate = async (page) => {
-  await page.goto(`${baseUrl}/`);
-  await page.fill('#message', MESSAGE);
-  await page.check('input[name="weathered"]');
-  await page.check('input[name="tally"]');
+  await page.check('input[value="worn"]', { force: true });
   await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
   await page.waitForSelector('[data-plate] svg');
 };
@@ -154,7 +145,7 @@ const openTalliedPlate = async (page) => {
 const openBrokenPlate = async (page) => {
   await page.goto(`${baseUrl}/`);
   await page.fill('#message', MESSAGE);
-  await page.check('input[name="broken"]');
+  await page.check('input[value="broken"]', { force: true });
   await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
   await page.waitForSelector('[data-plate] svg');
 };
@@ -205,9 +196,10 @@ const FLOWS = [
       { name: 'type a message', act: async (p) => { await p.click('#message'); await p.keyboard.type(MESSAGE); } },
       { name: 'edit at the start', act: async (p) => { await p.keyboard.press('Control+Home'); await p.keyboard.type('Brother, '); } },
       { name: 'delete', act: async (p) => { await p.keyboard.press('Control+End'); for (let i = 0; i < 30; i += 1) await p.keyboard.press('Backspace'); } },
-      { name: 'weather the plate', act: (p) => p.click('label.check >> nth=0') },
-      { name: 'add tally signs', act: (p) => p.click('label.check >> nth=1') },
-      { name: 'break the plate', act: (p) => p.click('label.check >> nth=2') },
+      { name: 'wear the plate', act: (p) => p.click('label.segment--worn') },
+      { name: 'break the plate', act: (p) => p.click('label.segment--broken') },
+      { name: 'ruin it, along the rows', act: async (p) => { await p.click('label.segment--ruined'); await p.click('input[value="rongorongo"]', { force: true }); } },
+      { name: 'back to the snail', act: (p) => p.click('input[value="phaistos"]', { force: true }) },
       { name: 'choose secret', anchor: '.entry-end', act: (p) => p.click('label.segment--secret') },
       { name: 'type a sealed message', act: async (p) => { await p.click('#message'); await p.keyboard.type(' and a seal'); } },
       { name: 'seal with too short a passphrase', act: async (p) => { await p.fill('#passphrase', 'short'); await p.click('[data-submit]'); } },
@@ -275,7 +267,7 @@ const FLOWS = [
   },
   {
     page: 'tallied',
-    open: openTalliedPlate,
+    open: bringToRead(talliedFile, '[data-bench]'),
     steps: [
       { name: 'press digits into a whole sign', act: async (p) => { for (let i = 0; i < 4; i += 1) { const free = p.locator('[data-digit]:not([disabled])'); await free.nth(i % (await free.count())).click(); await p.click('[data-bench-step="1"]'); } } },
       { name: 'step back', act: (p) => p.click('[data-bench-step="-1"]') }
@@ -402,10 +394,10 @@ const PAGES = [
       await page.waitForSelector('[data-plate] svg');
     }
   },
-  { page: 'weathered', open: openSamePlate({ message: MESSAGE, weathered: '1' }) },
-  { page: 'tallied', open: openSamePlate({ message: MESSAGE, weathered: '1', tally: '1' }) },
-  { page: 'broken', open: openSamePlate({ message: MESSAGE, broken: '1' }) },
-  { page: 'worn+broken', open: openSamePlate({ message: MESSAGE, broken: '1', weathered: '1' }) },
+  { page: 'weathered', open: openSamePlate({ message: MESSAGE, condition: 'worn' }) },
+  { page: 'tallied', open: bringToRead(talliedFile, '[data-bench]') },
+  { page: 'broken', open: openSamePlate({ message: MESSAGE, condition: 'broken' }) },
+  { page: 'worn+broken', open: openSamePlate({ message: MESSAGE, condition: 'ruined' }) },
   { page: 'restore', open: bringToRead(weatheredFile, '[data-bench]') },
   { page: 'rejoin', open: bringToRead(brokenFile, '[data-rejoin]') },
   { page: 'edition', open: bringToRead(weatheredFile, '[data-transcription]', true) },

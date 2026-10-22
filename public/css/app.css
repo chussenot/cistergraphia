@@ -444,21 +444,28 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .choice:has(input[value="phaistos"]:checked) [data-note="phaistos"],
   .choice:has(input[value="rongorongo"]:checked) [data-note="rongorongo"],
   .choice:has(input[value="grille"]:checked) [data-note="grille"] { visibility: visible; }
-  .entry:has(input[name="mode"][value="game"]:checked) [data-note="weathered"],
-  .entry:has(input[name="mode"][value="secret"]:checked) [data-note="unweathered"] { visibility: visible; }
-  /* A condition sent back with an error: the error takes its note's place (the notes
-     shown above weigh more, hence .entry) */
-  .entry .choice-notes:has(.field-error:not(:empty)) .choice-note:not(.field-error) { visibility: hidden; }
-  .choice-notes .choice-note.field-error:not(:empty) { visibility: visible; }
-  .entry:has(input[name="mode"][value="secret"]:checked) .check { opacity: 0.5; }
+  .choice:has(input[value="intact"]:checked) [data-note="intact"],
+  .choice:has(input[value="worn"]:checked) [data-note="worn"],
+  .choice:has(input[value="broken"]:checked) [data-note="broken"],
+  .choice:has(input[value="ruined"]:checked) [data-note="ruined"] { visibility: visible; }
+  /* The ladder's rungs the layout or the mode does not allow are greyed, and
+     the reserved note gives the reason: a broken plate follows the snail, a
+     sealed plate never weathers (the rules below weigh more, hence .entry) */
+  .entry:has(input[name="layout"]:not([value="phaistos"]):checked) .segment--snail { opacity: 0.5; }
+  .entry:has(input[name="layout"]:not([value="phaistos"]):checked) .choice--condition:has(.segment--snail input:checked) .choice-note:not(.field-error) { visibility: hidden; }
+  .entry:has(input[name="layout"]:not([value="phaistos"]):checked) .choice--condition:has(.segment--snail input:checked) .choice-note[data-note="snail"] { visibility: visible; }
+  .entry:has(input[name="mode"][value="secret"]:checked) .segment--rung:not(.segment--intact) { opacity: 0.5; }
+  .entry:has(input[name="mode"][value="secret"]:checked) .choice--condition .choice-note:not(.field-error) { visibility: hidden; }
+  .entry:has(input[name="mode"][value="secret"]:checked) .choice--condition .choice-note[data-note="unweathered"] { visibility: visible; }
+  /* A condition sent back with an error: the error takes its note's place
+     (the class twice: this weighs more than the reasons above) */
+  .entry .choice-notes:has(.field-error:not(:empty)) .choice-note.choice-note:not(.field-error) { visibility: hidden; }
+  .entry .choice-notes .choice-note.field-error:not(:empty) { visibility: visible; }
 }
 
-/* Condition: checkboxes, the height of a segment */
-.checks { display: flex; flex-wrap: wrap; column-gap: var(--space-6); }
-.check { display: inline-flex; align-items: center; gap: var(--space-3); min-height: 2.75rem; cursor: pointer; width: fit-content; }
-.check input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
-.check input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.check-title { font-size: 1.15rem; font-weight: 600; line-height: 1.2; }
+/* Condition: the ladder, four rungs in the leaf's width */
+.segments--ladder .segment-title { font-size: 1.05rem; }
+@container (min-width: 30rem) { .segments--ladder .segment-title { font-size: 1.15rem; } }
 
 .field-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
 .field-head .counter { font-family: var(--sans); font-size: 0.78rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
@@ -541,6 +548,7 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 
 /* ---------- Buttons ---------- */
 .actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.actions + .plate { margin-top: var(--space-5); } /* Download leads: the plate follows the actions */
 
 .btn {
   display: inline-flex;

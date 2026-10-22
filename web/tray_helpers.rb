@@ -22,6 +22,11 @@ module TrayHelpers
     )
   end
 
+  # "12 lacunae"
+  def lacunae_count(count)
+    "#{count} #{count == 1 ? 'lacuna' : 'lacunae'}"
+  end
+
   # "3 fragments"
   def fragments_count(count)
     count == 1 ? '1 fragment' : "#{count} fragments"

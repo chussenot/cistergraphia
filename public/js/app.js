@@ -49,7 +49,7 @@
     if (!form) return;
     const submit = $('[data-submit]', form);
     const passphrase = $('#passphrase', form);
-    const conditions = $$('[data-weathered]', form);
+    const rungs = $$('[data-rung]:not([value="intact"])', form);
 
     const apply = () => {
       const mode = $('input[name="mode"]:checked', form)?.value || 'game';
@@ -59,7 +59,8 @@
         passphrase.disabled = !secret;
         passphrase.required = secret;
       }
-      conditions.forEach((box) => { box.disabled = secret; }); // a sealed plate cannot weather
+      rungs.forEach((rung) => { rung.disabled = secret; }); // a sealed plate cannot weather or break
+      if (secret && rungs.some((rung) => rung.checked)) $('[data-rung][value="intact"]', form).checked = true;
       if (submit) submit.textContent = secret ? 'Seal & inscribe' : 'Inscribe';
       if (!secret) explain('');
     };

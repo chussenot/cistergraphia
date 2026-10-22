@@ -36,9 +36,9 @@ Constraints:
     <div><dt>Grid</dt><dd><%= @size %> × <%= @size %></dd></div>
     <div><dt>Layout</dt><dd><%= @broken ? 'Phaistos' : layout_name(@layout) %></dd></div>
     <% if @broken %>
-      <div><dt>Condition</dt><dd>Broken, in <%= fragments_count(@fragments.size) %><%= ', and weathered' if @weathered %></dd></div>
+      <div><dt>Condition</dt><dd><%= @weathered ? "Ruined: #{fragments_count(@fragments.size)}, worn" : "Broken, in #{fragments_count(@fragments.size)}" %></dd></div>
     <% else %>
-      <div><dt>Condition</dt><dd><%= @tally ? 'Weathered, with tally signs' : 'Weathered' %></dd></div>
+      <div><dt>Condition</dt><dd><%= @tally ? 'Worn, with tally signs' : 'Worn' %></dd></div>
     <% end %>
     <% if grille? %>
       <div><dt>Grille key</dt><dd><code class="grille-key"><%= @layout %></code></dd></div>

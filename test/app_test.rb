@@ -506,28 +506,33 @@ class AppTest < Minitest::Test
     assert_equal 413, last_response.status
   end
 
-  def test_the_form_offers_a_weathered_plate
+  def test_the_form_offers_the_ladder
     get '/'
 
-    assert_match(/<input type="checkbox" name="weathered" value="1"/, last_response.body)
-    assert_includes last_response.body, 'A sealed plate cannot weather'
+    body = last_response.body
+    FormParams::RUNGS.each_key { |rung| assert_match(/<input type="radio" name="condition" value="#{rung}"/, body) }
+    assert_match(/value="intact" data-rung checked/, body)
+    assert_includes body, 'A sealed plate cannot weather'
+    assert_includes body, 'Broken plates follow the snail'
+    refute_includes body, 'name="tally"' # the library's and the CLI's, not the form's
+    refute_includes body, 'name="weathered"'
   end
 
   def test_a_weathered_plate_shows_its_lacunae_and_never_its_lost_values
-    post '/generate', message: 'the brothers will gather in the chapter house', weathered: '1'
+    post '/generate', message: 'the brothers will gather in the chapter house', condition: 'worn'
 
     assert_predicate last_response, :ok?
     body = last_response.body
     assert_includes body, 'class="weathering"'
-    assert_match(%r{<dt>Condition</dt><dd>Weathered</dd>}, body)
-    assert_match(/Weathered: \d+ lacunae/, body)
+    assert_match(%r{<dt>Condition</dt><dd>Worn</dd>}, body)
+    assert_match(/Worn: \d+ lacunae\. Download it and send it/, body)
     cells = JSON.parse(CGI.unescapeHTML(body[/data-plate-cells="([^"]*)"/, 1]))
     assert(cells.any? { |_, _, value| value.nil? }, 'a worn sign has no value on the page')
     refute_match(/ style="/, body)
   end
 
   def test_a_weathered_plate_has_a_bench_that_never_holds_a_lost_value
-    post '/generate', message: 'the brothers will gather in the chapter house', weathered: '1'
+    post '/generate', message: 'the brothers will gather in the chapter house', condition: 'worn'
 
     body = last_response.body
     lacunae = JSON.parse(CGI.unescapeHTML(body[/data-lacunae="([^"]*)"/, 1]))
@@ -548,32 +553,22 @@ class AppTest < Minitest::Test
     assert(lacuna['open'].all? { |open| (lacuna['known'] / open % 10).zero? })
   end
 
-  def test_a_plate_can_carry_tally_signs
+  def test_the_form_does_not_draw_tally_signs
     post '/generate', message: 'ora et labora', tally: '1'
 
     assert_predicate last_response, :ok?
-    assert_includes last_response.body, 'class="tally-lines"'
-    assert_match(%r{<dt>Condition</dt><dd>Tally signs</dd>}, last_response.body)
-    refute_includes last_response.body, 'data-bench'
+    refute_includes last_response.body, 'class="tally-lines"'
+    refute_match(%r{<dt>Condition</dt>}, last_response.body)
   end
 
-  def test_a_weathered_plate_with_tallies_checks_them_on_the_bench
-    post '/generate', message: 'the brothers will gather in the chapter house', weathered: '1', tally: '1'
+  def test_a_tallied_plate_from_the_library_checks_its_tallies_on_the_readers_bench
+    _, svg, = Cistergraphia::Lacunae.inscribe('the brothers will gather in the chapter house', tally: true)
 
+    post '/decode', svg: svg
     body = last_response.body
-    assert_match(%r{<dt>Condition</dt><dd>Weathered, with tally signs</dd>}, body)
+    assert_match(%r{<dt>Condition</dt><dd>Worn, with tally signs</dd>}, body)
     assert_includes body, 'data-tally="'
     assert_match(/data-bench-tally>Tallies, \w+: row \?, column \?</, body)
-  end
-
-  def test_tally_signs_go_back_to_the_form_when_they_cannot_be_drawn
-    post '/generate', message: 'ora', layout: 'grille', tally: '1'
-    assert_equal 422, last_response.status
-    assert_includes last_response.body, Cistergraphia::Tally::NOT_UNDER_A_GRILLE
-
-    post '/generate', message: 'ora', mode: 'secret', passphrase: 'abbey of molesme', tally: '1'
-    assert_equal 422, last_response.status
-    assert_includes last_response.body, Cistergraphia::Tally::NOT_SEALED
   end
 
   def test_an_intact_plate_has_no_bench
@@ -583,15 +578,15 @@ class AppTest < Minitest::Test
   end
 
   def test_a_sealed_plate_cannot_weather
-    post '/generate', message: 'relics', mode: 'secret', passphrase: 'abbey of molesme', weathered: '1'
+    post '/generate', message: 'relics', mode: 'secret', passphrase: 'abbey of molesme', condition: 'worn'
 
     assert_equal 422, last_response.status
     assert_includes last_response.body, Cistergraphia::Lacunae::NOT_SEALED
-    assert_match(/name="weathered" value="1" data-weathered checked/, last_response.body)
+    assert_match(/name="condition" value="worn" data-rung checked/, last_response.body)
   end
 
   def test_two_readers_cannot_weather_yet
-    post '/generate', message: 'relics', layout: 'grille', decoy: 'vespers', weathered: '1'
+    post '/generate', message: 'relics', layout: 'grille', decoy: 'vespers', condition: 'worn'
 
     assert_equal 422, last_response.status
     assert_includes last_response.body, Cistergraphia::Lacunae::NOT_TWO_READERS
@@ -616,14 +611,14 @@ class AppTest < Minitest::Test
   end
 
   def test_a_broken_plate_lays_its_fragments_in_a_tray
-    post '/generate', message: 'the brothers will gather in the chapter house', broken: '1'
+    post '/generate', message: 'the brothers will gather in the chapter house', condition: 'broken'
 
-    assert_predicate last_response, :ok?
     body = last_response.body
     data = JSON.parse(CGI.unescapeHTML(body[/data-fragments="([^"]*)"/, 1]))
     count = body.scan('<g class="fragment"').size
     assert_includes 2..Cistergraphia::Fragments::MAX_PIECES, count
     assert_match(%r{<dt>Condition</dt><dd>Broken, in #{count} fragments</dd>}, body)
+    assert_match(/Broken: #{count} fragments\. Download it and send it/, body)
     assert_equal count, data['fragments'].size
     assert_includes body, 'data-rejoin-status'
     refute_includes body, 'data-plate-cells' # no walking a plate in pieces
@@ -631,7 +626,7 @@ class AppTest < Minitest::Test
 
   # The page holds what each fragment shows, read both ways, never where it goes
   def test_a_broken_plate_page_never_says_where_a_fragment_goes
-    post '/generate', message: 'ora et labora', broken: '1'
+    post '/generate', message: 'ora et labora', condition: 'broken'
 
     data = JSON.parse(CGI.unescapeHTML(last_response.body[/data-fragments="([^"]*)"/, 1]))
     assert_equal 6, data['size']
@@ -644,25 +639,26 @@ class AppTest < Minitest::Test
   def test_a_broken_plate_goes_back_to_the_form_when_it_cannot_break
     { { layout: 'rongorongo' } => Cistergraphia::Fragments::NOT_ALONG_THE_ROWS,
       { layout: 'grille' } => Cistergraphia::Fragments::NOT_UNDER_A_GRILLE,
-      { tally: '1' } => Cistergraphia::Fragments::NOT_TALLIED,
+      { condition: 'ruined', layout: 'rongorongo' } => Cistergraphia::Fragments::NOT_ALONG_THE_ROWS,
       { mode: 'secret', passphrase: 'abbey of molesme' } => Cistergraphia::Fragments::NOT_SEALED }.each do |form, error|
-      post '/generate', { message: 'ora et labora', broken: '1' }.merge(form)
+      post '/generate', { message: 'ora et labora', condition: 'broken' }.merge(form)
 
       assert_equal 422, last_response.status, form.inspect
       assert_includes last_response.body, CGI.escapeHTML(error)
-      assert_match(/name="broken" value="1" data-weathered checked/, last_response.body)
-      assert_match(/name="broken"[^>]*aria-invalid="true" autofocus>/m, last_response.body) # never missed
-      assert_includes last_response.body[%r{id="weathered-error"[^>]*>[^<]*</p>}], CGI.escapeHTML(error)
+      rung = form.fetch(:condition, 'broken')
+      assert_match(/name="condition" value="#{rung}" data-rung checked/, last_response.body)
+      assert_match(/value="#{rung}"[^>]*aria-invalid="true" autofocus>/m, last_response.body) # never missed
+      assert_includes last_response.body[%r{id="condition-error"[^>]*>[^<]*</p>}], CGI.escapeHTML(error)
     end
   end
 
   def test_a_broken_plate_can_be_weathered_too
-    post '/generate', message: 'the brothers will gather in the chapter house', broken: '1', weathered: '1'
+    post '/generate', message: 'the brothers will gather in the chapter house', condition: 'ruined'
 
     assert_predicate last_response, :ok?
     body = last_response.body
-    assert_match(%r{<dt>Condition</dt><dd>Broken, in \d fragments, and weathered</dd>}, body)
-    assert_match(/Broken and weathered: \d fragments, \d+ lacunae/, body)
+    assert_match(%r{<dt>Condition</dt><dd>Ruined: \d fragments, worn</dd>}, body)
+    assert_match(/Ruined: \d fragments, \d+ lacunae\. Download it and send it/, body)
     assert_includes body, 'class="lacunae"'
     refute_includes body, 'data-bench' # no bench on a plate in pieces
     signs = JSON.parse(CGI.unescapeHTML(body[/data-fragments="([^"]*)"/, 1]))['fragments'].flat_map { |f| f['signs'] }
@@ -698,7 +694,7 @@ class AppTest < Minitest::Test
     body = last_response.body
     assert_includes body, 'A plate to restore'
     assert_includes body, 'data-bench'
-    assert_match(%r{<dt>Condition</dt><dd>Weathered</dd>}, body)
+    assert_match(%r{<dt>Condition</dt><dd>Worn</dd>}, body)
     refute_includes body, 'data-transcription' # the answer is not on the page
     refute_includes body, 'leiden-'
   end
@@ -724,7 +720,7 @@ class AppTest < Minitest::Test
     body = last_response.body
     entries = JSON.parse(CGI.unescapeHTML(body[/data-lacunae="([^"]*)"/, 1]))
     assert_equal JSON.parse(JSON.generate(lacunae(sequence, :rongorongo, damage))), entries
-    assert_match(%r{<dt>Condition</dt><dd>Weathered, with tally signs</dd>}, body)
+    assert_match(%r{<dt>Condition</dt><dd>Worn, with tally signs</dd>}, body)
     assert_match(%r{<dt>Layout</dt><dd>Rongorongo</dd>}, body)
     assert_equal Cistergraphia::Tally.signs(sequence, :rongorongo),
                  JSON.parse(CGI.unescapeHTML(body[/data-tally="([^"]*)"/, 1]), symbolize_names: true)
@@ -752,7 +748,7 @@ class AppTest < Minitest::Test
     assert_predicate last_response, :ok?
     body = last_response.body
     assert_includes body, 'A plate to rejoin and restore'
-    assert_match(%r{<dt>Condition</dt><dd>Broken, in \d fragments, and weathered</dd>}, body)
+    assert_match(%r{<dt>Condition</dt><dd>Ruined: \d fragments, worn</dd>}, body)
     signs = JSON.parse(CGI.unescapeHTML(body[/data-fragments="([^"]*)"/, 1]))['fragments'].flat_map { |f| f['signs'] }
     assert(signs.any? { |_, _, worn| worn }, 'worn signs are marked')
     refute_includes body, 'leiden-'

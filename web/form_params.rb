@@ -3,6 +3,11 @@
 # What the forms ask for, read from the request: the mode (by its passphrase)
 # and the layout (a grille by its key). Mixed into the app's routes.
 module FormParams
+  # The ladder: each rung's name, and whether its plate is weathered and broken
+  RUNGS = { 'intact' => 'Intact', 'worn' => 'Worn', 'broken' => 'Broken', 'ruined' => 'Ruined' }.freeze
+  CONDITIONS = { 'intact' => [false, false], 'worn' => [true, false], 'broken' => [false, true],
+                 'ruined' => [true, true] }.freeze
+
   private
 
   # The mode switch wins when present; otherwise a non-blank passphrase means
@@ -53,46 +58,28 @@ module FormParams
     text
   end
 
-  # The plate's condition asked for: weathered, with tally signs, or broken
-  # (in that order: what may break depends on the others)
+  # The plate's condition: a rung of the ladder (intact unless another is
+  # asked for), as [weathered, broken]. Tally signs are the library's and the
+  # CLI's, not the form's
   def read_conditions
-    @weathered = weathered?
-    @tally = tally?
-    @broken = broken?
+    @condition = RUNGS.key?(params[:condition]) ? params[:condition] : 'intact'
+    @weathered, @broken = CONDITIONS.fetch(@condition)
+    @condition_error = condition_problem
   end
 
-  # A weathered plate asked for: game mode only, one reader only. What cannot
-  # weather (@weathered_error) goes back to the form
-  def weathered?
-    return false unless params[:weathered] == '1'
+  # What cannot be, in the library's words (@condition_error goes back to the
+  # form): a sealed plate never weathers, two readers' plates not yet, and a
+  # broken plate follows the snail
+  def condition_problem
+    return if @condition == 'intact'
+    return broken_problem if @broken
+    return Cistergraphia::Lacunae::NOT_SEALED if passphrase
 
-    @weathered_error = Cistergraphia::Lacunae::NOT_SEALED if passphrase
-    @weathered_error = Cistergraphia::Lacunae::NOT_TWO_READERS if @decoy
-    true
-  end
-
-  # Tally signs asked for: game mode only, not under a grille. What cannot
-  # carry them (@tally_error) goes back to the form
-  def tally?
-    return false unless params[:tally] == '1'
-
-    @tally_error = Cistergraphia::Tally::NOT_SEALED if passphrase
-    @tally_error = Cistergraphia::Tally::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
-    true
-  end
-
-  # A broken plate asked for: game mode only, along the snail, weathered or
-  # not, without tally signs. What cannot break (@broken_error) goes back to the form
-  def broken?
-    return false unless params[:broken] == '1'
-
-    @broken_error = broken_problem
-    true
+    Cistergraphia::Lacunae::NOT_TWO_READERS if @decoy
   end
 
   def broken_problem
     return Cistergraphia::Fragments::NOT_SEALED if passphrase
-    return Cistergraphia::Fragments::NOT_TALLIED if @tally
     return Cistergraphia::Fragments::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
 
     Cistergraphia::Fragments::NOT_ALONG_THE_ROWS unless @layout == :phaistos
@@ -100,21 +87,15 @@ module FormParams
 
   # What sends the form back, to explain
   def form_errors
-    [@passphrase_error, @grille_error, @decoy_error, @weathered_error, @tally_error, @broken_error]
+    [@passphrase_error, @grille_error, @decoy_error, @condition_error]
   end
 
-  # The conditions share one note: the error it shows, as [checkbox name, message], or nil
-  def condition_error
-    { weathered: @weathered_error, tally: @tally_error, broken: @broken_error }.find { |_, error| error }
-  end
+  # The rung sent back with an error: invalid, and focused when its error is
+  # the form's first (as the other fields are), so it is never missed
+  def condition_invalid(rung)
+    return '' unless @condition_error && rung == @condition
 
-  # A condition checkbox sent back with an error: invalid, and focused when its
-  # error is the form's first (as the other fields are), so it is never missed
-  def condition_invalid(name, error)
-    return '' unless error
-
-    first = condition_error&.first == name && form_errors.compact.first == error
-    first ? ' aria-invalid="true" autofocus' : ' aria-invalid="true"'
+    form_errors.compact.first == @condition_error ? ' aria-invalid="true" autofocus' : ' aria-invalid="true"'
   end
 
   # [sequence, svg, grille]: a plate for one reader, or for two (the grille is
@@ -122,9 +103,7 @@ module FormParams
   # fragments to @pieces
   def inscribe_plate
     return damaged_plate if @broken || @weathered
-    unless @decoy
-      return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout, tally: @tally) + [@layout]
-    end
+    return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout) + [@layout] unless @decoy
 
     given = @layout unless params[:grille].to_s.strip.empty? # a shared key is kept; a new one may be redrawn
     Cistergraphia::TwoReaders.inscribe(@message, @decoy, passphrase: passphrase, grille: given)
@@ -139,7 +118,7 @@ module FormParams
       @damage = damage unless damage.empty?
       @fragments = Cistergraphia::Fragments.read(svg)
     else
-      sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout, tally: @tally)
+      sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout)
     end
     [sequence, svg, @layout]
   end
