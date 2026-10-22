@@ -566,8 +566,8 @@
       const wrong = [0, 1].filter((k) => typed[k] !== values[(2 * pair) + k]);
       if (wrong.length) {
         wrong.forEach((k) => inputs[k].setAttribute('aria-invalid', 'true'));
-        const names = wrong.map((k) => (k ? 'second' : 'first')).join(' and the ');
-        feedback.textContent = `The ${names} sign does not read that. Look again${mode === 'guided' ? ', or tap the sign to see it' : ''}.`;
+        const which = wrong.length === 2 ? 'Neither sign reads' : `The ${wrong[0] ? 'second' : 'first'} sign does not read`;
+        feedback.textContent = `${which} that. Look again${mode === 'guided' ? ', or tap a sign to see it' : ''}.`;
         if (mode === 'unaided') { streak = 0; standing(); }
         inputs[wrong[0]].focus();
         return;
