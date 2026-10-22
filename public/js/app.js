@@ -11,6 +11,8 @@
   const { reducedMotion } = window.Ink;
   const PLACE_NAMES = { 1: 'units', 10: 'tens', 100: 'hundreds', 1000: 'thousands' };
   const TURNS = ['N', 'E', 'S', 'W']; // the grille's four positions
+  // The hand's motions beyond ink, told to whoever listens (sound.js)
+  const hand = (kind, detail = {}) => document.dispatchEvent(new CustomEvent(`hand:${kind}`, { detail }));
 
   // ---------- Toast ----------
   let toastTimer;
@@ -388,6 +390,7 @@
     const rung = $('[data-play]')?.dataset.play;
     if (!rung || !RUNGS.includes(rung) || recordedHere) return;
     recordedHere = true;
+    hand('bell');
     const record = storedRecord();
     record[rung] += 1;
     try { localStorage.setItem(RECORD_KEY, JSON.stringify(record)); } catch (error) { /* private mode: not kept */ }
@@ -482,6 +485,7 @@
       turnButton.addEventListener('click', () => {
         const turned = !isTurned();
         frame.classList.toggle('is-turned', turned);
+        hand('turn');
         turnButton.setAttribute('aria-pressed', String(turned));
         if (current >= 0) show(current);
       });
@@ -618,6 +622,7 @@
       if (letter === '') feedback.textContent = `${a} + ${b}: the second sign is ${nullMark}, a null pair. Nothing to read.`;
       else feedback.textContent = `${a} + ${b} = ${a + b}: ${letter === ' ' ? 'a space' : `“${letter}”`}.`;
       letterEl.textContent = letter === '' ? '∅' : letter;
+      hand('bite'); // the letter written down
       textEl.textContent = text();
       if (mode === 'unaided') {
         const before = rankFor(streak).name;
@@ -732,6 +737,7 @@
     $$('.grille-actions .awaits-script').forEach((el) => el.classList.remove('awaits-script'));
     button.addEventListener('click', () => {
       turn = turn === 3 ? -1 : turn + 1;
+      hand('parchment', { kind: turn === 0 ? 'lay' : turn < 0 ? 'lift' : 'turn' });
       if (turn === 0) reset(active.sheet);
       else if (turn > 0) active.sheet.style.setProperty('--turn', turn);
       show();
@@ -1024,12 +1030,23 @@
           ? `It reads, restored: ${best.text}`
           : `It reads: ${best.text}`;
         frame.classList.add('is-whole');
+        hand('bell');
         // A ruined plate is won on the bench, which opens on it from here
         if (restore) restore.disabled = false;
         else recordWin();
         return;
       }
       status.textContent = `Covered: ${best.balanced} of ${best.pairs} pairs balance.`;
+    };
+
+    // A fragment set down on the board: clay on wood, or two sherds meeting
+    // when it lands edge to edge against one already there
+    const touches = (a, b) => (a.row < b.row + b.rows && b.row < a.row + a.rows && (a.col + a.cols === b.col || b.col + b.cols === a.col))
+      || (a.col < b.col + b.cols && b.col < a.col + a.cols && (a.row + a.rows === b.row || b.row + b.rows === a.row));
+    const landed = (piece) => {
+      if (!onBoard(piece)) return;
+      const joined = pieces.some((other) => other !== piece && onBoard(other) && touches(piece, other));
+      hand('sherd', { pan: (((piece.col + (piece.cols / 2)) / data.size) - 0.5) * 1.2, joined });
     };
 
     const pick = (piece) => {
@@ -1044,6 +1061,7 @@
 
     const turn = (piece) => {
       piece.turned = !piece.turned;
+      hand('turn');
       draw(piece);
       update();
     };
@@ -1099,6 +1117,7 @@
         if (moved) {
           snap(piece);
           pick(piece);
+          landed(piece);
           update();
         } else pick(picked === piece ? null : piece);
       };
@@ -1115,6 +1134,7 @@
           piece.y = (piece.row + dr) * cellHeight;
           snap(piece);
           pick(piece);
+          landed(piece);
           update();
         } else if (event.key === 't' || event.key === 'T') {
           event.preventDefault();
@@ -1144,6 +1164,7 @@
       raise(picked);
       snap(picked);
       hideGhost();
+      landed(picked);
       picked.group.focus({ preventScroll: true }); // the keys go on moving and turning it
       update();
     });
@@ -1404,8 +1425,10 @@
     digits.forEach((button) => button.addEventListener('click', () => {
       const lacuna = lacunae[current];
       const digit = Number(button.dataset.digit);
-      if (chosen.get(key(lacuna)) === digit) chosen.delete(key(lacuna));
-      else chosen.set(key(lacuna), digit);
+      if (chosen.get(key(lacuna)) === digit) {
+        chosen.delete(key(lacuna));
+        hand('lift'); // the digit taken back
+      } else chosen.set(key(lacuna), digit);
       press(lacuna);
       select(current);
       drawEdition();

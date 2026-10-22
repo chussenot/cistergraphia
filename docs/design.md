@@ -145,6 +145,8 @@ dry wit that never winks ("Without it, the plate is an anagram of itself").
 | Lectio; novice, monk, prior, abbot | the reading exercise and the ranks it and the desk award | level, XP, badge |
 | your scriptorium | the record of plates read, kept in the browser | history, stats, profile |
 | transcription | what the decoder hands back | output, result, decoded message |
+| Hear the hand, Silence | the one control for sound, and its pressed state | sound on, mute, audio, volume, SFX |
+| the bite, the lift, the sherd, the join, the turn, the parchment, the bell | the seven sounds, named by the material that makes them | click, whoosh, snap, chime, ding, success sound |
 
 **The codex.** The folios follow the order the story is read: Inscribe `1r`, the plate `1v`,
 Read `2r`, the scriptorium `2v`, the transcription `3r`, About `4r`. The Erratum has no folio: a
@@ -160,9 +162,10 @@ Motion and interaction follow four rules. Anything that breaks one does not ship
    its tip, wet in the mode's colour, then the ink dries to iron-gall) or *lifted* (it fades). A sign changes by *morphing*:
    shared strokes stay, only the difference is pressed. Never a pop, a bounce or a shake.
 3. **The game is reading.** The page invites you to read the signs yourself, at your own
-   pace: no timers, no sound, no confetti. Mistakes are shown, not punished.
+   pace: no timers, no confetti, and no sound unless the reader asks to hear the hand (see
+   Sound, below). Mistakes are shown, not punished.
 4. **Silence by default.** Under `prefers-reduced-motion`, everything is instant and the
-   same information is still there.
+   same information is still there; nothing sounds until "Hear the hand" is pressed.
 
 **Red means one thing at a time.** Wet ink and "look here" share the mode colour, so lighting
 a corner first dries any wet ink: the only red left is what you should look at.
@@ -217,6 +220,49 @@ each sign's turned flag, and the cell's size), so walking the plate follows the 
 Under a grille, a wedge's cell is read from where it bites, to light the signs under the holes. Turning is a class on
 the frame, never on the SVG, and exports strip every class, style and the walking field: the
 downloaded SVG is unchanged.
+
+## Sound: the sounds of silence
+
+The site is silent by default, and stays so until a reader presses **Hear the hand** in the
+colophon (pressed: **Silence**; kept in the browser as `cistergraphia.sound`, off by default;
+the press is also the gesture browsers require before a page may sound, so nothing is ever
+autoplayed). What is then heard is only the hand at work, the motions the page already makes.
+Nothing is heard that is not seen; no sound stands for a state; mistakes are silent (the
+absence is the mark); nothing loops. One pitched sound, the bell, rings once when a plate is
+complete, and the reader rings it. Everything is synthesised in `public/js/sound.js` with the
+Web Audio API: no file, no request, nothing the CSP need allow. A bite is seeded by its
+stroke, as its wedge is by `Cistergraphia::Stylus`, so the same stroke always sounds the same.
+
+| Sound | What makes it | When | Length |
+|---|---|---|---|
+| The bite | The stylus biting clay at a stroke's head | A stroke pressed: the plate inked, the preview as you type, a digit on the bench, a pair read right at the desk | 4 to 8 ms |
+| The lift | The stylus leaving the clay | A stroke lifted: a sign morphing, a digit taken back | 15 ms |
+| The sherd | Clay set down on wood | A fragment laid on the board | 130 ms |
+| The join | Two sherds meeting edge to edge | A fragment landing against one already placed | two bites, 12 ms apart |
+| The turn | Clay slid half round on wood | A Rongorongo plate turned, a fragment turned | 400 ms, in the middle of `--dur-turn` |
+| The parchment | A pierced sheet laid, dragged a quarter turn, lifted | The grille laid, turned to E, S, W, lifted | 150 ms, 400 ms turned |
+| The bell | Bronze, struck once | A plate read to the end, every pair balanced, whole again, restored | 5 s, never cut, one at a time |
+
+Silent on purpose: ink drying, the page changing ink, a misread or a pair that does not
+balance, navigation, forms, downloads, the toast, Lectio's ranks, pointing and walking the plate.
+
+**Where the hand is.** Pan follows the sign's column within ±0.6, brightness its row (a
+low-pass from 6 kHz at the top row to 2.5 kHz at the bottom), so the snail is audible as it
+coils inward. Bites are thinned to at most 25 a second: a long plate is a patter that follows
+the drying front, never a hail. Peaks sit around −20 dBFS for the bite, −14 for the sherd and
+the turn, −10 for the bell, through one soft limiter; no reverb but the bell's own decay; in
+Vigils everything is 6 dB quieter. The context sleeps after 30 s without a sound.
+
+**One clock.** Sound is bound to the hand's timing (`ink:press` carries the wedge and its
+delay), not to the data. Under `prefers-reduced-motion` the hand is instant, so a sign set
+down whole makes one bite (the thinning), and the turn and the parchment still sound in full.
+The two preferences are independent.
+
+**Hooks.** `ink.js` tells `ink:press` (also for the wet strokes of a long plate, the pressing
+the drawing skipped) and `ink:lift`; `app.js` tells `hand:turn`, `hand:parchment` (lay, turn,
+lift), `hand:sherd` (with `joined`), `hand:bite`, `hand:lift` and `hand:bell` from the places
+that toggle `is-turned`, `is-laid`, `is-whole` and call `recordWin`. The pure part (what a
+sound is, from what made it) is tested in Node: `bundle exec rake test:sound`.
 
 ## Engineering rules the design depends on
 

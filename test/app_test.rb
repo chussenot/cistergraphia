@@ -116,6 +116,16 @@ class AppTest < Minitest::Test
     assert_includes body, 'John of Basingstoke'
   end
 
+  def test_silence_is_the_default_and_the_colophon_offers_the_hand
+    get '/'
+    assert_includes last_response.body, '<script src="/js/sound.js" defer></script>'
+    control = '<button type="button" class="hear awaits-script" data-hear aria-pressed="false">Hear the hand</button>'
+    assert_includes last_response.body, control
+
+    get '/about'
+    assert_includes last_response.body, 'no sound unless you ask to hear the hand'
+  end
+
   def test_pages_carry_social_preview_metadata
     get '/about'
 

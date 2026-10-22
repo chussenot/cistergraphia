@@ -10,6 +10,9 @@ Design Decisions:
 - Only first-party CSS, JS and fonts: a strict Content-Security-Policy applies
   (no inline script or style anywhere in the templates)
 - The body carries the mode: red for the game, blue for the secret
+- Silence by default: the colophon's one control, "Hear the hand", lets a
+  reader hear the hand at work (sound.js); its space is reserved, the script
+  enables it, and the choice is kept in the browser
 
 Constraints:
 - Works without JavaScript (forms post normally; JS only enhances)
@@ -39,6 +42,7 @@ Constraints:
   <link rel="stylesheet" href="/css/app.css">
   <script src="/js/ink.js" defer></script>
   <script src="/js/app.js" defer></script>
+  <script src="/js/sound.js" defer></script>
 </head>
 <body data-mode="<%= @secret ? 'secret' : 'game' %>">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -67,6 +71,7 @@ Constraints:
     <nav aria-label="About">
       <a href="https://github.com/chussenot/cistergraphia">Source</a>
       <a href="https://github.com/chussenot/cistergraphia/blob/master/docs/security-study.md">Security study</a>
+      <button type="button" class="hear awaits-script" data-hear aria-pressed="false">Hear the hand</button>
     </nav>
   </footer>
 
