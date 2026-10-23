@@ -275,6 +275,18 @@ class AppTest < Minitest::Test
     readings.flatten.each { |entry| assert_lacuna_shows_only_the_file(entry) }
   end
 
+  def test_a_plate_with_its_own_tablet_brought_to_read_goes_to_the_decoder_and_keeps_its_seed
+    _, svg = Cistergraphia.inscribe('Ora et labora', layout: :furrows, tablet: 'K7Q2M-ZXB4P')
+    post '/decode', svg: svg
+
+    assert_includes last_response.body, 'ora et labora', 'the decoder reads by the seed'
+    refute_includes last_response.body, 'data-desk', 'no desk until the notebook can open it'
+    cleaned = PlateFile.clean(svg)
+
+    assert_equal 'K7Q2MZXB4P', Cistergraphia::Tablet.seed_of(cleaned), 'the page keeps the seed on the file'
+    assert_equal 'ora et labora', Cistergraphia.decode(cleaned)
+  end
+
   def test_a_worn_plate_can_be_pathless_from_the_form
     post '/generate', message: 'Ora et labora', condition: 'worn', path: 'withheld'
     _cells, _layout, svg = plate_of(last_response.body)

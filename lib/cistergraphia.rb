@@ -16,6 +16,9 @@
 #   the game cipher and the public entry points
 # - Each character value is split into two random parts (same message, a
 #   different picture every time)
+# - A plate reads by a tablet: the shared one (TABLET), or one of its own, the
+#   same values dealt out again from a seed the file carries (Tablet); the
+#   reader of such a plate builds the tablet in the notebook
 # - 'Evil' pairs [noise, 9999] pad the sequence to a perfect square; 9999 can
 #   never come from a character, so the decoder can drop them reliably
 # - The sequence is laid out along one of six reading paths (layouts):
@@ -65,6 +68,8 @@ module Cistergraphia
 
   # Value => character, for decoding
   CHARACTERS = TABLET.to_h { |char, value| [value * 10, char.to_s] }.freeze
+  # Character => value, for enciphering (the shared tablet's; Tablet.draw gives a plate its own)
+  VALUES = CHARACTERS.invert.freeze
 
   module_function
 
@@ -77,10 +82,10 @@ module Cistergraphia
   # With a passphrase the message is encrypted (secret mode), otherwise enciphered (game).
   # even: a square with an even side, as a grille needs. Game sequences always
   # have one: they are made of pairs, and an even square has an even side.
-  def encode(message, passphrase: nil, even: false)
+  def encode(message, passphrase: nil, even: false, tablet: nil)
     return Secret.encrypt(message, passphrase, even: even) if passphrase
 
-    sequence = cister(message)
+    sequence = cister(message, tablet)
     inject_evil_symbols(sequence) until perfect_square?(sequence.size)
     sequence
   end
@@ -88,22 +93,23 @@ module Cistergraphia
   # Full pipeline: SVG rendered by #to_svg => message (normalized in game mode).
   # Without a layout, the five keyless paths are tried: only the right one
   # yields letters (game) or passes authentication (secret). A grille's plate
-  # (square) can only be read with its grille.
+  # (square) can only be read with its grille. A plate with a tablet of its own
+  # carries its seed: the decoder reads by that tablet.
   def decode(svg, passphrase: nil, layout: nil)
     Grille.check(svg, layout)
     return Fragments.decode(svg, passphrase: passphrase, layout: layout) if Fragments.broken?(svg)
     return Lacunae.decode(svg, passphrase: passphrase, layout: layout) if Lacunae.weathered?(svg)
 
-    read_whole(svg, passphrase, layout)
+    read_whole(svg, passphrase, layout, Tablet.seed_of(svg))
   end
 
   # An intact plate: along the layout given, else along every keyless path,
   # the file parsed once
-  def read_whole(svg, passphrase, layout)
+  def read_whole(svg, passphrase, layout, tablet = nil)
     strokes = SVG.lines(svg)
     errors = (layout ? [layout] : Layout::KEYLESS).map do |candidate|
       sequence = SVG.read(svg, layout: candidate, strokes: strokes)
-      return passphrase ? Secret.decrypt(sequence, passphrase) : decipher(sequence)
+      return passphrase ? Secret.decrypt(sequence, passphrase) : decipher(sequence, tablet: tablet)
     rescue DecodeError => e
       e
     end
@@ -123,18 +129,21 @@ module Cistergraphia
   # 100 two-letter ones) is drawn again with new random splits, so the
   # decoder's layout detection is never wrong. Secret plates need no check: the
   # wrong layout fails authentication instead of yielding a false message.
-  def inscribe(message, passphrase: nil, layout: :phaistos, tally: false, pathless: false)
+  # With a tablet (a seed), the plate is written by a tablet of its own.
+  def inscribe(message, passphrase: nil, layout: :phaistos, tally: false, pathless: false, tablet: nil)
     Pathless.check(passphrase, layout) if pathless
+    Tablet.check(passphrase, layout) if tablet
     100.times do
-      sequence = encode(message, passphrase: passphrase, even: layout.is_a?(Grille))
-      svg = to_svg(sequence, layout: layout, tally: tally, pathless: pathless)
+      sequence = encode(message, passphrase: passphrase, even: layout.is_a?(Grille), tablet: tablet)
+      svg = to_svg(sequence, layout: layout, tally: tally, pathless: pathless, tablet: tablet)
       return [sequence, svg] if passphrase || layout.is_a?(Grille) || unambiguous?(svg, layout)
     end
     raise Error, 'Could not draw an unambiguous plate for this message'
   end
 
   # True when the plate reads as letters along its own layout only (a path that
-  # is the same walk at this plate's side is not another layout)
+  # is the same walk at this plate's side is not another layout). The values
+  # are the same under any tablet, so the shared one tells letters from none
   def unambiguous?(svg, layout)
     strokes = SVG.lines(svg)
     side = SVG.grid_size(strokes.group_by { |line| Layout.cell_of(line, layout) })
@@ -146,27 +155,31 @@ module Cistergraphia
   end
 
   # Renders a sequence as an SVG document along a layout's reading path
-  def to_svg(sequence, layout: :phaistos, tally: false, pathless: false)
-    SVG.render(sequence, layout: layout, tally: tally, pathless: pathless)
+  def to_svg(sequence, layout: :phaistos, tally: false, pathless: false, tablet: nil)
+    SVG.render(sequence, layout: layout, tally: tally, pathless: pathless, tablet: tablet)
   end
 
-  # Converts a message into a sequence of numbers using the TABLET mapping
-  def cister(message)
+  # Converts a message into a sequence of numbers by the tablet: the shared
+  # one, or the one a seed draws
+  def cister(message, tablet = nil)
     chars = normalize(message).chars
     raise EmptyMessageError, 'Message has no characters that can be enciphered' if chars.empty?
 
-    chars.map { |c| TABLET.fetch(c.to_sym) * 10 }
+    values = tablet ? Tablet.draw(tablet) : VALUES
+    chars.map { |c| values.fetch(c) }
          .flat_map { |n| split(n) }
   end
 
-  # Inverse of #encode: drops evil symbols and joins the pairs back
-  def decipher(sequence)
+  # Inverse of #encode: drops evil symbols and joins the pairs back, each read
+  # by the tablet (the shared one, or the one a seed draws)
+  def decipher(sequence, tablet: nil)
     values = strip_evil_symbols(sequence)
     raise DecodeError, 'No enciphered characters found' if values.empty?
     raise DecodeError, 'Sequence has an odd number of values' if values.size.odd?
 
+    letters = tablet ? Tablet.characters(tablet) : CHARACTERS
     values.each_slice(2).map do |a, b|
-      CHARACTERS.fetch(a + b) { raise DecodeError, "#{a} + #{b} is not a known character" }
+      letters.fetch(a + b) { raise DecodeError, "#{a} + #{b} is not a known character" }
     end.join
   end
 
@@ -203,6 +216,7 @@ require_relative 'cistergraphia/stylus'
 require_relative 'cistergraphia/grille'
 require_relative 'cistergraphia/layout'
 require_relative 'cistergraphia/pathless'
+require_relative 'cistergraphia/tablet'
 require_relative 'cistergraphia/svg'
 require_relative 'cistergraphia/secret'
 require_relative 'cistergraphia/two_readers'

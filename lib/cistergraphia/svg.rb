@@ -18,13 +18,15 @@ module Cistergraphia
     module_function
 
     # Renders the sequence as a standalone SVG document along a layout's path
-    # (with the strokes lost to weathering taken away: damage is Weathering's)
-    def render(sequence, layout: :phaistos, damage: {}, tally: false, pathless: false)
+    # (with the strokes lost to weathering taken away: damage is Weathering's).
+    # The root says what else the plate is: pathless (a class), with a tablet
+    # of its own (its seed, data-tablet)
+    def render(sequence, layout: :phaistos, damage: {}, tally: false, pathless: false, tablet: nil)
       width, height, cols, _rows = Layout.dimensions(sequence, layout, tally: tally)
       signs = Layout.placed(sequence, cols, layout, pathless: pathless)
 
       <<~SVG
-        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}"#{%( class="#{Pathless::CLASS}") if pathless}>
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}"#{%( class="#{Pathless::CLASS}") if pathless}#{%( #{Tablet::ATTRIBUTE}="#{Tablet.normalize(tablet)}") if tablet}>
           <rect width="100%" height="100%" fill="white"/>
           #{Lacunae.patches(cols, layout, damage, pathless: pathless)}
           <g fill="black">

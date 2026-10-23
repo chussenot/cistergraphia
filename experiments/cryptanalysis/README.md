@@ -8,6 +8,8 @@ modes. Conclusions and sources: [docs/security-study.md](../../docs/security-stu
 | [`blind-llm/`](blind-llm/) | An LLM agent with a shell, given only 10 SVGs | 10/10 messages in ~2.5 min | not run (nothing to reason about) |
 | [`crack.py`](crack.py) | A script: public Cistercian glyphs + word lists | 100% from **one** SVG; 10/10 | stops at step 2; 0% |
 | [`crack.py`](crack.py) on pathless plates along the leap | The same script; the file withholds the way | 100% from one SVG; 10/10, as along the snail | not run (the same seal) |
+| [`crack.py`](crack.py) on ten plates sharing one tablet of their own | The same script; the seed stripped from the files | 10/10 from the ten pooled; 5 to 7% from one or three | not run |
+| [`crack.py`](crack.py) on plates each with its own tablet | The same script; the seed stripped; every plate a cryptogram of its own | 3 to 10%: a 40-letter cryptogram is not solved by a dictionary alone | not run |
 | [`blind-llm-grille/`](blind-llm-grille/) | The same agent, 10 SVGs under the Grille layout | 10/10 messages in ~26 min | not run |
 | [`crack_grille.py`](crack_grille.py) | A script that knows the scheme (Kerckhoffs) but not the grille's key | 10/10 from single SVGs; plates up to 16 × 16, sometimes 18 × 18; shared keys fall | 0%: every branch dies at once |
 
@@ -27,7 +29,11 @@ modes. Conclusions and sources: [docs/security-study.md](../../docs/security-stu
 3. **Pairs → characters:** it sums each pair; the most frequent sum is the space.
 4. **Substitution:** a dictionary-scored search over all substitutions, plus a second search
    restricted to "larger value = later letter" (the shortcut the blind LLM found). It keeps
-   whichever scores better.
+   whichever scores better. On a plate with a tablet of its own the shortcut is false and the
+   free search must carry the whole weight: it does, from ten plates pooled on one tablet
+   (10/10), and does not from one plate of forty letters (a monoalphabetic cryptogram that
+   short has thousands of dictionary-consistent readings; the attacker would need a language
+   model, or the file's own seed, which a real plate carries).
 
 ## Scripted attack on the Grille
 

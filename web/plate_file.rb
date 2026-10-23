@@ -10,7 +10,7 @@ module PlateFile
   ELEMENTS = %w[svg defs pattern g rect polygon path line].freeze
   ATTRIBUTES = %w[version width height viewBox class id fill stroke stroke-width stroke-dasharray stroke-linecap
                   stroke-linejoin x y x1 y1 x2 y2 points d transform display opacity patternUnits
-                  patternTransform].freeze
+                  patternTransform data-tablet].freeze # data-tablet: the seed of a plate's own tablet
   VALUE = /\A[\w\s#().,%-]*\z/ # a number, a word, a colour, a list of points, a transform: never markup or a URL
   PAINT = /\Aurl\(#[\w-]+\)\z/ # a pattern of the file's own (fill="url(#worn)")
   XMLNS = 'http://www.w3.org/2000/svg'
