@@ -373,7 +373,9 @@
   // exchange, not a leaderboard. The Read page shows it; a plate won on the
   // reader's page (read to the end, every pair balanced, whole again) adds one
   const RECORD_KEY = 'cistergraphia.record';
-  const RUNGS = ['intact', 'worn', 'broken', 'ruined', 'pathless'];
+  const RUNGS = ['intact', 'worn', 'broken', 'ruined', 'pathless', 'tablet'];
+  // How a count is said in the record: a rung's name, or its phrase
+  const RUNG_WORDS = { tablet: (n) => (n === 1 ? 'with its own tablet' : 'with their own tablets') };
   function storedRecord() {
     const empty = Object.fromEntries(RUNGS.map((rung) => [rung, 0]));
     try {
@@ -384,7 +386,7 @@
   function recordLine(record) {
     const total = RUNGS.reduce((sum, rung) => sum + record[rung], 0);
     if (!total) return '';
-    const parts = RUNGS.filter((rung) => record[rung]).map((rung) => `${record[rung]} ${rung}`);
+    const parts = RUNGS.filter((rung) => record[rung]).map((rung) => `${record[rung]} ${RUNG_WORDS[rung] ? RUNG_WORDS[rung](record[rung]) : rung}`);
     const listed = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0];
     return `${total} ${total === 1 ? 'plate' : 'plates'} read, ${listed}.`;
   }
@@ -561,6 +563,7 @@
     if (!desk || !frame || !frame.dataset.plateCells || !Ink.glyphTable()) return;
     const cells = JSON.parse(frame.dataset.plateCells);
     const pathless = 'deskPathless' in desk.dataset;
+    const own = 'deskOwn' in desk.dataset; // a tablet of its own: the notebook names the sums (initNotebook)
     const grid = pathless ? JSON.parse(frame.dataset.plateGrid) : null;
     let values = cells.map(([, , value]) => value);
     const tablet = JSON.parse(desk.dataset.tablet);
@@ -586,6 +589,10 @@
     };
     const waiting = () => pathless && !way;
     const text = () => read.map((letter) => (letter === null ? '·' : (letter === ' ' ? ' ' : letter))).join('');
+    const notes = own ? initNotebook(cells.map(([, , value]) => value), textEl, nullMark) : null;
+    const writeText = () => { if (notes) notes.render(); else textEl.textContent = text(); };
+    const sumOf = (p) => values[2 * p] + values[(2 * p) + 1];
+    const said = (letter) => (letter === ' ' ? 'space' : letter);
     const standing = () => {
       $('[data-desk-rank]', desk).textContent = rankFor(streak).name;
       $('[data-desk-streak]', desk).textContent = streak;
@@ -596,6 +603,7 @@
       desk.dataset.deskMode = mode;
       $$('[data-desk-set-mode]', desk).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.deskSetMode === mode)));
       frame.plateWalk?.reveal(mode === 'guided');
+      notes?.guided(mode === 'guided');
       try { localStorage.setItem(DESK_MODE_KEY, mode); } catch (error) { /* private mode */ }
     };
     const show = (p) => {
@@ -609,7 +617,8 @@
         inputs[k].value = '';
         inputs[k].removeAttribute('aria-invalid');
       });
-      letterEl.textContent = read[pair] === null ? '?' : (read[pair] === '' ? '∅' : read[pair]);
+      if (notes) letterEl.textContent = values[(2 * pair) + 1] === nullMark ? '∅' : (notes.letter(sumOf(pair)) ?? '?');
+      else letterEl.textContent = read[pair] === null ? '?' : (read[pair] === '' ? '∅' : read[pair]);
       frame.plateWalk?.show(2 * pair);
     };
     const nextUnread = () => {
@@ -642,7 +651,7 @@
       $$('[data-desk-way]', desk).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.deskWay === name)));
       frame.plateWalk?.follow(laid);
       feedback.textContent = `Along ${WAY_NAMES[name]}: the pairs form. Read them.`;
-      textEl.textContent = text();
+      writeText();
       notebook();
       pair = 0;
       const next = read[0] === null ? 0 : nextUnread();
@@ -669,7 +678,7 @@
         tried.get(way).broke ??= pair + 1;
         feedback.textContent = `Turned half round, a sign reads as no number: ${WAY_NAMES[way]} is not the way.`;
         letterEl.textContent = '✗';
-        textEl.textContent = text();
+        writeText();
         notebook();
         return;
       }
@@ -688,24 +697,31 @@
         inputs[wrong[0]].focus();
         return;
       }
-      const letter = letterOf(pair);
+      const letter = notes ? (values[(2 * pair) + 1] === nullMark ? '' : 'read') : letterOf(pair);
       read[pair] = letter;
       const [a, b] = [values[2 * pair], values[(2 * pair) + 1]];
+      if (notes && letter === 'read') { // a tablet of its own: the sum goes into the notebook, its letter is the notebook's
+        notes.seen(a + b);
+        const known = notes.letter(a + b);
+        feedback.textContent = `${a} + ${b} = ${a + b}. ${known ? `In the notebook: “${said(known)}”.` : 'Not yet in the notebook.'}`;
+        letterEl.textContent = known ?? '?';
+      }
       if (letter === '?') { // along a way laid over a pathless plate: the pair does not balance
         tried.get(way).broke ??= pair + 1;
         feedback.textContent = `${a} + ${b} = ${a + b}: not on the tablet. ${capital(WAY_NAMES[way])} breaks at pair ${pair + 1}.`;
         letterEl.textContent = '✗';
-        textEl.textContent = text();
+        writeText();
         notebook();
         const next = nextUnread();
         if (next >= 0) setTimeout(() => { show(next); inputs[0].focus(); }, reducedMotion ? 300 : 900);
         return;
       }
       if (letter === '') feedback.textContent = `${a} + ${b}: the second sign is ${nullMark}, a null pair. Nothing to read.`;
-      else feedback.textContent = `${a} + ${b} = ${a + b}: ${letter === ' ' ? 'a space' : `“${letter}”`}.`;
-      letterEl.textContent = letter === '' ? '∅' : letter;
+      else if (!notes) feedback.textContent = `${a} + ${b} = ${a + b}: ${letter === ' ' ? 'a space' : `“${letter}”`}.`;
+      if (letter === '') letterEl.textContent = '∅';
+      else if (!notes) letterEl.textContent = letter;
       hand('bite'); // the letter written down
-      textEl.textContent = text();
+      writeText();
       notebook();
       if (mode === 'unaided') {
         const before = rankFor(streak).name;
@@ -717,6 +733,10 @@
         standing();
       }
       const next = nextUnread();
+      if (next < 0 && notes) {
+        feedback.textContent = 'Every pair read: their sums are in the notebook. Now its tablet.';
+        return;
+      }
       if (next < 0) {
         const breaks = read.filter((l) => l === '?').length;
         if (breaks) {
@@ -750,6 +770,128 @@
     setMode(mode);
     standing();
     desk.classList.remove('awaits-script');
+  }
+
+  // ---------- The notebook: a plate with a tablet of its own ----------
+  // One entry per sum the pairs make (the server drew them, the most seen
+  // first). A letter written against a sum is in pencil: the text line takes
+  // it at once, in grey italics; a letter is used by one sum at a time, so
+  // writing it elsewhere moves it. Ask the scribe sends the pencilled entries
+  // (POST /ask); those that hold come back, only when three or more do (or
+  // the last ones, together), and go into ink, upright, for good. Guided, every
+  // sum is in the notebook from the start; unaided, a sum enters it once its
+  // pair is read right at the desk. Kept in this browser, by the plate's seed.
+  const NOTEBOOK_KEY = 'cistergraphia.notebook.';
+  function initNotebook(values, textEl, nullMark) {
+    const book = $('[data-notebook]');
+    const sums = JSON.parse(book.dataset.notebookSums);
+    const selects = new Map($$('[data-entry]', book).map((el) => [Number(el.dataset.entry), el]));
+    const rows = new Map($$('[data-entry-row]', book).map((el) => [Number(el.dataset.entryRow), el]));
+    const [countEl, verdict, ask] = ['[data-notebook-count]', '[data-notebook-verdict]', '[data-notebook-ask]'].map((q) => $(q, book));
+    const svgField = $('.readback input[name="svg"]');
+    const seed = (svgField?.value.match(/data-tablet="([^"]+)"/) || [])[1];
+    const pairs = [];
+    for (let k = 0; k < values.length; k += 2) if (values[k + 1] !== nullMark) pairs.push(values[k] + values[k + 1]);
+    const pencil = new Map();
+    const ink = new Map();
+    const seen = new Set();
+    let asked = 0;
+    let guided = true;
+    let busy = false;
+
+    const save = () => {
+      if (!seed) return;
+      try { localStorage.setItem(NOTEBOOK_KEY + seed, JSON.stringify({ pencil: [...pencil], ink: [...ink], seen: [...seen], asked })); } catch (error) { /* private mode */ }
+    };
+    const restore = () => {
+      if (!seed) return;
+      try {
+        const kept = JSON.parse(localStorage.getItem(NOTEBOOK_KEY + seed) || 'null');
+        if (!kept) return;
+        kept.ink.forEach(([sum, char]) => { if (selects.has(sum)) ink.set(sum, char); });
+        kept.pencil.forEach(([sum, char]) => { if (selects.has(sum) && !ink.has(sum)) pencil.set(sum, char); });
+        kept.seen.forEach((sum) => seen.add(sum));
+        asked = Number(kept.asked) || 0;
+      } catch (error) { /* nothing kept */ }
+    };
+    const letter = (sum) => ink.get(sum) ?? pencil.get(sum);
+    const inkedLetters = () => new Set(ink.values());
+
+    // The text line: every pair that reads, its letter in ink, in pencil, or a dot
+    const render = () => {
+      textEl.replaceChildren(...pairs.map((sum) => {
+        const span = document.createElement('span');
+        if (ink.has(sum)) { span.className = 'is-ink'; span.textContent = ink.get(sum); } else if (pencil.has(sum)) { span.className = 'is-pencil'; span.textContent = pencil.get(sum); } else span.textContent = '·';
+        return span;
+      }));
+      const used = inkedLetters();
+      selects.forEach((select, sum) => {
+        const inked = ink.has(sum);
+        select.value = letter(sum) ?? '';
+        select.disabled = inked;
+        select.classList.toggle('is-ink', inked);
+        select.classList.toggle('is-pencil', !inked && pencil.has(sum));
+        $$('option', select).forEach((option) => { option.disabled = option.value !== '' && used.has(option.value) && ink.get(sum) !== option.value; });
+        rows.get(sum).classList.toggle('is-unseen', !guided && !inked && !seen.has(sum));
+      });
+      countEl.textContent = `${ink.size} of ${sums.length} in ink · asked ${asked} ${asked === 1 ? 'time' : 'times'}`;
+    };
+
+    selects.forEach((select, sum) => select.addEventListener('change', () => {
+      const char = select.value;
+      if (char === '') pencil.delete(sum);
+      else {
+        pencil.forEach((other, key) => { if (other === char && key !== sum) pencil.delete(key); }); // a letter is one sum's
+        pencil.set(sum, char);
+      }
+      hand(char === '' ? 'lift' : 'bite');
+      render();
+      save();
+    }));
+
+    ask.addEventListener('click', async () => {
+      if (busy) return;
+      const open = sums.filter((sum) => !ink.has(sum));
+      const written = open.filter((sum) => pencil.has(sum));
+      if (!open.length) return;
+      if (written.length < Math.min(3, open.length)) {
+        verdict.textContent = open.length < 3 ? 'Pencil every sum left: the scribe confirms the last ones together.' : 'Pencil three entries at least: the scribe confirms three at a time.';
+        return;
+      }
+      busy = true;
+      verdict.textContent = 'The scribe reads the notebook…';
+      try {
+        const body = new URLSearchParams({ svg: svgField.value, pencil: JSON.stringify(Object.fromEntries(written.map((sum) => [sum, pencil.get(sum)]))), inked: JSON.stringify([...ink.keys()]) });
+        const response = await fetch('/ask', { method: 'POST', body, headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error(String(response.status));
+        const { held } = await response.json();
+        asked += 1;
+        const confirmed = Object.entries(held).map(([sum, char]) => [Number(sum), char]);
+        confirmed.forEach(([sum, char]) => { ink.set(sum, char); pencil.delete(sum); });
+        if (ink.size === sums.length) {
+          verdict.textContent = 'Every sum is in ink: the tablet is yours.';
+          recordWin(); // the bell
+        } else if (confirmed.length) {
+          verdict.textContent = `${confirmed.length} ${confirmed.length === 1 ? 'entry holds' : 'entries hold'}: now in ink.`;
+        } else verdict.textContent = 'Nothing holds yet.';
+        render();
+        save();
+      } catch (error) {
+        verdict.textContent = 'The scribe could not read the notebook: ask again.';
+      } finally {
+        busy = false;
+      }
+    });
+
+    restore();
+    render();
+    book.classList.remove('awaits-script');
+    return {
+      render,
+      letter,
+      seen: (sum) => { if (!seen.has(sum)) { seen.add(sum); render(); save(); } },
+      guided: (on) => { guided = on; render(); }
+    };
   }
 
   // ---------- The grille: a parchment laid on the plate, turned N, E, S, W ----------

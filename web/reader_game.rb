@@ -12,16 +12,27 @@ module ReaderGame
   # (decipher=1, or a passphrase). The puzzle is built from the file alone
   def playable?(svg)
     return false if passphrase || params[:decipher] == '1'
-    # A plate with a tablet of its own goes to the decoder until the notebook can open it
-    return false if Cistergraphia::Tablet.seed_of(svg)
 
-    @weathered = Cistergraphia::Lacunae.weathered?(svg)
-    @broken = Cistergraphia::Fragments.broken?(svg)
-    @pathless = Cistergraphia::Pathless.pathless?(svg)
+    read_marks(svg)
+    return false if two_to_find?
+
     @svg_content = PlateFile.clean(svg)
     return false unless @svg_content
 
     !lay(svg).nil?
+  end
+
+  # One thing to find at a time: a plate with its own tablet is a game only intact, its way shown
+  def two_to_find?
+    @own && (@pathless || @weathered || @broken)
+  end
+
+  # What the file says of the plate: worn, broken, pathless, with its own tablet
+  def read_marks(svg)
+    @weathered = Cistergraphia::Lacunae.weathered?(svg)
+    @broken = Cistergraphia::Fragments.broken?(svg)
+    @pathless = Cistergraphia::Pathless.pathless?(svg)
+    @own = !Cistergraphia::Tablet.seed_of(svg).nil?
   end
 
   # The puzzle the plate opens as: the board for a broken plate (the bench on
@@ -57,8 +68,29 @@ module ReaderGame
     return unless @layout && (@values = letters(svg, @layout))
 
     @size = Integer.sqrt(@values.size)
-    lay_pathless if @pathless && !submitted_grille
+    lay_desk_variant
     @desk = true
+  end
+
+  # A pathless plate lays its ways itself; a plate with its own tablet opens the notebook
+  def lay_desk_variant
+    lay_pathless if @pathless && !submitted_grille
+    @notebook = Cistergraphia::Notebook.entries(@values) if @own
+  end
+
+  # The scribe's answer to the notebook: the pencilled entries that hold, as
+  # { sum => character } (strings, for JSON), three at a time (Notebook.held)
+  def scribe_answer(svg)
+    pencil, inked = notebook_sent
+    Cistergraphia::Notebook.held(svg, pencil, inked).transform_keys(&:to_s)
+  end
+
+  # [{ sum => character } pencilled, [sum] inked], from the page's JSON
+  def notebook_sent
+    pencil = JSON.parse(params[:pencil].to_s).to_h { |sum, char| [Integer(sum), char.to_s] }
+    [pencil, JSON.parse(params[:inked].to_s).map { |sum| Integer(sum) }]
+  rescue JSON::ParserError, ArgumentError, TypeError, NoMethodError
+    raise Cistergraphia::Error, 'The notebook could not be read: ask again'
   end
 
   # A pathless plate: the page gets every cell's readings in grid order and

@@ -28,6 +28,7 @@ end", "every pair balances", "Whole again"), or to Decipher if the reader gave u
 | Worn | 6 × 6 | Phaistos | | | | / | | |
 | Worn | 10 × 10 | Phaistos | | | | / | | |
 | Worn, pathless | 8 × 8 | Furrows, withheld | | | | / | | which way first; whether the edition's [?] marks were read as the sign of a wrong way |
+| Intact, its own tablet | 8 × 8 | Phaistos | | | | n/a | | time to the space; how many askings; worked from the counts or from the words |
 | Broken | 10 × 10 | Phaistos | | | | n/a | | |
 | Ruined | 10 × 10 | Phaistos | | | | / | | |
 

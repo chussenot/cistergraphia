@@ -71,42 +71,6 @@ module FormParams
     @tablet_error = tablet_problem if @own_tablet
   end
 
-  # What cannot have a tablet of its own, in the library's words (@tablet_error
-  # goes back to the form): a sealed plate, a grille plate, a damaged one
-  def tablet_problem
-    return Cistergraphia::Tablet::NOT_SEALED if passphrase
-    return Cistergraphia::Tablet::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
-
-    Cistergraphia::Tablet::NOT_DAMAGED if @weathered || @broken
-  end
-
-  # What cannot be pathless, in the library's words (@path_error goes back
-  # to the form): a sealed plate, a grille plate, a broken one
-  def path_problem
-    return Cistergraphia::Pathless::NOT_SEALED if passphrase
-    return Cistergraphia::Pathless::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
-
-    Cistergraphia::Pathless::NOT_BROKEN if @broken
-  end
-
-  # What cannot be, in the library's words (@condition_error goes back to the
-  # form): a sealed plate never weathers, two readers' plates not yet, and a
-  # broken plate follows the snail
-  def condition_problem
-    return if @condition == 'intact'
-    return broken_problem if @broken
-    return Cistergraphia::Lacunae::NOT_SEALED if passphrase
-
-    Cistergraphia::Lacunae::NOT_TWO_READERS if @decoy
-  end
-
-  def broken_problem
-    return Cistergraphia::Fragments::NOT_SEALED if passphrase
-    return Cistergraphia::Fragments::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
-
-    Cistergraphia::Fragments::NOT_ALONG_THE_ROWS unless @layout == :phaistos
-  end
-
   # What sends the form back, to explain
   def form_errors
     [@passphrase_error, @grille_error, @decoy_error, @condition_error, @path_error, @tablet_error]

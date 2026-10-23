@@ -22,12 +22,16 @@ Design Decisions:
 Constraints:
 - Worn plates under a grille play once the key is given; broken plates
   follow the snail. Sealed plates are not games
+- A plate with a tablet of its own opens at the desk with the notebook
+  under it (intact, its way shown: one thing to find at a time); the page
+  holds its sums, never its tablet, and the scribe (POST /ask) confirms
 - A ruined plate is the board first, then (rejoined=1, from the board once
   whole) the bench on the plate drawn whole from its own fragments; the file
   carried on to the decoder is still the broken one
 %>
 <% rung = if @broken || @rejoined then @weathered ? 'ruined' : 'broken'
           elsif @grid then 'pathless'
+          elsif @notebook then 'tablet'
           elsif @desk then 'intact'
           else 'worn'
           end %>
@@ -43,6 +47,8 @@ Constraints:
     <p class="lede">The plate is worn and pathless: <%= @values.size / 2 %> pairs of signs, <%= pathless_lacunae(@worn) %> <%= pathless_lacunae(@worn) == 1 ? 'stroke position' : 'stroke positions' %> lost where the surface is hatched, and nothing says which way it runs. Choose one of the five ways at the bench: along it the pairs form, and read as letters or do not. Along the way, press the lost digits back in: each pair must sum to a value on the tablet, and where two or three letters balance, the words decide.</p>
   <% elsif @grid %>
     <p class="lede">The plate is whole and pathless: <%= @values.size / 2 %> pairs of signs, but nothing says which way it runs. Choose one of the five ways at the desk and read along it: the pairs form, and each sums to a letter on the tablet, or does not. Along the wrong way the letters stop; the notebook keeps what each way gave.</p>
+  <% elsif @notebook %>
+    <p class="lede">The plate is whole and has a tablet of its own: <%= @notebook.size %> sums, each one letter, but not the letter the shared tablet gives it. Build its tablet in the notebook. Every pair that adds to one sum is the same letter, however it is spelled; the sum seen most is usually the space, or <i>e</i>. Write a letter in pencil against a sum and the text below takes it at once. Ask the scribe: entries are confirmed three at a time, never one.</p>
   <% elsif @desk %>
     <p class="lede">The plate is whole: <%= @values.size / 2 %> pairs of signs, each summing to a letter on the tablet. Read it pair by pair: type what each sign reads and the page adds them. Guided, a tap on a sign shows its value; unaided, a wrong reading is marked, never corrected, and three in a row earn the Lectio’s ranks.</p>
   <% elsif @broken && @weathered %>
@@ -68,6 +74,9 @@ Constraints:
       <div><dt>Condition</dt><dd><%= @tally ? 'Worn, pathless, with tally signs' : 'Worn, pathless' %></dd></div>
     <% elsif @grid %>
       <div><dt>Condition</dt><dd>Intact, pathless</dd></div>
+    <% elsif @notebook %>
+      <div><dt>Condition</dt><dd>Intact</dd></div>
+      <div><dt>Tablet</dt><dd>Its own: to build</dd></div>
     <% elsif @desk %>
       <div><dt>Condition</dt><dd>Intact</dd></div>
     <% else %>
@@ -86,6 +95,10 @@ Constraints:
   <% elsif @grid %>
     <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: pathless_cells_json(@grid), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size, grid: @grid } %>
     <%== erb :_desk, layout: false, locals: { values: @values, tablet: Cistergraphia::CHARACTERS, pathless: true } %>
+  <% elsif @notebook %>
+    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size } %>
+    <%== erb :_desk, layout: false, locals: { values: @values, tablet: {}, own: true } %>
+    <%== erb :_notebook, layout: false, locals: { entries: @notebook } %>
   <% elsif @desk %>
     <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size } %>
     <%== erb :_desk, layout: false, locals: { values: @values, tablet: Cistergraphia::CHARACTERS } %>

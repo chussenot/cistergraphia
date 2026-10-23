@@ -31,6 +31,7 @@ module Cistergraphia
     NOT_UNDER_A_GRILLE = 'A grille plate has a key already: one key at a time'
     NOT_DAMAGED = 'A worn or broken plate keeps the shared tablet: the bench and the board speak in letters'
     NOT_A_SEED = "A tablet's seed has #{LENGTH} letters and digits, as a grille key".freeze
+    NOT_PATHLESS = 'One thing to find at a time: a pathless plate keeps the shared tablet'
 
     module_function
 

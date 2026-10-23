@@ -23,6 +23,7 @@ const talliedFile = plateFile.replace(/\.svg$/, '-tallied.svg'); // and this one
 const ruinedFile = plateFile.replace(/\.svg$/, '-ruined.svg'); // and this one, broken and worn
 const pathlessFile = plateFile.replace(/\.svg$/, '-pathless.svg'); // and this one, its way withheld
 const wornPathlessFile = plateFile.replace(/\.svg$/, '-worn-pathless.svg'); // and this one, worn, its way withheld
+const ownTabletFile = plateFile.replace(/\.svg$/, '-own-tablet.svg'); // and this one, with a tablet of its own
 const VIEWPORTS = [
   { width: 320, height: 640 }, // the smallest phone
   { width: 390, height: 844 }, // a common phone
@@ -353,6 +354,18 @@ const FLOWS = [
     ]
   },
   {
+    page: 'notebook',
+    open: bringToRead(ownTabletFile, '[data-notebook]'),
+    steps: [
+      { name: 'pencil the most seen sum', act: (p) => p.selectOption('[data-entry] >> nth=0', ' ') },
+      { name: 'pencil two more', act: async (p) => { await p.selectOption('[data-entry] >> nth=1', 'e'); await p.selectOption('[data-entry] >> nth=2', 't'); } },
+      { name: 'ask the scribe', act: async (p) => { await p.click('[data-notebook-ask]'); await p.waitForTimeout(300); } },
+      { name: 'read a pair at the desk', act: async (p) => { await p.click('[data-desk-sign="0"]'); await p.click('[data-desk-sign="1"]'); await p.click('[data-desk-read]'); } },
+      { name: 'go unaided', act: (p) => p.click('[data-desk-set-mode="unaided"]') },
+      { name: 'back to guided', act: (p) => p.click('[data-desk-set-mode="guided"]') }
+    ]
+  },
+  {
     page: 'worn+pathless',
     open: bringToRead(wornPathlessFile, '[data-bench-pathless]'),
     steps: [
@@ -465,6 +478,7 @@ const PAGES = [
   { page: 'restore', open: bringToRead(weatheredFile, '[data-bench]') },
   { page: 'pathless', open: bringToRead(pathlessFile, '[data-desk-pathless]') },
   { page: 'worn+pathless', open: bringToRead(wornPathlessFile, '[data-bench-pathless]') },
+  { page: 'notebook', open: bringToRead(ownTabletFile, '[data-notebook]') },
   { page: 'rejoin', open: bringToRead(brokenFile, '[data-rejoin]') },
   { page: 'ruined', open: bringToRead(ruinedFile, '[data-rejoin]') },
   { page: 'rejoined', open: openRejoinedBench },

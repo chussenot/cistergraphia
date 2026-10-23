@@ -237,6 +237,48 @@ async function pathlessBench() {
   await ctx.close();
 }
 
+// ---------- A tablet of its own: the notebook ----------
+async function notebook() {
+  const ctx = await context();
+  const page = await ctx.newPage();
+  await bringToRead(page, 'own-tablet.svg', '[data-notebook]:not(.awaits-script)');
+  const tablet = answers.own_tablet; // sum => character, from the seed
+  const sums = Object.keys(tablet).map(Number);
+  const order = await page.evaluate(() => JSON.parse(document.querySelector('[data-notebook]').dataset.notebookSums));
+  expectEqual('notebook', 'the page holds no tablet', await page.evaluate(() => document.querySelector('[data-desk]').dataset.tablet), '{}');
+  expectEqual('notebook', 'one entry per sum the pairs make', order.slice().sort((a, b) => a - b).join(), sums.slice().sort((a, b) => a - b).join());
+  const write = (sum, char) => page.selectOption(`[data-entry="${sum}"]`, char);
+  const ask = async () => { await page.click('[data-notebook-ask]'); await page.waitForFunction(() => !document.querySelector('[data-notebook-verdict]').textContent.endsWith('…')); };
+  const inked = () => page.locator('select[data-entry]:disabled').count();
+  // The space: the most seen sum of this message, and pencilling it breaks the line into words
+  const space = sums.find((sum) => tablet[sum] === ' ');
+  await write(space, ' ');
+  expectEqual('notebook', 'a pencilled space breaks the line into words', (await page.textContent('[data-desk-text]')).includes(' '), true);
+  expectEqual('notebook', 'a pencilled letter is in pencil', await page.locator('[data-desk-text] .is-pencil').count() > 0, true);
+  // Two right and one wrong: nothing holds yet, nothing in ink, and the scribe does not say which
+  const others = order.filter((sum) => sum !== space);
+  const wrongLetter = 'abcdefghijklmnopqrstuvwxyz'.split('').find((c) => !Object.values(tablet).includes(c));
+  await write(others[0], tablet[others[0]]);
+  await write(others[1], wrongLetter);
+  await ask();
+  expectEqual('notebook', 'two right entries and a wrong one: nothing holds yet', await text(page, '[data-notebook-verdict]'), 'Nothing holds yet.');
+  expectEqual('notebook', 'and nothing goes into ink', await inked(), 0);
+  // The third put right, a fourth wrong: three hold, the wrong one stays in pencil
+  await write(others[1], tablet[others[1]]);
+  await write(others[2], wrongLetter);
+  await ask();
+  expectEqual('notebook', 'three right entries hold, in ink', await inked(), 3);
+  expectEqual('notebook', 'the wrong one stays in pencil', await page.locator(`[data-entry="${others[2]}"]`).isDisabled(), false);
+  expectEqual('notebook', 'the count says how far', (await text(page, '[data-notebook-count]')).startsWith(`3 of ${sums.length} in ink · asked 2 times`), true);
+  // The rest, right: every sum in ink, the text is the message, one plate in the record
+  for (const sum of others.slice(2)) await write(sum, tablet[sum]);
+  await ask();
+  expectEqual('notebook', 'every sum in ink: the tablet is the reader\'s', await text(page, '[data-notebook-verdict]'), 'Every sum is in ink: the tablet is yours.');
+  expectEqual('notebook', 'the text is the message', await text(page, '[data-desk-text]'), MESSAGE);
+  expectEqual('notebook', 'one plate with its own tablet in the scriptorium', await record(page), 'Entered in your scriptorium: 1 plate read, 1 with its own tablet.');
+  await ctx.close();
+}
+
 // ---------- The board ----------
 async function board() {
   const ctx = await context();
@@ -457,6 +499,7 @@ async function budgets() {
   await pathless();
   await bench();
   await pathlessBench();
+  await notebook();
   await board();
   await lectio();
   await grille();

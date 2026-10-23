@@ -43,6 +43,14 @@ def breaks(svg)
   end
 end
 
+# A plate with a tablet of its own, written to the directory: what each of its sums reads as, from its seed
+def own_tablet(dir)
+  seed = 'K7Q2M-ZXB4P'
+  values, svg = Cistergraphia.inscribe(MESSAGE, layout: :furrows, tablet: seed)
+  File.write(File.join(dir, 'own-tablet.svg'), svg)
+  Cistergraphia::Notebook.entries(values).to_h { |entry| [entry[:sum], Cistergraphia::Tablet.characters(seed)[entry[:sum]]] }
+end
+
 Dir.mktmpdir do |dir|
   answers = { message: Cistergraphia.normalize(MESSAGE) }
   File.write(File.join(dir, 'intact.svg'), Cistergraphia.inscribe(MESSAGE).last)
@@ -64,6 +72,7 @@ Dir.mktmpdir do |dir|
                                                                     random: Random.new(5))
   File.write(File.join(dir, 'worn-pathless.svg'), worn_pathless)
   answers[:worn_pathless] = { way: 'furrows', values: values }
+  answers[:own_tablet] = own_tablet(dir)
   File.write(File.join(dir, 'answers.json'), JSON.generate(answers))
 
   ok = UiHarness.serve(dir) { |base_url| UiHarness.run_script('play.js', base_url, dir) }
