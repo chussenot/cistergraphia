@@ -39,7 +39,7 @@ chases the number.
 | axe-core violations | 0 on 11 page states in both themes | `test/ui/play.js` |
 | Page errors | 0, in both browser suites | `stability.js`, `play.js` |
 | Elements that move under the reader | 0 (1 px tolerance) | `stability.js` |
-| Scripts and styles | under 160 KB (138 KB today) | `play.js` |
+| Scripts and styles | under 60 KB as transferred (37 KB today; 157 KB unpacked: the app compresses them with `Rack::Deflater`) | `play.js` |
 | Longest task inking a 14 × 14 plate | under 300 ms (126 to 196 ms measured) | `play.js` |
 | Game plates the attack reads | at least 90 % (80 % under a grille) | `run.sh --check` |
 | Sealed plates the attack reads | at most 10 % | `run.sh --check` |

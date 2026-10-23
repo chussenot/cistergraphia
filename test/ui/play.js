@@ -19,7 +19,7 @@ const BROWSER = process.env.BROWSER || 'chromium';
 const answers = JSON.parse(fs.readFileSync(path.join(platesDir, 'answers.json'), 'utf8'));
 const MESSAGE = answers.message;
 const LONG = 'Meet me at the old abbey after vespers, under the cloister arches by the well';
-const BUDGET = { bytes: 160000, longTask: 300 }; // measured 126 to 196 ms on a 14 × 14 plate: a floor for regressions, not a target
+const BUDGET = { bytes: 60000, longTask: 300 }; // transferred bytes of scripts and styles (37 KB compressed today); 126 to 196 ms on a 14 × 14 plate: floors for regressions, not targets
 
 // ---------- A small runner ----------
 const results = [];
@@ -421,12 +421,24 @@ async function budgets() {
     window.__long = (PerformanceObserver.supportedEntryTypes || []).includes('longtask') ? [] : null;
     if (window.__long) new PerformanceObserver((list) => list.getEntries().forEach((e) => window.__long.push(Math.round(e.duration)))).observe({ type: 'longtask', buffered: true });
   });
+  // What the browser downloads (compressed by the app) and what it unpacks, per file
   const sizes = {};
-  page.on('response', async (res) => { const file = new URL(res.url()).pathname; if (/\.(js|css)$/.test(file)) { try { sizes[file] = (await res.body()).length; } catch (e) { /* gone */ } } });
+  const raw = {};
+  page.on('response', async (res) => {
+    const file = new URL(res.url()).pathname;
+    if (!/\.(js|css)$/.test(file) || file in sizes) return; // the first load of each; later ones come from the cache
+    try {
+      raw[file] = (await res.body()).length;
+      await res.finished(); // the sizes are known once the body has arrived
+      const { responseBodySize } = await res.request().sizes();
+      sizes[file] = responseBodySize >= 0 ? responseBodySize : Number(res.headers()['content-length'] || raw[file]);
+    } catch (e) { /* gone */ }
+  });
   await inscribe(page, { message: LONG });
   await page.waitForTimeout(3500);
   const bytes = Object.values(sizes).reduce((a, b) => a + b, 0);
-  check('budget', `scripts and styles under ${BUDGET.bytes / 1000} KB (${Math.round(bytes / 1000)} KB)`, bytes > 0 && bytes <= BUDGET.bytes, JSON.stringify(sizes));
+  const rawBytes = Object.values(raw).reduce((a, b) => a + b, 0);
+  check('budget', `scripts and styles under ${BUDGET.bytes / 1000} KB as transferred (${Math.round(bytes / 1000)} KB; ${Math.round(rawBytes / 1000)} KB unpacked)`, bytes > 0 && bytes <= BUDGET.bytes, JSON.stringify(sizes));
   const long = await page.evaluate(() => window.__long);
   if (long) check('budget', `no long task over ${BUDGET.longTask} ms inking a 14 × 14 plate (${long.length ? Math.max(...long) : 0} ms)`, long.every((ms) => ms <= BUDGET.longTask), long.join(', '));
   else console.log('skip  budget    long tasks: not observable in this engine');
