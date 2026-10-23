@@ -2,13 +2,26 @@
 A plate, walkable: the figure the plate page and the reader's page share.
 Locals: svg, cells (plate_cells_json), geometry (plate_layout_json), layout, decoy, size (the grid's side),
 grid (a pathless plate's cells with both readings, for the desk to lay the ways over; nil otherwise)
+From ZOOM_FROM signs a side, the plate can be zoomed inside its frame (app.js, initPlateZoom): the
+frame keeps its size, the plate grows within it and scrolls; the controls sit above the frame, never over a sign
 %>
 <% plate_grid = defined?(grid) ? grid : nil %>
+<% zoomable = size >= ViewHelpers::ZOOM_FROM %>
 <figure class="plate<%= plate_size_class(size) %>">
-  <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
-       aria-label="The plate. Use the arrow keys to walk its signs in reading order."
-       data-plate-cells="<%= cells %>" data-plate-layout="<%= geometry %>"<% if plate_grid %> data-plate-grid="<%= JSON.generate(plate_grid) %>"<% end %>>
-    <%== svg %>
+  <div class="plate-view">
+    <% if zoomable %>
+      <div class="plate-zoom awaits-script" role="group" aria-label="Zoom on the plate" data-plate-zoom>
+        <button type="button" class="plate-zoom-button" data-zoom-step="-1" aria-label="Zoom out" disabled>−</button>
+        <output class="plate-zoom-level" data-zoom-level aria-live="polite">×1</output>
+        <button type="button" class="plate-zoom-button" data-zoom-step="1" aria-label="Zoom in">+</button>
+        <button type="button" class="plate-zoom-button plate-zoom-fit" data-zoom-fit aria-label="Fit the plate in its frame" disabled>Fit</button>
+      </div>
+    <% end %>
+    <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
+         aria-label="The plate. Use the arrow keys to walk its signs in reading order<%= zoomable ? ', and plus, minus and zero to zoom' : '' %>."
+         data-plate-cells="<%= cells %>" data-plate-layout="<%= geometry %>"<% if plate_grid %> data-plate-grid="<%= JSON.generate(plate_grid) %>"<% end %>>
+      <%== svg %>
+    </div>
   </div>
   <figcaption>
     <span class="plate-reading">

@@ -84,6 +84,9 @@ module ViewHelpers
 
   # The plate's size class, for optical weight on the page: a large plate's strokes
   # are hairlines at screen size without it (see .plate--large in app.css)
+  # From this many signs a side a plate's signs are small on a phone: the reader may zoom on it
+  ZOOM_FROM = 7
+
   def plate_size_class(size)
     return ' plate--large' if size >= 10
 

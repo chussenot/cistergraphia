@@ -40,7 +40,9 @@ const MESSAGE = 'Meet me at the old abbey after vespers, under the cloister arch
 // internals (strokes move by design: morphs, the turned plate), inline boxes
 // (text that rewraps in place; their block is measured), positioned boxes
 // (they follow their container), and anything inside a sticky or fixed box
-// (it follows the viewport as you scroll: the side leaf on wide screens).
+// (it follows the viewport as you scroll: the side leaf on wide screens). A
+// zoomed plate is not measured either: it grows inside its frame, a window
+// that keeps its size, and the frame is measured.
 function measurable() {
   const riding = Array.from(document.body.querySelectorAll('*'))
     .filter((el) => ['sticky', 'fixed'].includes(getComputedStyle(el).position));
@@ -50,6 +52,7 @@ function measurable() {
     if (['inline', 'contents', 'none'].includes(style.display)) return false;
     if (['fixed', 'absolute', 'sticky'].includes(style.position)) return false;
     if (riding.some((box) => box.contains(el))) return false;
+    if (el.matches('.plate-frame.is-zoomed > svg')) return false; // zoomed on: measured as its frame
     const r = el.getBoundingClientRect();
     return r.width > 0 || r.height > 0;
   });
@@ -80,6 +83,7 @@ function measure() {
   const movers = [];
   for (const [el, top, bottom] of marks) {
     if (!el.isConnected) continue;
+    if (el.matches('.plate-frame.is-zoomed > svg')) continue; // zoomed on: it grows inside its window, which keeps its size
     const r = el.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) continue;
     if (anchor && (anchor.contains(el) || top >= anchorTop - 1)) continue;
@@ -256,7 +260,11 @@ const FLOWS = [
       { name: 'point at signs', act: hoverPlate },
       { name: 'turn the plate', act: (p) => p.click('[data-action="turn-plate"]') },
       { name: 'walk the turned plate', act: async (p) => { await p.focus('[data-plate]'); await p.keyboard.press('Home'); await p.keyboard.press('ArrowRight'); } },
-      { name: 'leave the plate', act: (p) => p.keyboard.press('Escape') }
+      { name: 'leave the plate', act: (p) => p.keyboard.press('Escape') },
+      { name: 'zoom in', act: async (p) => { await p.click('[data-zoom-step="1"]'); await p.click('[data-zoom-step="1"]'); } },
+      { name: 'walk the zoomed plate', act: async (p) => { await p.focus('[data-plate]'); for (let i = 0; i < 20; i += 1) await p.keyboard.press('ArrowRight'); } },
+      { name: 'zoom with the keys', act: async (p) => { await p.keyboard.press('+'); await p.keyboard.press('-'); } },
+      { name: 'fit the plate again', act: (p) => p.click('[data-zoom-fit]') }
     ]
   },
   {

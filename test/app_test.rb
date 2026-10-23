@@ -182,6 +182,16 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'Worn, shared tablet, path shown'
   end
 
+  def test_a_plate_of_many_signs_can_be_zoomed_a_small_one_need_not
+    post '/generate', message: 'the brothers will gather in the chapter house at dawn'
+
+    assert_includes last_response.body, 'data-plate-zoom'
+    assert_includes last_response.body, 'aria-label="Zoom in"'
+    post '/generate', message: 'Ora'
+
+    refute_includes last_response.body, 'data-plate-zoom', 'a 4 × 4 plate: its signs are large enough'
+  end
+
   def test_index_offers_six_layouts
     get '/'
 
