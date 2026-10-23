@@ -164,7 +164,14 @@ abbot's key) add a reader, not secrecy. Not measured; what the construction impl
    by position. The Zodiac's 340-character
    cipher is the precedent: its transposition held for 51 years against hand work and fell in
    2020 to a search over some 650,000 candidate reading orders; here there are five, and the
-   search is the game. (On very short messages the pair test can pass along two routes, about
+   search is the game. A plate with a **tablet of its own** (the values dealt out again from a
+   seed) is a monoalphabetic substitution over the pair sums, and its seed travels in the file:
+   an attacker who has the file has the tablet. With the seed stripped, the scripted attack
+   recovers 10/10 plates that share one such tablet, pooled, and 3 to 10% of plates that each
+   have their own: a forty-letter cryptogram is not solved by a dictionary alone (measured; the
+   Copiale cipher fell to 75,000 characters, not to forty). That is the reader's puzzle, not a
+   seal: a reader with a notebook does in minutes what the script does not, and the decoder
+   reads the seed. (On very short messages the pair test can pass along two routes, about
    1 one- or two-word plate in 20 with five routes to try; the encoder redraws those, so the
    test always names one.)
    The **Grille** layout is the one route with a key: a turning grille, set by a code of 50

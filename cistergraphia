@@ -45,9 +45,7 @@ options = {}
 parser = OptionParser.new do |opts|
   opts.banner = 'Usage: cistergraphia [options]'
 
-  opts.on('-m', '--message MESSAGE', 'The message to convert') do |m|
-    options[:message] = m
-  end
+  opts.on('-m', '--message MESSAGE', 'The message to convert') { |m| options[:message] = m }
 
   opts.on('-o', '--output FILE', 'The output file path for the SVG') { |o| options[:output] = o }
 
@@ -66,7 +64,10 @@ parser = OptionParser.new do |opts|
   opts.on('-w', '--weathered', 'Game mode: a worn plate, some strokes lost to restore') { options[:weathered] = true }
   opts.on('-b', '--broken', 'Game mode: the plate in fragments, to rejoin (the snail only)') { options[:broken] = true }
   opts.on('--pathless', 'Game mode: the reader finds the way, the plate says nothing') { options[:pathless] = true }
-  opts.on('-t', '--tally', 'Game mode: row and column sums (with -w, whole signs may be lost)') do
+  opts.on('--own-tablet', 'Game mode: a tablet of the plate\'s own; the reader builds it in the notebook') do
+    options[:tablet] = Cistergraphia::Tablet.generate
+  end
+  opts.on('-t', '--tally', 'Game mode: row and column sums (with -w, whole signs are lost too)') do
     options[:tally] = true
   end
 
@@ -80,6 +81,15 @@ begin
   parser.parse!
 rescue OptionParser::ParseError => e
   abort "#{e.message}\n#{parser.banner}"
+end
+
+# A plate's own tablet, as the scribe should see it: the seed, then the twenty-seven rows in three columns
+def tablet_lines(seed)
+  rows = Cistergraphia::Tablet.rows(seed).map { |char, value| format('%<c>s %<v>04d', c: char == ' ' ? '␣' : char, v: value) }
+  columns = rows.each_slice(9).to_a
+  table = columns.first.each_index.map { |i| columns.map { |column| column[i] }.compact.join('    ') }
+  ["Its own tablet (seed #{Cistergraphia::Tablet.show(seed)}): the reader builds it in the notebook; -d reads it",
+   *table].join("\n")
 end
 
 def command?(name)
@@ -164,6 +174,11 @@ begin
   abort Cistergraphia::Fragments::NOT_SEALED if options[:broken] && options[:secret]
   abort Cistergraphia::Fragments::NOT_TALLIED if options[:broken] && options[:tally]
   abort Cistergraphia::Pathless::NOT_BROKEN if options[:pathless] && options[:broken]
+  if options[:tablet]
+    abort Cistergraphia::Tablet::NOT_SEALED if options[:secret]
+    abort Cistergraphia::Tablet::NOT_DAMAGED if options[:weathered] || options[:broken]
+    abort Cistergraphia::Tablet::NOT_UNDER_A_GRILLE if layout.is_a?(Cistergraphia::Grille) || options[:decoy]
+  end
   passphrase = ask_passphrase(confirm: true) if options[:secret]
   if options[:broken]
     sequence, svg, pieces, damage = Cistergraphia::Fragments.inscribe(message, layout: layout,
@@ -182,8 +197,9 @@ begin
                                                                                          grille: given)
   else
     sequence, svg = Cistergraphia.inscribe(message, passphrase: passphrase, layout: layout, tally: options[:tally],
-                                                    pathless: options[:pathless])
+                                                    pathless: options[:pathless], tablet: options[:tablet])
     puts 'Pathless: the plate says nothing of where it begins; -d finds the way' if options[:pathless]
+    puts tablet_lines(options[:tablet]) if options[:tablet]
   end
 rescue Cistergraphia::Error => e
   abort e.message

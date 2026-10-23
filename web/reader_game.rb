@@ -12,6 +12,8 @@ module ReaderGame
   # (decipher=1, or a passphrase). The puzzle is built from the file alone
   def playable?(svg)
     return false if passphrase || params[:decipher] == '1'
+    # A plate with a tablet of its own goes to the decoder until the notebook can open it
+    return false if Cistergraphia::Tablet.seed_of(svg)
 
     @weathered = Cistergraphia::Lacunae.weathered?(svg)
     @broken = Cistergraphia::Fragments.broken?(svg)

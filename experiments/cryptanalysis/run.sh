@@ -8,6 +8,10 @@
 #
 # Under a grille the game check asks for 80%, not 90%: the search for the
 # grille has a step limit, and one plate in a few dozen needs more than it.
+# Ten plates on one tablet of their own are checked at 90% from the ten
+# pooled (the single-plate subsets print, unchecked); plates each with its
+# own tablet are printed and not checked: the script does not solve a
+# 40-letter cryptogram alone, and the study says so.
 #
 # Needs: Ruby + bundle install, Python 3, word lists (apt install wamerican wfrench).
 set -euo pipefail
@@ -15,7 +19,8 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-mkdir -p "$work/game" "$work/game-leap" "$work/secret" "$work/game-grille" "$work/secret-grille"
+mkdir -p "$work/game" "$work/game-leap" "$work/game-tablet" "$work/game-tablets" "$work/secret" "$work/game-grille" \
+  "$work/secret-grille"
 
 game_check=() grille_check=() secret_check=()
 if [[ "${1:-}" == "--check" ]]; then
@@ -26,6 +31,8 @@ fi
 
 bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/game" game
 bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/game-leap" game leap pathless
+bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/game-tablet" game phaistos shared-own-tablet
+bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/game-tablets" game phaistos own-tablet
 bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/secret" secret
 bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/game-grille" game grille
 bundle exec ruby "$here/make_corpus.rb" "$here/messages.txt" "$work/secret-grille" secret grille
@@ -35,6 +42,12 @@ python3 -I "$here/crack.py" "$work/game" --answers "$work/game/answers.json" --s
 
 echo; echo "##### GAME MODE ALONG THE LEAP, PATHLESS (the attacker tries the ways; the file tells nothing) #####"
 python3 -I "$here/crack.py" "$work/game-leap" --answers "$work/game-leap/answers.json" --subsets 1 3 10 "${game_check[@]}"
+
+echo; echo "##### GAME MODE, TEN PLATES ON ONE TABLET OF THEIR OWN (the seed stripped; the attacker pools the plates) #####"
+python3 -I "$here/crack.py" "$work/game-tablet" --answers "$work/game-tablet/answers.json" --subsets 1 3 10 "${game_check[@]}"
+
+echo; echo "##### GAME MODE, EACH PLATE WITH ITS OWN TABLET (the seed stripped; a 40-letter cryptogram each; no threshold) #####"
+python3 -I "$here/crack.py" "$work/game-tablets" --answers "$work/game-tablets/answers.json" --subsets 1 3 10
 
 echo; echo "##### SECRET MODE (passphrase, AES-256-GCM) #####"
 python3 -I "$here/crack.py" "$work/secret" --answers "$work/secret/answers.json" "${secret_check[@]}"

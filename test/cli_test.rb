@@ -70,6 +70,17 @@ class CliTest < Minitest::Test
     assert_equal [1, Cistergraphia::Pathless::NOT_SEALED], [status, err.strip]
   end
 
+  def test_a_plate_with_its_own_tablet_shows_the_scribe_the_tablet_and_reads_back_by_its_seed
+    out, _, status = cli('-m', MESSAGE, '-l', 'leap', '--own-tablet', '-o', plate('own'))
+    seed = out[/Its own tablet \(seed ([A-Z0-9-]{11})\)/, 1]
+    assert_equal [0, 27], [status, out.scan(/(?:^|\s)[a-z␣] \d{4}(?=\s|\z)/).size], 'the seed, the twenty-seven rows'
+    assert_equal Cistergraphia::Tablet.normalize(seed), Cistergraphia::Tablet.seed_of(File.read(plate('own')))
+    out, _, status = cli('-d', plate('own'))
+    assert_equal [0, MESSAGE], [status, out.strip]
+    _, err, status = cli('-m', MESSAGE, '--own-tablet', '-w', '-o', plate('no'))
+    assert_equal [1, Cistergraphia::Tablet::NOT_DAMAGED], [status, err.strip]
+  end
+
   def test_a_worn_pathless_plate_is_announced_twice_and_reads_back_as_an_edition
     out, _, status = cli('-m', MESSAGE, '-l', 'furrows', '-w', '--pathless', '-o', plate('worn-pathless'))
     assert_equal 0, status
