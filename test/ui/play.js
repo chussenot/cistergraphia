@@ -345,6 +345,30 @@ async function expert() {
   await ctx.close();
 }
 
+// ---------- The reading room: what is read is never a scroll away ----------
+async function room() {
+  const inView = (box, height) => box && box.y >= -1 && box.y + box.height <= height + 1;
+  // A wide screen: the plate beside the desk, held in view while the notebook scrolls
+  let ctx = await context({ viewport: { width: 1280, height: 800 } });
+  let page = await ctx.newPage();
+  await bringToRead(page, 'own-tablet.svg', '[data-notebook]:not(.awaits-script)');
+  const [plate, desk] = await Promise.all(['[data-plate]', '[data-desk]'].map((q) => page.locator(q).boundingBox()));
+  expectEqual('room', 'on a wide screen the desk sits beside the plate', desk.x >= plate.x + plate.width && Math.abs(desk.y - plate.y) < 120, true);
+  await page.locator('[data-entry-row] >> nth=8').scrollIntoViewIfNeeded(); // halfway down the notebook
+  expectEqual('room', 'the plate stays in view down the notebook', inView(await page.locator('[data-plate]').boundingBox(), 800), true);
+  expectEqual('room', 'and the text line stays in view', inView(await page.locator('.notebook-line').boundingBox(), 800), true);
+  expectEqual('room', 'and so does Ask the scribe', inView(await page.locator('[data-notebook-ask]').boundingBox(), 800), true);
+  await ctx.close();
+  // A phone: the pair set as a sum on paper, each sign beside its value, the letter beneath
+  ctx = await context({ viewport: { width: 390, height: 844 } });
+  page = await ctx.newPage();
+  await bringToRead(page, 'intact.svg', '[data-desk]:not(.awaits-script)');
+  const [s1, v1, s2, v2, letter] = await Promise.all(['[data-desk-sign="0"]', '#desk-first', '[data-desk-sign="1"]', '#desk-second', '[data-desk-letter]'].map((q) => page.locator(q).boundingBox()));
+  expectEqual('room', 'on a phone each sign has its value beside it', v1.x > s1.x + s1.width - 1 && Math.abs(v1.y + (v1.height / 2) - s1.y - (s1.height / 2)) < 8, true);
+  expectEqual('room', 'the second sign below the first, the letter below both', s2.y >= s1.y + s1.height && Math.abs(s2.x - s1.x) < 2 && letter.y >= v2.y + v2.height - 1, true);
+  await ctx.close();
+}
+
 // ---------- The board ----------
 async function board() {
   const ctx = await context();
@@ -568,6 +592,7 @@ async function budgets() {
   await pathlessBench();
   await notebook();
   await expert();
+  await room();
   await board();
   await lectio();
   await grille();

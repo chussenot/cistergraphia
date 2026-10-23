@@ -9,7 +9,7 @@ pathless (a pathless plate: the way is to find; the desk asks which, and keeps a
 notebook of the ways tried; the pair boxes wait empty for a way), own (a plate
 with a tablet of its own: the page holds no tablet, only the values every tablet
 deals out (data-values); the pairs are read for their sums, and the text line is
-the notebook's, in pencil and ink: _notebook.erb). Both (the expert plate): the
+the notebook's, in pencil and ink, held at its head: _notebook.erb). Both (the expert plate): the
 way is found on sums alone, a sum on no tablet breaks it, and three pairs that
 land open the notebook on that way
 %>
@@ -48,7 +48,7 @@ land open the notebook on that way
                                                                       elsif own_desk then 'Type what each sign reads: the page adds them. The sum is a letter only the notebook knows.'
                                                                       else 'Type what each sign reads: the page adds them and finds the letter on the tablet. Guided, a tap on a sign shows its value.'
                                                                       end %></p>
-  <p class="desk-text<%= ' desk-text--notebook' if own_desk && !expert %>" data-desk-text aria-live="polite"><%= '·' * (own_desk && !expert ? Cistergraphia::Notebook.pairs(values).size : values.size / 2) %></p>
+  <% unless own_desk %><p class="desk-text" data-desk-text aria-live="polite"><%= '·' * (values.size / 2) %></p><% end %>
   <% if pathless_desk %>
     <p class="desk-notebook" data-desk-notebook aria-live="polite"><%= expert ? 'The ways tried, and where each broke.' : 'The notebook: what each way gave, and where it broke.' %></p>
   <% end %>

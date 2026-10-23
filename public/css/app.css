@@ -971,7 +971,17 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 /* The reading desk, under an intact plate: the pair shown large, two numbers
    to type, the letter, the text so far. Every part keeps its size whatever is
    read, so nothing moves */
-.desk { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--rule); }
+.desk { display: grid; gap: var(--space-4); margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--rule); container: desk / inline-size; }
+/* The reading room: on a wide screen the plate and the work side by side, the
+   plate held in view (sticky) while the desk, the bench or the notebook scrolls */
+@media (min-width: 70rem) {
+  .room { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+  .room-work > :first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+}
+@media (min-width: 70rem) and (min-height: 36rem) {
+  .room-plate { position: sticky; top: var(--space-4); }
+  .room-plate .plate-frame svg { max-height: calc(100vh - 14rem); } /* the plate, its frame and its caption within the screen */
+}
 .desk-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .desk-head .index-heading { margin: 0; }
 .desk-modes { display: inline-grid; min-width: 12rem; }
@@ -980,6 +990,21 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .desk-nav { display: flex; align-items: center; gap: var(--space-3); }
 .desk-which { font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); min-width: 13rem; font-variant-numeric: tabular-nums; }
 .desk-pair { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+/* A narrow desk (a phone, or the reading room's column) sets the pair as a
+   sum on paper, one sign and its value above the other, the letter beneath */
+@container desk (max-width: 34rem) {
+  .desk-pair { display: grid; grid-template-columns: 1.2rem 3.4rem minmax(0, 1fr); grid-template-areas: ". s1 v1" "plus s2 v2" "eq letter read"; gap: var(--space-2) var(--space-3); }
+  .desk-pair > [data-desk-sign="0"] { grid-area: s1; }
+  .desk-pair > [data-desk-sign="1"] { grid-area: s2; }
+  .desk-pair > [data-desk-value="0"] { grid-area: v1; }
+  .desk-pair > [data-desk-value="1"] { grid-area: v2; }
+  .desk-pair > .desk-op:nth-of-type(1) { grid-area: plus; }
+  .desk-pair > .desk-op:nth-of-type(2) { grid-area: eq; }
+  .desk-pair > .desk-letter { grid-area: letter; justify-self: center; }
+  .desk-pair > [data-desk-read] { grid-area: read; justify-self: start; }
+  .desk-pair > .desk-value { width: 100%; max-width: 10rem; }
+  .desk-pair > .desk-op { justify-self: center; }
+}
 .desk-sign { display: grid; place-items: center; width: 3.4rem; height: 4.8rem; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--vellum); cursor: pointer; }
 .desk-sign .desk-glyph { width: 2.6rem; color: var(--ink); }
 .desk-sign .desk-glyph path { fill: currentColor; }
@@ -988,7 +1013,7 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .desk-op { font-family: var(--mono); font-size: 1.2rem; color: var(--ink-soft); }
 .desk-letter { display: grid; place-items: center; min-width: 2.6rem; height: 2.6rem; padding: 0 var(--space-2); border-radius: var(--radius); background: var(--paper); border: 1px solid var(--rule); font-family: var(--mono); font-size: 1.25rem; color: var(--accent); }
 .desk-feedback { margin: 0; font-family: var(--sans); font-size: 0.9rem; color: var(--ink-soft); min-height: 2.8em; min-height: 2lh; }
-@media (max-width: 30rem) { .desk-feedback { min-height: 4.2em; min-height: 3lh; } } /* the longest answer, on a phone */
+@container desk (max-width: 34rem) { .desk-feedback { min-height: 4.2em; min-height: 3lh; } } /* the longest answer, on a phone or in the reading room's column */
 .desk-text { margin: 0; font-family: var(--mono); font-size: 0.95rem; overflow-wrap: anywhere; color: var(--ink); min-height: 1.4em; min-height: 1lh; }
 .desk-standing { visibility: hidden; } /* the ranks are earned unaided */
 /* A pathless plate: the question, the five ways to lay (figures as labels, as
@@ -1003,7 +1028,7 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .desk-text--notebook { white-space: pre-wrap; }
 .desk-text--notebook .is-pencil { color: var(--ink-soft); font-style: italic; }
 .desk-text--notebook .is-ink { color: var(--ink); font-weight: 600; }
-.notebook { display: grid; gap: var(--space-3); margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--rule); }
+.notebook { display: grid; gap: var(--space-3); margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--rule); container: notebook / inline-size; }
 .notebook-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-3); }
 .notebook-head .index-heading { margin: 0; }
 .notebook-count, .notebook-note, .notebook-verdict { margin: 0; font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
@@ -1023,8 +1048,12 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .notebook-table tr.is-unseen > * { visibility: hidden; } /* unaided: a sum enters the notebook once its pair is read */
 .notebook.is-shut .notebook-scroll { display: none; } /* the expert plate: shut until the way is found */
 .notebook-ask { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+/* The text held at the top of the screen and the scribe at the bottom while
+   the entries scroll: a letter pencilled anywhere is read, and asked, at once */
+.notebook-line { position: sticky; top: 0; z-index: 1; background: var(--paper); padding-block: var(--space-2); border-bottom: 1px solid var(--rule); }
+.notebook-ask { position: sticky; bottom: 0; z-index: 1; background: var(--paper); padding-block: var(--space-3); border-top: 1px solid var(--rule); }
 .notebook-verdict { flex: 1 1 18rem; min-height: 1.4em; min-height: 1lh; }
-@media (max-width: 30rem) {
+@container notebook (max-width: 34rem) { /* a phone, or the reading room's column: one spelling per sum, one line per row */
   .notebook-spellings { white-space: nowrap; font-size: 0.72rem; }
   .notebook-spellings .spelling:nth-of-type(n+2) { display: none; }
   .notebook-spellings .spelling-more { display: inline; }

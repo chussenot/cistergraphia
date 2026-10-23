@@ -7,7 +7,12 @@ scribe confirms entries three at a time, and those go into ink, upright. Its
 first state is drawn here as the script draws it (every entry in pencil, none
 written), so nothing moves when the script arrives. ␣ is the space. A phone
 shows one spelling per sum, a wider screen three; … says there are more.
-Locals: entries (Cistergraphia::Notebook.entries: [{ sum:, seen:, spellings: }]), shut
+The text line is the notebook's: held at the top of the screen while its
+entries scroll, and Ask the scribe at the bottom, so a letter pencilled
+anywhere in the table is seen in the text at once, and asked from where it is.
+Locals: entries (Cistergraphia::Notebook.entries: [{ sum:, seen:, spellings: }]),
+values (every sign's value, in reading order: the line's dots, one span per pair
+as app.js draws them, so the line wraps the same before and after), shut
 (the expert plate: no entries yet, the way to find first; app.js opens it on
 the way found, from the row template)
 %>
@@ -18,10 +23,11 @@ the way found, from the row template)
     <h2 id="notebook-title" class="index-heading">The notebook</h2>
     <span class="notebook-count" data-notebook-count aria-live="polite"><%= shut_book ? 'Shut until the way is found' : "0 of #{entries.size} in ink · asked 0 times" %></span>
   </div>
+  <p class="desk-text notebook-line<%= ' desk-text--notebook' unless shut_book %>" data-desk-text aria-live="polite"><% if shut_book %><%= '·' * (values.size / 2) %><% else %><%== '<span>·</span>' * Cistergraphia::Notebook.pairs(values).size %><% end %></p>
   <p class="notebook-note" data-notebook-note><%= shut_book ? 'Find the way first: three pairs along it whose sums are values of the tablet open the notebook, on every sum the way makes.' : note %></p>
   <div class="notebook-scroll">
     <table class="notebook-table">
-      <thead><tr><th scope="col">Sum</th><th scope="col">Seen</th><th scope="col">Spelled</th><th scope="col">Reads as</th></tr></thead>
+      <thead><tr><th scope="col">Sum</th><th scope="col" class="notebook-seen">Seen</th><th scope="col">Spelled</th><th scope="col">Reads as</th></tr></thead>
       <tbody data-notebook-rows>
         <% entries.each do |entry| %>
           <%== erb :_notebook_row, layout: false, locals: { entry: entry } %>
