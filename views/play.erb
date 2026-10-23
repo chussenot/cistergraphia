@@ -12,7 +12,9 @@ Design Decisions:
   are worn, what their strokes allow, where the fragments' edges are. The
   scribe's plate page knows more; this one cannot, and says so
 - The same bench, board and plate figure as the plate page (partials), so the
-  two pages play the same
+  two pages play the same. On a wide screen the plate and the work sit side
+  by side (.room), the plate held in view while the desk, the bench or the
+  notebook scrolls: what is read is never a scroll away from where it is read
 - "Decipher it" posts the same file back with decipher=1: the solver, for a
   reader who wants the answer, or has one to check
 - A plate won (read to the end, every pair balanced, whole again) is counted
@@ -96,23 +98,33 @@ Constraints:
 
   <% if @broken %>
     <%== erb :_board, layout: false, locals: { svg: @svg_content, fragments: @fragments, size: @size, worn: @weathered } %>
-  <% elsif @grid && !@desk %>
-    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: pathless_cells_json(@grid), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size, grid: @grid } %>
-    <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally, pathless: true, worn: @worn } %>
-  <% elsif @grid %>
-    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: pathless_cells_json(@grid), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size, grid: @grid } %>
-    <%== erb :_desk, layout: false, locals: { values: @values, tablet: @expert ? {} : Cistergraphia::CHARACTERS, pathless: true, own: @expert } %>
-    <% if @expert %><%== erb :_notebook, layout: false, locals: { entries: [], shut: true } %><% end %>
-  <% elsif @notebook %>
-    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size } %>
-    <%== erb :_desk, layout: false, locals: { values: @values, tablet: {}, own: true } %>
-    <%== erb :_notebook, layout: false, locals: { entries: @notebook } %>
-  <% elsif @desk %>
-    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size } %>
-    <%== erb :_desk, layout: false, locals: { values: @values, tablet: Cistergraphia::CHARACTERS } %>
   <% else %>
-    <%== erb :_plate, layout: false, locals: { svg: @plate_svg || @svg_content, cells: plate_cells_json(@values, @layout, @damage), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size } %>
-    <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally } %>
+    <div class="room">
+      <div class="room-plate">
+        <% if @grid %>
+          <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: pathless_cells_json(@grid), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size, grid: @grid } %>
+        <% elsif @desk %>
+          <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: plate_cells_json(@values, @layout), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size } %>
+        <% else %>
+          <%== erb :_plate, layout: false, locals: { svg: @plate_svg || @svg_content, cells: plate_cells_json(@values, @layout, @damage), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size } %>
+        <% end %>
+      </div>
+      <div class="room-work">
+        <% if @grid && !@desk %>
+          <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally, pathless: true, worn: @worn } %>
+        <% elsif @grid %>
+          <%== erb :_desk, layout: false, locals: { values: @values, tablet: @expert ? {} : Cistergraphia::CHARACTERS, pathless: true, own: @expert } %>
+          <% if @expert %><%== erb :_notebook, layout: false, locals: { entries: [], values: @values, shut: true } %><% end %>
+        <% elsif @notebook %>
+          <%== erb :_desk, layout: false, locals: { values: @values, tablet: {}, own: true } %>
+          <%== erb :_notebook, layout: false, locals: { entries: @notebook, values: @values } %>
+        <% elsif @desk %>
+          <%== erb :_desk, layout: false, locals: { values: @values, tablet: Cistergraphia::CHARACTERS } %>
+        <% else %>
+          <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally } %>
+        <% end %>
+      </div>
+    </div>
   <% end %>
 
   <p class="record" data-record="play" aria-live="polite"></p>

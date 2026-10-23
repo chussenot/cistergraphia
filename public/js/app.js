@@ -596,7 +596,8 @@
     const form = $('[data-desk-form]', desk);
     const inputs = [0, 1].map((k) => $(`[data-desk-value="${k}"]`, desk));
     const signs = [0, 1].map((k) => $(`[data-desk-sign="${k}"]`, desk));
-    const [which, letterEl, feedback, textEl, notebookEl] = ['which', 'letter', 'feedback', 'text', 'notebook'].map((n) => $(`[data-desk-${n}]`, desk));
+    const [which, letterEl, feedback, notebookEl] = ['which', 'letter', 'feedback', 'notebook'].map((n) => $(`[data-desk-${n}]`, desk));
+    const textEl = $('[data-desk-text]'); // the desk's, or the notebook's on a plate with a tablet of its own
     let read = new Array(pairs).fill(null); // the letter of each pair once read ('' for a null pair, '?' for a break)
     let way = null; // a pathless plate: the way laid, once chosen
     const tried = new Map(); // way => { read, broke }: the notebook
