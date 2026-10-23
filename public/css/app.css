@@ -621,6 +621,23 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 .btn--small { padding: 0 var(--space-4); }
 .entry > .btn--primary,
 .entry-end > .btn--primary { justify-self: start; min-width: 12rem; font-size: 0.9rem; }
+/* The reader's puzzle: one disclosure below the message, its summary two
+   fixed lines (what it is, and what it holds), so a choice inside never moves
+   the button; the space above the button lives inside it, as in the slots */
+.puzzle { margin-bottom: var(--space-5); border: 1px solid var(--rule); border-radius: var(--radius); background: var(--vellum); }
+.puzzle-summary { display: grid; grid-template-columns: auto 1fr; gap: 0 var(--space-2); padding: var(--space-3) var(--space-4); cursor: pointer; list-style: none; }
+.puzzle-summary::-webkit-details-marker { display: none; }
+.puzzle-summary::before { content: '▸'; grid-row: 1 / 3; color: var(--accent); transition: transform var(--dur-mode) var(--ease); }
+.puzzle[open] > .puzzle-summary::before { transform: rotate(90deg); }
+.puzzle-title { font-family: var(--sans); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+.puzzle-state, .puzzle-sealed { grid-column: 2; font-style: italic; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.puzzle-sealed { display: none; color: var(--ink-soft); }
+.puzzle-summary:hover .puzzle-title { color: var(--ink); }
+.puzzle-choices { padding: var(--space-2) var(--space-4) var(--space-4); }
+@supports selector(:has(*)) {
+  .entry:has(input[name="mode"][value="secret"]:checked) .puzzle-state { display: none; }
+  .entry:has(input[name="mode"][value="secret"]:checked) .puzzle-sealed { display: block; }
+}
 
 /* ---------- The key (how to read a sign) ---------- */
 .glyph path { fill: currentColor; stroke: currentColor; stroke-width: var(--weight, 0); stroke-linejoin: round; }

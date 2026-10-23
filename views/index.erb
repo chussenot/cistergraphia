@@ -7,8 +7,11 @@ Purpose:
 - Teach how a sign is read, beside the form
 
 Design Decisions:
-- The choices come first (mode, then layout), as two segmented controls whose
-  descriptions share one reserved line each: what you type never moves them
+- What is made comes first (mode, then layout), as two segmented controls
+  whose descriptions share one reserved line each, then the message. The
+  reader's puzzle (condition, tablet, path) is one disclosure below it, shut
+  on the plain plate with what it holds said on its summary, open when any
+  of it is chosen or refused: a first plate is a message and a button
 - Nothing on this leaf changes height while you type or choose. The preview is
   a fixed strip (it scrolls sideways); notes swap in place; the passphrase
   unfolds below the message, moving only the button. Showing and hiding is CSS
@@ -62,30 +65,6 @@ Constraints:
           </div>
         </fieldset>
 
-        <fieldset class="choice choice--tablet">
-          <legend>Tablet</legend>
-          <div class="segments">
-            <label class="segment segment--tablet-shared">
-              <input type="radio" name="tablet" value="shared"<%= ' checked' unless @own_tablet %> aria-describedby="note-tablet-shared">
-              <span class="segment-title">Shared</span>
-            </label>
-            <label class="segment segment--tablet-own">
-              <input type="radio" name="tablet" value="own"<%= ' checked' if @own_tablet %>
-                     aria-describedby="note-tablet-own note-tablet-short note-tablet-sealed note-tablet-grille note-tablet-damaged note-tablet-expert tablet-error"<%= ' aria-invalid="true"' if @tablet_error %>>
-              <span class="segment-title">Its own</span>
-            </label>
-          </div>
-          <div class="choice-notes">
-            <p class="choice-note" id="note-tablet-shared" data-note="shared">The tablet everyone has: add a pair, look its sum up.</p>
-            <p class="choice-note" id="note-tablet-own" data-note="own">A tablet of this plate’s own. The reader builds it in the notebook, sum by sum; the scribe confirms three entries at a time.</p>
-            <p class="choice-note" id="note-tablet-short" data-note="tablet-short">A tablet of its own, on a message this short, is close to guessing: under <%= Cistergraphia::Tablet::SHORT %> words there is little for a reader to count. A longer message reads better.</p>
-            <p class="choice-note" id="note-tablet-sealed" data-note="tablet-sealed">A sealed plate has no tablet to find: its passphrase is the whole key. Choose Game.</p>
-            <p class="choice-note" id="note-tablet-grille" data-note="tablet-grille">A grille plate has a key already: one key at a time. Choose another layout.</p>
-            <p class="choice-note" id="note-tablet-damaged" data-note="tablet-damaged">A worn or broken plate keeps the shared tablet: the bench and the board speak in letters. Choose Intact.</p>
-            <p class="choice-note" id="note-tablet-expert" data-note="tablet-expert">The expert plate: pathless, with a tablet of its own. Two things to find, in order: the way, on sums alone, then the tablet in the notebook.</p>
-            <p class="choice-note field-error" id="tablet-error" aria-live="polite"><%= @tablet_error %></p>
-          </div>
-        </fieldset>
 
         <fieldset class="choice choice--ways">
           <legend>Layout</legend>
@@ -131,50 +110,7 @@ Constraints:
           </div>
         </fieldset>
 
-        <fieldset class="choice choice--path">
-          <legend>Path</legend>
-          <div class="segments">
-            <label class="segment segment--path-shown">
-              <input type="radio" name="path" value="shown"<%= ' checked' unless @pathless %> aria-describedby="note-shown">
-              <span class="segment-title">Shown</span>
-            </label>
-            <label class="segment segment--path-withheld">
-              <input type="radio" name="path" value="withheld"<%= ' checked' if @pathless %>
-                     aria-describedby="note-withheld note-path-sealed note-path-grille note-path-broken path-error"<%= ' aria-invalid="true"' if @path_error %>>
-              <span class="segment-title">Withheld</span>
-            </label>
-          </div>
-          <div class="choice-notes">
-            <p class="choice-note" id="note-shown" data-note="shown">The reader’s desk opens on the way the plate runs.</p>
-            <p class="choice-note" id="note-withheld" data-note="withheld">A pathless plate: nothing says where it begins. The reader finds the way among the five, intact or worn.</p>
-            <p class="choice-note" id="note-path-sealed" data-note="path-sealed">A sealed plate reads as no letters along any way: nothing to find. Choose Game.</p>
-            <p class="choice-note" id="note-path-grille" data-note="path-grille">A grille plate hides its way by its key already. Choose another layout.</p>
-            <p class="choice-note" id="note-path-broken" data-note="path-broken">A broken plate follows the snail: the board rejoins it along it. Choose Intact or Worn.</p>
-            <p class="choice-note field-error" id="path-error" aria-live="polite"><%= @path_error %></p>
-          </div>
-        </fieldset>
 
-        <fieldset class="choice choice--condition">
-          <legend>Condition</legend>
-          <div class="segments segments--ladder">
-            <% FormParams::RUNGS.each do |rung, title| %>
-              <label class="segment segment--rung segment--<%= rung %><%= ' segment--snail' if FormParams::CONDITIONS.fetch(rung).last %>">
-                <input type="radio" name="condition" value="<%= rung %>" data-rung<%= ' checked' if (@condition || 'intact') == rung %>
-                       aria-describedby="note-<%= rung %> note-unweathered note-snail condition-error"<%== condition_invalid(rung) %>>
-                <span class="segment-title"><%= title %></span>
-              </label>
-            <% end %>
-          </div>
-          <div class="choice-notes">
-            <p class="choice-note" id="note-intact" data-note="intact">As copied: read the signs, add the pairs, look them up on the tablet.</p>
-            <p class="choice-note" id="note-worn" data-note="worn">Some strokes are lost. Press the digits back in: each pair must balance, and the words settle the doubts.</p>
-            <p class="choice-note" id="note-broken" data-note="broken">The plate in two to four pieces, some turned. Only the sums say where each one goes.</p>
-            <p class="choice-note" id="note-ruined" data-note="ruined">Broken and worn. Rejoin it by what each worn sign may hold, then restore the whole.</p>
-            <p class="choice-note" id="note-snail" data-note="snail">Broken plates follow the snail: the board rejoins the fragments along it. Choose Phaistos, or a plate in one piece.</p>
-            <p class="choice-note" id="note-unweathered" data-note="unweathered">A sealed plate cannot weather or break: with one stroke lost, it would never open again.</p>
-            <p class="choice-note field-error" id="condition-error" aria-live="polite"><%= @condition_error %></p>
-          </div>
-        </fieldset>
       </div>
 
       <div class="field">
@@ -238,6 +174,82 @@ Constraints:
             </div>
           </div>
         </div>
+        <details class="puzzle" data-puzzle<%= ' open' if puzzle_open? %>>
+          <summary class="puzzle-summary">
+            <span class="puzzle-title">The reader’s puzzle</span>
+            <span class="puzzle-state" data-puzzle-state><%= puzzle_state %></span>
+            <span class="puzzle-sealed">None: a sealed plate is not a puzzle</span>
+          </summary>
+          <div class="choices puzzle-choices">
+            <fieldset class="choice choice--condition">
+              <legend>Condition</legend>
+              <div class="segments segments--ladder">
+                <% FormParams::RUNGS.each do |rung, title| %>
+                  <label class="segment segment--rung segment--<%= rung %><%= ' segment--snail' if FormParams::CONDITIONS.fetch(rung).last %>">
+                    <input type="radio" name="condition" value="<%= rung %>" data-rung<%= ' checked' if (@condition || 'intact') == rung %>
+                           aria-describedby="note-<%= rung %> note-unweathered note-snail condition-error"<%== condition_invalid(rung) %>>
+                    <span class="segment-title"><%= title %></span>
+                  </label>
+                <% end %>
+              </div>
+              <div class="choice-notes">
+                <p class="choice-note" id="note-intact" data-note="intact">As copied: read the signs, add the pairs, look them up on the tablet.</p>
+                <p class="choice-note" id="note-worn" data-note="worn">Some strokes are lost. Press the digits back in: each pair must balance, and the words settle the doubts.</p>
+                <p class="choice-note" id="note-broken" data-note="broken">The plate in two to four pieces, some turned. Only the sums say where each one goes.</p>
+                <p class="choice-note" id="note-ruined" data-note="ruined">Broken and worn. Rejoin it by what each worn sign may hold, then restore the whole.</p>
+                <p class="choice-note" id="note-snail" data-note="snail">Broken plates follow the snail: the board rejoins the fragments along it. Choose Phaistos, or a plate in one piece.</p>
+                <p class="choice-note" id="note-unweathered" data-note="unweathered">A sealed plate cannot weather or break: with one stroke lost, it would never open again.</p>
+                <p class="choice-note field-error" id="condition-error" aria-live="polite"><%= @condition_error %></p>
+              </div>
+            </fieldset>
+            <fieldset class="choice choice--tablet">
+              <legend>Tablet</legend>
+              <div class="segments">
+                <label class="segment segment--tablet-shared">
+                  <input type="radio" name="tablet" value="shared"<%= ' checked' unless @own_tablet %> aria-describedby="note-tablet-shared">
+                  <span class="segment-title">Shared</span>
+                </label>
+                <label class="segment segment--tablet-own">
+                  <input type="radio" name="tablet" value="own"<%= ' checked' if @own_tablet %>
+                         aria-describedby="note-tablet-own note-tablet-short note-tablet-sealed note-tablet-grille note-tablet-damaged note-tablet-expert tablet-error"<%= ' aria-invalid="true"' if @tablet_error %>>
+                  <span class="segment-title">Its own</span>
+                </label>
+              </div>
+              <div class="choice-notes">
+                <p class="choice-note" id="note-tablet-shared" data-note="shared">The tablet everyone has: add a pair, look its sum up.</p>
+                <p class="choice-note" id="note-tablet-own" data-note="own">A tablet of this plate’s own. The reader builds it in the notebook, sum by sum; the scribe confirms three entries at a time.</p>
+                <p class="choice-note" id="note-tablet-short" data-note="tablet-short">A tablet of its own, on a message this short, is close to guessing: under <%= Cistergraphia::Tablet::SHORT %> words there is little for a reader to count. A longer message reads better.</p>
+                <p class="choice-note" id="note-tablet-sealed" data-note="tablet-sealed">A sealed plate has no tablet to find: its passphrase is the whole key. Choose Game.</p>
+                <p class="choice-note" id="note-tablet-grille" data-note="tablet-grille">A grille plate has a key already: one key at a time. Choose another layout.</p>
+                <p class="choice-note" id="note-tablet-damaged" data-note="tablet-damaged">A worn or broken plate keeps the shared tablet: the bench and the board speak in letters. Choose Intact.</p>
+                <p class="choice-note" id="note-tablet-expert" data-note="tablet-expert">The expert plate: pathless, with a tablet of its own. Two things to find, in order: the way, on sums alone, then the tablet in the notebook.</p>
+                <p class="choice-note field-error" id="tablet-error" aria-live="polite"><%= @tablet_error %></p>
+              </div>
+            </fieldset>
+            <fieldset class="choice choice--path">
+              <legend>Path</legend>
+              <div class="segments">
+                <label class="segment segment--path-shown">
+                  <input type="radio" name="path" value="shown"<%= ' checked' unless @pathless %> aria-describedby="note-shown">
+                  <span class="segment-title">Shown</span>
+                </label>
+                <label class="segment segment--path-withheld">
+                  <input type="radio" name="path" value="withheld"<%= ' checked' if @pathless %>
+                         aria-describedby="note-withheld note-path-sealed note-path-grille note-path-broken path-error"<%= ' aria-invalid="true"' if @path_error %>>
+                  <span class="segment-title">Withheld</span>
+                </label>
+              </div>
+              <div class="choice-notes">
+                <p class="choice-note" id="note-shown" data-note="shown">The reader’s desk opens on the way the plate runs.</p>
+                <p class="choice-note" id="note-withheld" data-note="withheld">A pathless plate: nothing says where it begins. The reader finds the way among the five, intact or worn.</p>
+                <p class="choice-note" id="note-path-sealed" data-note="path-sealed">A sealed plate reads as no letters along any way: nothing to find. Choose Game.</p>
+                <p class="choice-note" id="note-path-grille" data-note="path-grille">A grille plate hides its way by its key already. Choose another layout.</p>
+                <p class="choice-note" id="note-path-broken" data-note="path-broken">A broken plate follows the snail: the board rejoins it along it. Choose Intact or Worn.</p>
+                <p class="choice-note field-error" id="path-error" aria-live="polite"><%= @path_error %></p>
+              </div>
+            </fieldset>
+          </div>
+        </details>
         <button class="btn btn--primary" type="submit" data-submit>Inscribe</button>
       </div>
     </form>

@@ -170,6 +170,18 @@ class AppTest < Minitest::Test
     assert_match(/anatomy-hint awaits-script/, body)                   # space kept until JS
   end
 
+  def test_the_readers_puzzle_is_one_disclosure_shut_on_a_plain_plate_open_when_chosen_or_refused
+    get '/'
+
+    assert_match(/<details class="puzzle" data-puzzle>/, last_response.body, 'shut on a plain plate')
+    assert_includes last_response.body, 'Intact, shared tablet, path shown'
+    assert_operator last_response.body.index('id="message"'), :<, last_response.body.index('name="condition"')
+    post '/generate', message: 'Ora et labora', mode: 'secret', condition: 'worn', passphrase: 'abbey of molesme'
+
+    assert_match(/<details class="puzzle" data-puzzle open>/, last_response.body, 'open on its refusal')
+    assert_includes last_response.body, 'Worn, shared tablet, path shown'
+  end
+
   def test_index_offers_six_layouts
     get '/'
 

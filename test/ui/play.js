@@ -42,7 +42,10 @@ const inscribe = async (page, { message = MESSAGE, layout, condition, key } = {}
   await page.goto(`${baseUrl}/`);
   await page.fill('#message', message);
   if (layout) await page.click(`label.segment:has(input[value="${layout}"])`);
-  if (condition) await page.click(`label.segment--${condition}`);
+  if (condition) {
+    if (!(await page.locator('.puzzle[open]').count())) await page.click('.puzzle-summary'); // the reader's puzzle, shut on a plain plate
+    await page.click(`label.segment--${condition}`);
+  }
   if (key) await page.fill('#grille', key);
   await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
 };
