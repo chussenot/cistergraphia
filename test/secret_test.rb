@@ -83,10 +83,18 @@ class SecretTest < Minitest::Test
     assert_raises(Cistergraphia::EmptyMessageError) { Cistergraphia.encode("  \n ", passphrase: PASSPHRASE) }
   end
 
+  # A sealed plate's values are the ciphertext's base-10000 digits, uniform over
+  # 0..9999: one may be 9999 by chance (about one 100-sign plate in sixty), so
+  # the game's structure is tested by its pairs. In a game every letter's pair
+  # sums to a multiple of ten (only the null pairs do not: 82% of this plate's
+  # pairs); in a sealed plate one pair in ten does by chance (measured on 300
+  # plates: 10% on average, 22% at most)
   def test_secret_images_carry_none_of_the_game_structure
     sequence = Cistergraphia.encode('the abbot will travel north at dawn' * 3, passphrase: PASSPHRASE)
+    pairs = sequence.each_slice(2).to_a
+    balanced = pairs.count { |a, b| ((a + b) % 10).zero? }.fdiv(pairs.size)
 
-    refute_includes sequence, Cistergraphia::EVIL_MARKER
+    assert_operator balanced, :<, 0.5, 'no pair structure: a game plate balances every letter'
     assert_raises(Cistergraphia::DecodeError) { Cistergraphia.decipher(sequence) }
   end
 
