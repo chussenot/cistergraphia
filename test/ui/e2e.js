@@ -149,7 +149,7 @@ async function bringToRead(page, c, file, key) {
 }
 
 async function checkDecipher(page, c, problems) {
-  const message = normalize(MESSAGES[c.size]);
+  const message = c.mode === 'secret' ? MESSAGES[c.size] : normalize(MESSAGES[c.size]); // a sealed plate keeps the text as typed
   if (c.mode !== 'secret') {
     const [response] = await Promise.all([page.waitForNavigation(), page.click('.readback [type="submit"]')]);
     if (response.status() !== 200) { problems.push(`decipher: HTTP ${response.status()}`); return; }
