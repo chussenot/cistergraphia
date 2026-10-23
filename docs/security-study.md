@@ -169,7 +169,12 @@ abbot's key) add a reader, not secrecy. Not measured; what the construction impl
    an attacker who has the file has the tablet. With the seed stripped, the scripted attack
    recovers 10/10 plates that share one such tablet, pooled, and 3 to 10% of plates that each
    have their own: a forty-letter cryptogram is not solved by a dictionary alone (measured; the
-   Copiale cipher fell to 75,000 characters, not to forty). That is the reader's puzzle, not a
+   Copiale cipher fell to 75,000 characters, not to forty). The **expert plate** (pathless, with a tablet
+   of its own) adds the way, and the way falls first: every tablet deals out the same values, so
+   the pair test finds it on sums alone. Measured once: pooled on one tablet, the attack reads all
+   ten expert plates whole, though starting part-way (its route family holds the leap begun at
+   another diagonal, which gives the same pairs; the per-position score counts that as 6% of
+   characters), and 4% of characters when each has its own. That is the reader's puzzle, not a
    seal: a reader with a notebook does in minutes what the script does not, and the decoder
    reads the seed. (On very short messages the pair test can pass along two routes, about
    1 one- or two-word plate in 20 with five routes to try; the encoder redraws those, so the

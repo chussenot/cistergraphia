@@ -31,6 +31,9 @@ Dir.mktmpdir do |dir|
              Cistergraphia::Lacunae.inscribe(MESSAGE, layout: :furrows, pathless: true, random: Random.new(5))[1])
   # And one with a tablet of its own: the desk opens with the notebook under it
   File.write(plate.sub(/\.svg\z/, '-own-tablet.svg'), Cistergraphia.inscribe(MESSAGE, tablet: 'K7Q2M-ZXB4P').last)
+  # And the expert plate along the furrows, pathless with its own tablet: the desk, the notebook shut under it
+  File.write(plate.sub(/\.svg\z/, '-expert.svg'),
+             Cistergraphia.inscribe(MESSAGE, layout: :furrows, pathless: true, tablet: 'Q4M8T-RJ2WX').last)
   # And one with tally signs (the library's and the CLI's, not the form's): the bench checks them
   File.write(plate.sub(/\.svg\z/, '-tallied.svg'),
              Cistergraphia::Lacunae.inscribe(MESSAGE, tally: true, random: Random.new(7))[1])

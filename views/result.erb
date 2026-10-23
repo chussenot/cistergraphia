@@ -60,6 +60,8 @@ Constraints:
     <p class="lede">Broken: <%= fragments_count(@pieces.size) %>. Download it and send it: Read opens it for your reader as the board, where only the sums say where each fragment goes. Below, a preview of their puzzle.</p>
   <% elsif @damage %>
     <p class="lede">Worn: <%= lacunae_count(@damage.size) %>. Download it and send it: Read opens it for your reader as the bench, where each pair must balance again and the words settle the doubts. Below, a preview of their puzzle.</p>
+  <% elsif @tablet && @pathless %>
+    <p class="lede">The expert plate: pathless, with a tablet of its own. Download it and send it: your reader finds the way first, on sums alone, and then builds the tablet in the notebook, sum by sum; you confirm three entries at a time. The tablet is below, for your eyes.</p>
   <% elsif @tablet %>
     <p class="lede">A tablet of its own: the values dealt out again for this plate alone. Download it and send it: your reader builds the tablet in the notebook, sum by sum, and you confirm three entries at a time. The tablet is below, for your eyes.</p>
   <% elsif @secret %>

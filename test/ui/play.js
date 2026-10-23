@@ -279,6 +279,72 @@ async function notebook() {
   await ctx.close();
 }
 
+// ---------- The expert plate: the way on sums alone, then the notebook ----------
+async function expert() {
+  const ctx = await context();
+  const page = await ctx.newPage();
+  await bringToRead(page, 'expert.svg', '[data-notebook]:not(.awaits-script)');
+  const { way, breaks, tablet } = answers.expert;
+  const sums = Object.keys(tablet).map(Number);
+  expectEqual('expert', 'the page holds no tablet', await page.evaluate(() => document.querySelector('[data-desk]').dataset.tablet), '{}');
+  expectEqual('expert', 'the notebook is shut, with no sum in it', await page.evaluate(() => document.querySelector('[data-notebook]').dataset.notebookSums), '[]');
+  expectEqual('expert', 'and the scribe cannot be asked', await page.locator('[data-notebook-ask]').isDisabled(), true);
+  const grid = await page.evaluate(() => JSON.parse(document.querySelector('[data-plate]').dataset.plateGrid));
+  const byCell = new Map(grid.map(([r, c, up, turned]) => [`${r},${c}`, { up, turned }]));
+  const along = (name) => Ways.path(Math.sqrt(grid.length), name).map(([r, c, turned]) => { const cell = byCell.get(`${r},${c}`); return turned ? cell.turned : cell.up; });
+  const readPair = async (values, p) => {
+    await page.fill('#desk-first', String(values[2 * p]));
+    await page.fill('#desk-second', String(values[(2 * p) + 1]));
+    await page.click('[data-desk-read]');
+    await page.waitForTimeout(80);
+  };
+  // A wrong way, the one that breaks soonest: on a sum that is no tablet's value, or a sign that reads as nothing turned
+  const [wrong, at] = Object.entries(breaks).filter(([name]) => name !== way).sort((a, b) => a[1] - b[1])[0];
+  await page.click(`[data-desk-way="${wrong}"]`);
+  const wrongValues = along(wrong);
+  for (let p = 0; p < at - 1; p += 1) {
+    await readPair(wrongValues, p);
+    await page.waitForFunction((n) => document.querySelector('[data-desk-which]').textContent.startsWith(`Pair ${n + 2} of`), p);
+  }
+  if (wrongValues[2 * (at - 1)] === null || wrongValues[(2 * (at - 1)) + 1] === null) await page.click('[data-desk-read]');
+  else await readPair(wrongValues, at - 1);
+  await page.waitForTimeout(80);
+  const broke = await text(page, '[data-desk-feedback]');
+  expectEqual('expert', `${wrong} breaks at pair ${at}, no letter said`, (broke.includes('a value of no tablet') || broke.includes('reads as no number')) && !/“[a-z]”/.test(broke), true);
+  expectEqual('expert', 'the ways tried keep where it broke', (await text(page, '[data-desk-notebook]')).includes(`✗ at pair ${at}`), true);
+  expectEqual('expert', 'and the notebook stays shut', await page.locator('[data-notebook-shut]').count(), 1);
+  // The way: pairs that land, their letters unknown, until three open the notebook on every sum along it
+  await page.click(`[data-desk-way="${way}"]`);
+  const values = along(way);
+  const nullMark = Number(await page.evaluate(() => document.querySelector('[data-desk]').dataset.null));
+  let landed = 0;
+  for (let p = 0; p < values.length / 2 && await page.locator('[data-notebook-shut]').count(); p += 1) {
+    if (p) await page.waitForFunction((n) => document.querySelector('[data-desk-which]').textContent.startsWith(`Pair ${n + 1} of`), p);
+    await readPair(values, p);
+    if (values[(2 * p) + 1] === nullMark) continue;
+    landed += 1;
+    if (landed === 1) expectEqual('expert', 'a pair that lands is a value of the tablet, its letter to find', (await text(page, '[data-desk-feedback]')).endsWith('a value of the tablet, its letter to find.'), true);
+  }
+  expectEqual('expert', 'three pairs that land open the notebook', landed, 3);
+  expectEqual('expert', 'the page says this is the way', (await text(page, '[data-desk-feedback]')).includes('this is the way'), true);
+  const order = await page.evaluate(() => JSON.parse(document.querySelector('[data-notebook]').dataset.notebookSums));
+  expectEqual('expert', 'the notebook opens on every sum along the way', order.slice().sort((a, b) => a - b).join(), sums.slice().sort((a, b) => a - b).join());
+  expectEqual('expert', 'the other ways are shut', await page.locator('[data-desk-way]:disabled').count(), 4);
+  // Away and back: the way and the notebook as left, in this browser
+  await page.selectOption(`[data-entry="${order[0]}"]`, tablet[order[0]]);
+  await bringToRead(page, 'expert.svg', '[data-notebook]:not(.awaits-script)');
+  expectEqual('expert', 'brought back: the notebook open on the way found', await page.locator('[data-notebook-shut]').count(), 0);
+  expectEqual('expert', 'and the entry pencilled before', await page.inputValue(`[data-entry="${order[0]}"]`), tablet[order[0]]);
+  // Every sum written right, the scribe asked: in ink, the message, one expert plate in the record
+  for (const sum of order) await page.selectOption(`[data-entry="${sum}"]`, tablet[sum]);
+  await page.click('[data-notebook-ask]');
+  await page.waitForFunction(() => !document.querySelector('[data-notebook-verdict]').textContent.endsWith('…'));
+  expectEqual('expert', 'every sum in ink', await text(page, '[data-notebook-verdict]'), 'Every sum is in ink: the tablet is yours.');
+  expectEqual('expert', 'the text is the message', await text(page, '[data-desk-text]'), MESSAGE);
+  expectEqual('expert', 'one expert plate in the scriptorium', await record(page), 'Entered in your scriptorium: 1 plate read, 1 pathless with its own tablet.');
+  await ctx.close();
+}
+
 // ---------- The board ----------
 async function board() {
   const ctx = await context();
@@ -431,6 +497,7 @@ async function accessibility() {
     desk: (p) => bringToRead(p, 'intact.svg', '[data-desk]'),
     bench: (p) => bringToRead(p, 'worn.svg', '[data-bench]'),
     board: (p) => bringToRead(p, 'broken.svg', '[data-rejoin]'),
+    expert: (p) => bringToRead(p, 'expert.svg', '[data-notebook]:not(.awaits-script)'),
     read: (p) => p.goto(`${baseUrl}/decode`),
     about: (p) => p.goto(`${baseUrl}/about`),
     erratum: (p) => p.goto(`${baseUrl}/nowhere`)
@@ -500,6 +567,7 @@ async function budgets() {
   await bench();
   await pathlessBench();
   await notebook();
+  await expert();
   await board();
   await lectio();
   await grille();

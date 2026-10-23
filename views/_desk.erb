@@ -7,13 +7,17 @@ marks a wrong value without correcting it and earns the Lectio's ranks.
 Locals: values (every sign's value, in reading order), tablet (value => letter),
 pathless (a pathless plate: the way is to find; the desk asks which, and keeps a
 notebook of the ways tried; the pair boxes wait empty for a way), own (a plate
-with a tablet of its own: the page holds no tablet; the pairs are read for their
-sums, and the text line is the notebook's, in pencil and ink: _notebook.erb)
+with a tablet of its own: the page holds no tablet, only the values every tablet
+deals out (data-values); the pairs are read for their sums, and the text line is
+the notebook's, in pencil and ink: _notebook.erb). Both (the expert plate): the
+way is found on sums alone, a sum on no tablet breaks it, and three pairs that
+land open the notebook on that way
 %>
 <% pathless_desk = defined?(pathless) ? pathless : false %>
 <% own_desk = defined?(own) ? own : false %>
+<% expert = pathless_desk && own_desk %>
 <section class="desk awaits-script" aria-labelledby="desk-title" data-desk data-desk-mode="guided"<%= ' data-desk-pathless' if pathless_desk %><%= ' data-desk-own' if own_desk %>
-         data-tablet="<%= JSON.generate(tablet) %>" data-null="<%= Cistergraphia::EVIL_MARKER %>" data-glyph-table="<%= glyph_table_json %>">
+         data-tablet="<%= JSON.generate(tablet) %>"<% if own_desk %> data-values="<%= JSON.generate(Cistergraphia::CHARACTERS.keys.sort) %>"<% end %> data-null="<%= Cistergraphia::EVIL_MARKER %>" data-glyph-table="<%= glyph_table_json %>">
   <div class="desk-head">
     <h2 id="desk-title" class="index-heading">Read it</h2>
     <div class="segments desk-modes" role="group" aria-label="How to read">
@@ -39,13 +43,14 @@ sums, and the text line is the notebook's, in pencil and ink: _notebook.erb)
     <output class="desk-letter" data-desk-letter aria-label="The letter the pair makes">?</output>
     <button type="submit" class="btn btn--primary btn--small" data-desk-read>Read</button>
   </form>
-  <p class="desk-feedback" data-desk-feedback aria-live="polite"><%= if pathless_desk then 'Nothing says where the plate begins. Choose a way: the pairs form along it, and read as letters or do not.'
+  <p class="desk-feedback" data-desk-feedback aria-live="polite"><%= if expert then 'Nothing says where it begins, nor what its sums read. Choose a way: its sums are the tablet’s values, or not.'
+                                                                      elsif pathless_desk then 'Nothing says where the plate begins. Choose a way: the pairs form along it, and read as letters or do not.'
                                                                       elsif own_desk then 'Type what each sign reads: the page adds them. The sum is a letter only the notebook knows.'
                                                                       else 'Type what each sign reads: the page adds them and finds the letter on the tablet. Guided, a tap on a sign shows its value.'
                                                                       end %></p>
-  <p class="desk-text<%= ' desk-text--notebook' if own_desk %>" data-desk-text aria-live="polite"><%= '·' * (own_desk ? Cistergraphia::Notebook.pairs(values).size : values.size / 2) %></p>
+  <p class="desk-text<%= ' desk-text--notebook' if own_desk && !expert %>" data-desk-text aria-live="polite"><%= '·' * (own_desk && !expert ? Cistergraphia::Notebook.pairs(values).size : values.size / 2) %></p>
   <% if pathless_desk %>
-    <p class="desk-notebook" data-desk-notebook aria-live="polite">The notebook: what each way gave, and where it broke.</p>
+    <p class="desk-notebook" data-desk-notebook aria-live="polite"><%= expert ? 'The ways tried, and where each broke.' : 'The notebook: what each way gave, and where it broke.' %></p>
   <% end %>
   <p class="lectio-standing desk-standing"><span data-desk-rank>Novice</span> · <span data-desk-streak>0</span> in a row · best <span data-desk-best>0</span></p>
 </section>

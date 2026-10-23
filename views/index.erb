@@ -71,7 +71,7 @@ Constraints:
             </label>
             <label class="segment segment--tablet-own">
               <input type="radio" name="tablet" value="own"<%= ' checked' if @own_tablet %>
-                     aria-describedby="note-tablet-own note-tablet-short note-tablet-sealed note-tablet-grille note-tablet-damaged note-tablet-pathless tablet-error"<%= ' aria-invalid="true"' if @tablet_error %>>
+                     aria-describedby="note-tablet-own note-tablet-short note-tablet-sealed note-tablet-grille note-tablet-damaged note-tablet-expert tablet-error"<%= ' aria-invalid="true"' if @tablet_error %>>
               <span class="segment-title">Its own</span>
             </label>
           </div>
@@ -82,7 +82,7 @@ Constraints:
             <p class="choice-note" id="note-tablet-sealed" data-note="tablet-sealed">A sealed plate has no tablet to find: its passphrase is the whole key. Choose Game.</p>
             <p class="choice-note" id="note-tablet-grille" data-note="tablet-grille">A grille plate has a key already: one key at a time. Choose another layout.</p>
             <p class="choice-note" id="note-tablet-damaged" data-note="tablet-damaged">A worn or broken plate keeps the shared tablet: the bench and the board speak in letters. Choose Intact.</p>
-            <p class="choice-note" id="note-tablet-pathless" data-note="tablet-pathless">One thing to find at a time: a pathless plate keeps the shared tablet. Choose Shown under Path.</p>
+            <p class="choice-note" id="note-tablet-expert" data-note="tablet-expert">The expert plate: pathless, with a tablet of its own. Two things to find, in order: the way, on sums alone, then the tablet in the notebook.</p>
             <p class="choice-note field-error" id="tablet-error" aria-live="polite"><%= @tablet_error %></p>
           </div>
         </fieldset>

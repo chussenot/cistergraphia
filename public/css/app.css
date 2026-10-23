@@ -720,13 +720,13 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .entry:has(input[name="layout"][value="grille"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note:not(.field-error),
   .entry:has(input[name="condition"]:not([value="intact"]):checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note:not(.field-error),
   .entry.is-short .choice--tablet:has(.segment--tablet-own input:checked) .choice-note:not(.field-error),
-  .entry:has(input[name="path"][value="withheld"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note:not(.field-error) { visibility: hidden; }
-  .entry:has(input[name="path"][value="withheld"]:checked) .segment--tablet-own { opacity: 0.5; }
+  .entry:has(input[name="path"][value="withheld"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="own"] { visibility: hidden; }
   .entry.is-short .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-short"],
-  .entry:has(input[name="path"][value="withheld"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-pathless"],
   .entry:has(input[name="condition"]:not([value="intact"]):checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-damaged"],
   .entry:has(input[name="layout"][value="grille"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-grille"],
   .entry:has(input[name="mode"][value="secret"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-sealed"] { visibility: visible; }
+  /* Pathless and its own: the expert plate, said when nothing above is */
+  .entry:has(input[name="path"][value="withheld"]:checked):not(.is-short):not(:has(input[name="mode"][value="secret"]:checked)):not(:has(input[name="layout"][value="grille"]:checked)):not(:has(input[name="condition"]:not([value="intact"]):checked)) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-expert"] { visibility: visible; }
 }
 /* The grille over a 4 x 4 grid: its holes (paper) at N, each other cell
    lettered with the turn that brings a hole over it */
@@ -1021,6 +1021,7 @@ path.ink-lift { animation: ink-lift var(--dur-lift) var(--ease) forwards; }
 .notebook-entry.is-pencil { font-style: italic; color: var(--ink-soft); }
 .notebook-entry.is-ink { font-weight: 600; color: var(--ink); border-color: var(--ink); opacity: 1; }
 .notebook-table tr.is-unseen > * { visibility: hidden; } /* unaided: a sum enters the notebook once its pair is read */
+.notebook.is-shut .notebook-scroll { display: none; } /* the expert plate: shut until the way is found */
 .notebook-ask { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .notebook-verdict { flex: 1 1 18rem; min-height: 1.4em; min-height: 1lh; }
 @media (max-width: 30rem) {
