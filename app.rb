@@ -43,12 +43,15 @@ class CistergraphiaApp < Sinatra::Base
   MAX_MESSAGE_LENGTH = 500 # ~1000 symbols, a 32x32 grid
   MAX_PAIR_LENGTH = 250 # each message of a plate with two readers: the largest, sealed, is ~1.4 MB
   MAX_SVG_BYTES = 2 * 1024 * 1024 # The largest plate (500 four-byte characters, sealed) is ~1.4 MB
-  CONTENT_SECURITY_POLICY = [
-    "default-src 'self'", "img-src 'self' data: blob:", "object-src 'none'", "base-uri 'none'",
-    "form-action 'self'", "frame-ancestors 'none'"
-  ].join('; ')
+  CONTENT_SECURITY_POLICY = ["default-src 'self'", "img-src 'self' data: blob:", "object-src 'none'", "base-uri 'none'",
+                             "form-action 'self'", "frame-ancestors 'none'"].join('; ')
 
   helpers ViewHelpers, BenchHelpers, TrayHelpers, Figures, FormParams, ReaderGame
+
+  # Pages and assets go compressed to a browser that accepts it: the scripts and
+  # styles weigh a quarter of their raw size on the wire (the behaviour suite's
+  # budget is on what is transferred: docs/quality.md)
+  use Rack::Deflater
 
   configure do
     set :root, __dir__

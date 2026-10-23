@@ -717,6 +717,15 @@ class AppTest < Minitest::Test
     assert_match(/data-bench-tally>Tallies, \w+: row \?, column \?</, body)
   end
 
+  def test_scripts_and_styles_go_compressed_to_a_browser_that_accepts_it
+    get '/js/app.js'
+    raw = last_response.body.bytesize
+    get '/js/app.js', {}, 'HTTP_ACCEPT_ENCODING' => 'gzip'
+
+    assert_equal 'gzip', last_response.headers['Content-Encoding']
+    assert_operator last_response.body.bytesize, :<, raw / 2
+  end
+
   def test_an_intact_plate_has_no_bench
     post '/generate', message: 'ora et labora'
 
