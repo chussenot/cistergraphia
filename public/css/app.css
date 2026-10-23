@@ -406,6 +406,11 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 .entry:has(input[name="mode"][value="secret"]:checked) .preview-signs,
 .entry:has(input[name="mode"][value="secret"]:checked) .preview-note--empty { opacity: 0; visibility: hidden; }
 .entry:has(input[name="mode"][value="secret"]:checked) .preview-note--secret { opacity: 1; visibility: visible; }
+/* A tablet of its own is dealt at inscribing: no preview, as when sealed, and the note says why */
+.preview-note--own { opacity: 0; visibility: hidden; }
+.entry:has(input[name="mode"][value="game"]:checked):has(input[name="tablet"][value="own"]:checked) .preview-signs,
+.entry:has(input[name="mode"][value="game"]:checked):has(input[name="tablet"][value="own"]:checked) .preview-note--empty { opacity: 0; visibility: hidden; }
+.entry:has(input[name="mode"][value="game"]:checked):has(input[name="tablet"][value="own"]:checked) .preview-note--own { opacity: 1; visibility: visible; }
 
 /* Mode and layout: segmented controls (native radios) over one reserved
    line of description each; the notes swap in place, never resize. One above
@@ -455,6 +460,8 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .choice:has(input[value="grille"]:checked) [data-note="grille"] { visibility: visible; }
   .choice:has(input[value="shown"]:checked) [data-note="shown"],
   .choice:has(input[value="withheld"]:checked) [data-note="withheld"],
+  .choice:has(input[value="shared"]:checked) [data-note="shared"],
+  .choice:has(input[value="own"]:checked) [data-note="own"],
   .choice:has(input[value="intact"]:checked) [data-note="intact"],
   .choice:has(input[value="worn"]:checked) [data-note="worn"],
   .choice:has(input[value="broken"]:checked) [data-note="broken"],
@@ -704,6 +711,19 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   body:not(:has(input[name="layout"][value="unwinding"]:checked)) [data-layout-note="unwinding"],
   body:not(:has(input[name="layout"][value="grille"]:checked)) [data-layout-note="grille"] { visibility: hidden; }
   body:not(:has(input[name="path"][value="withheld"]:checked)) [data-path-withheld] { visibility: hidden; }
+  /* Its own tablet: greyed, with its reason in the note, on a sealed plate, under a grille and on a damaged
+     one; on a message under six words the note says the plate is close to guessing (the counter sets is-short) */
+  .entry:has(input[name="mode"][value="secret"]:checked) .segment--tablet-own,
+  .entry:has(input[name="layout"][value="grille"]:checked) .segment--tablet-own,
+  .entry:has(input[name="condition"]:not([value="intact"]):checked) .segment--tablet-own { opacity: 0.5; }
+  .entry:has(input[name="mode"][value="secret"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note:not(.field-error),
+  .entry:has(input[name="layout"][value="grille"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note:not(.field-error),
+  .entry:has(input[name="condition"]:not([value="intact"]):checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note:not(.field-error),
+  .entry.is-short .choice--tablet:has(.segment--tablet-own input:checked) .choice-note:not(.field-error) { visibility: hidden; }
+  .entry.is-short .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-short"],
+  .entry:has(input[name="condition"]:not([value="intact"]):checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-damaged"],
+  .entry:has(input[name="layout"][value="grille"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-grille"],
+  .entry:has(input[name="mode"][value="secret"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-sealed"] { visibility: visible; }
 }
 /* The grille over a 4 x 4 grid: its holes (paper) at N, each other cell
    lettered with the turn that brings a hole over it */
@@ -800,6 +820,12 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
 .plate-frame .grille-sheet .stencil-north { fill: var(--accent); font-family: var(--serif); font-weight: 600; }
 .plate-frame .grille-sheet .stencil-key { fill: var(--ink-soft); font-family: var(--serif); }
 .grille-key { font-family: var(--mono); font-size: 0.95em; letter-spacing: 0.08em; }
+/* A plate's own tablet, on its plate page (.tablet is About's): twenty-seven rows in columns, the value then the character */
+.own-tablet { margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--rule); }
+.own-tablet .index-heading { margin-bottom: var(--space-2); }
+.own-tablet-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: var(--space-1) var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; font-family: var(--mono); font-size: 0.95rem; }
+.own-tablet-value { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.own-tablet-char { font-weight: 600; }
 .grille-actions { margin-bottom: var(--space-4); }
 /* Two readers: the novice's message under the abbot's, and a choice of grille */
 .decoy-echo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); color: var(--ink-soft); margin-bottom: var(--space-3); overflow-wrap: anywhere; }

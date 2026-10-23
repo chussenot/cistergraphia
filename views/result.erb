@@ -60,6 +60,8 @@ Constraints:
     <p class="lede">Broken: <%= fragments_count(@pieces.size) %>. Download it and send it: Read opens it for your reader as the board, where only the sums say where each fragment goes. Below, a preview of their puzzle.</p>
   <% elsif @damage %>
     <p class="lede">Worn: <%= lacunae_count(@damage.size) %>. Download it and send it: Read opens it for your reader as the bench, where each pair must balance again and the words settle the doubts. Below, a preview of their puzzle.</p>
+  <% elsif @tablet %>
+    <p class="lede">A tablet of its own: the values dealt out again for this plate alone. Download it and send it: your reader builds the tablet in the notebook, sum by sum, and you confirm three entries at a time. The tablet is below, for your eyes.</p>
   <% elsif @secret %>
     <p class="lede">Secret mode: sealed with your passphrase. Without it, this plate reveals nothing but its length.</p>
   <% elsif @normalized != @message %>
@@ -75,6 +77,9 @@ Constraints:
     <div><dt>Layout</dt><dd><%= layout_name(@layout) %></dd></div>
     <% if @pathless %>
       <div><dt>Path</dt><dd>Withheld: the reader finds it</dd></div>
+    <% end %>
+    <% if @tablet %>
+      <div><dt>Tablet</dt><dd>Its own <code class="grille-key"><%= Cistergraphia::Tablet.show(@tablet) %></code></dd></div>
     <% end %>
     <% if @pieces && @damage %>
       <div><dt>Condition</dt><dd>Ruined: <%= fragments_count(@pieces.size) %>, worn</dd></div>
@@ -108,6 +113,18 @@ Constraints:
 
   <% if @damage && !@pieces %>
     <%== erb :_bench, layout: false, locals: { entries: lacunae(@sequence, @layout, @damage), values: @sequence, damage: @damage, tally: nil } %>
+  <% end %>
+
+  <% if @tablet %>
+    <section class="own-tablet" aria-labelledby="tablet-title">
+      <h2 id="tablet-title" class="index-heading">Its tablet</h2>
+      <p class="field-meta">What each sum reads as on this plate, for the scribe’s eyes. The reader has only the sums; the file carries the seed, so the decoder and your confirmations need nothing from you.</p>
+      <ol class="own-tablet-rows" data-tablet-rows>
+        <% Cistergraphia::Tablet.rows(@tablet).each do |char, value| %>
+          <li><span class="own-tablet-value"><%= format('%04d', value) %></span> <span class="own-tablet-char"><%= char == ' ' ? '␣' : char %></span></li>
+        <% end %>
+      </ol>
+    </section>
   <% end %>
 
   <% if grille? %>
