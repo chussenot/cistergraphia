@@ -117,9 +117,12 @@
     if (!field || !counter) return;
     const count = $('[data-count]', counter);
     const max = Number(field.getAttribute('maxlength')) || 500;
+    const form = field.closest('form');
+    const SHORT = 6; // words: under this, a tablet of the plate's own is close to guessing (Cistergraphia::Tablet::SHORT)
     const update = () => {
       count.textContent = field.value.length;
       counter.classList.toggle('is-near', field.value.length > max * 0.9);
+      form?.classList.toggle('is-short', field.value.trim().split(/\s+/).filter(Boolean).length < SHORT);
     };
     field.addEventListener('input', update);
     update();

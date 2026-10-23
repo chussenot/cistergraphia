@@ -62,6 +62,30 @@ Constraints:
           </div>
         </fieldset>
 
+        <fieldset class="choice choice--tablet">
+          <legend>Tablet</legend>
+          <div class="segments">
+            <label class="segment segment--tablet-shared">
+              <input type="radio" name="tablet" value="shared"<%= ' checked' unless @own_tablet %> aria-describedby="note-tablet-shared">
+              <span class="segment-title">Shared</span>
+            </label>
+            <label class="segment segment--tablet-own">
+              <input type="radio" name="tablet" value="own"<%= ' checked' if @own_tablet %>
+                     aria-describedby="note-tablet-own note-tablet-short note-tablet-sealed note-tablet-grille note-tablet-damaged tablet-error"<%= ' aria-invalid="true"' if @tablet_error %>>
+              <span class="segment-title">Its own</span>
+            </label>
+          </div>
+          <div class="choice-notes">
+            <p class="choice-note" id="note-tablet-shared" data-note="shared">The tablet everyone has: add a pair, look its sum up.</p>
+            <p class="choice-note" id="note-tablet-own" data-note="own">A tablet of this plate’s own. The reader builds it in the notebook, sum by sum; the scribe confirms three entries at a time.</p>
+            <p class="choice-note" id="note-tablet-short" data-note="tablet-short">A tablet of its own, on a message this short, is close to guessing: under <%= Cistergraphia::Tablet::SHORT %> words there is little for a reader to count. A longer message reads better.</p>
+            <p class="choice-note" id="note-tablet-sealed" data-note="tablet-sealed">A sealed plate has no tablet to find: its passphrase is the whole key. Choose Game.</p>
+            <p class="choice-note" id="note-tablet-grille" data-note="tablet-grille">A grille plate has a key already: one key at a time. Choose another layout.</p>
+            <p class="choice-note" id="note-tablet-damaged" data-note="tablet-damaged">A worn or broken plate keeps the shared tablet: the bench and the board speak in letters. Choose Intact.</p>
+            <p class="choice-note field-error" id="tablet-error" aria-live="polite"><%= @tablet_error %></p>
+          </div>
+        </fieldset>
+
         <fieldset class="choice choice--ways">
           <legend>Layout</legend>
           <div class="segments segments--ways">
@@ -165,6 +189,7 @@ Constraints:
             <ol class="preview-signs" data-preview-signs aria-hidden="true"></ol>
             <p class="preview-note preview-note--empty">Each letter becomes one sign. Anything else becomes a space.</p>
             <p class="preview-note preview-note--secret">No preview when sealed: the signs come from the encryption. Any text works.</p>
+            <p class="preview-note preview-note--own">No preview with a tablet of its own: the values are dealt when the plate is inscribed.</p>
           </div>
         </div>
       </div>

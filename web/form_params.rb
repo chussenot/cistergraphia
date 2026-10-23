@@ -67,6 +67,17 @@ module FormParams
     @condition_error = condition_problem
     @pathless = params[:path] == 'withheld'
     @path_error = path_problem if @pathless
+    @own_tablet = params[:tablet] == 'own'
+    @tablet_error = tablet_problem if @own_tablet
+  end
+
+  # What cannot have a tablet of its own, in the library's words (@tablet_error
+  # goes back to the form): a sealed plate, a grille plate, a damaged one
+  def tablet_problem
+    return Cistergraphia::Tablet::NOT_SEALED if passphrase
+    return Cistergraphia::Tablet::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
+
+    Cistergraphia::Tablet::NOT_DAMAGED if @weathered || @broken
   end
 
   # What cannot be pathless, in the library's words (@path_error goes back
@@ -98,7 +109,7 @@ module FormParams
 
   # What sends the form back, to explain
   def form_errors
-    [@passphrase_error, @grille_error, @decoy_error, @condition_error, @path_error]
+    [@passphrase_error, @grille_error, @decoy_error, @condition_error, @path_error, @tablet_error]
   end
 
   # The rung sent back with an error: invalid, and focused when its error is
@@ -114,8 +125,12 @@ module FormParams
   # fragments to @pieces
   def inscribe_plate
     return damaged_plate if @broken || @weathered
+
     unless @decoy
-      return Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout, pathless: @pathless) + [@layout]
+      @tablet = Cistergraphia::Tablet.generate if @own_tablet
+      plate = Cistergraphia.inscribe(@message, passphrase: passphrase, layout: @layout, pathless: @pathless,
+                                               tablet: @tablet)
+      return plate + [@layout]
     end
 
     given = @layout unless params[:grille].to_s.strip.empty? # a shared key is kept; a new one may be redrawn

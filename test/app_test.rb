@@ -181,6 +181,48 @@ class AppTest < Minitest::Test
     assert_equal 6, last_response.body.scan('class="segment-figure"').size # each way shows its order
   end
 
+  def test_index_offers_the_tablet_shared_or_its_own
+    get '/'
+
+    assert_match(/name="tablet" value="shared" checked/, last_response.body)
+    assert_match(/name="tablet" value="own"/, last_response.body)
+    assert_includes last_response.body, 'data-note="tablet-short"'
+  end
+
+  def test_a_plate_with_its_own_tablet_from_the_form_shows_the_scribe_the_tablet
+    post '/generate', message: 'Meet me at the old abbey after vespers', layout: 'leap', tablet: 'own'
+    body = last_response.body
+    _cells, _layout, svg = plate_of(body)
+    seed = Cistergraphia::Tablet.seed_of(svg)
+
+    assert_predicate last_response, :ok?
+    refute_nil seed
+    assert_includes body, "<dd>Its own <code class=\"grille-key\">#{Cistergraphia::Tablet.show(seed)}</code></dd>"
+    assert_equal 27, body.scan('<span class="own-tablet-value">').size
+    assert_includes body, 'A tablet of its own: the values dealt out again'
+    assert_equal 'meet me at the old abbey after vespers', Cistergraphia.decode(svg)
+  end
+
+  def test_a_plate_cannot_have_its_own_tablet_sealed_under_a_grille_or_damaged
+    { { mode: 'secret', passphrase: 'abbey of molesme' } => Cistergraphia::Tablet::NOT_SEALED,
+      { layout: 'grille' } => Cistergraphia::Tablet::NOT_UNDER_A_GRILLE,
+      { condition: 'worn' } => Cistergraphia::Tablet::NOT_DAMAGED,
+      { condition: 'broken' } => Cistergraphia::Tablet::NOT_DAMAGED }.each do |fields, reason|
+      post '/generate', { message: 'Ora et labora', tablet: 'own' }.merge(fields)
+
+      assert_equal 422, last_response.status, fields
+      assert_includes last_response.body, reason
+      assert_match(/name="tablet" value="own" checked/, last_response.body)
+    end
+  end
+
+  def test_about_tells_of_the_tablet_of_its_own_and_the_copiale_cipher
+    get '/about'
+
+    assert_includes last_response.body, 'a tablet of its own'
+    assert_includes last_response.body, 'aclanthology.org/W11-1202'
+  end
+
   def test_index_offers_the_path_shown_or_withheld
     get '/'
 
