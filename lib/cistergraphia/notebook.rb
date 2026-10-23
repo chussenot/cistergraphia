@@ -20,8 +20,9 @@ module Cistergraphia
   #   the reader's page never holds the tablet
   #
   # Constraints:
-  # - Intact plates with a tablet of their own, along a keyless way the pair
-  #   test finds (a pathless plate keeps the shared tablet on the page)
+  # - Intact plates with a tablet of their own, along the keyless way the
+  #   pair test finds, shown or withheld (on a pathless plate the reader finds
+  #   it first, at the desk: the scribe reads it as the decoder does)
   module Notebook
     AT_ONCE = 3
     SPELLINGS = 3 # spellings shown per entry

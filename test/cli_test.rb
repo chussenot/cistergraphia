@@ -81,6 +81,15 @@ class CliTest < Minitest::Test
     assert_equal [1, Cistergraphia::Tablet::NOT_DAMAGED], [status, err.strip]
   end
 
+  def test_the_expert_plate_is_pathless_with_its_own_tablet_and_reads_back
+    out, _, status = cli('-m', MESSAGE, '-l', 'furrows', '--pathless', '--own-tablet', '-o', plate('expert'))
+    assert_equal 0, status
+    assert_includes out, 'Pathless: the plate says nothing of where it begins'
+    assert_includes out, 'Its own tablet (seed '
+    out, _, status = cli('-d', plate('expert'))
+    assert_equal [0, MESSAGE], [status, out.strip]
+  end
+
   def test_a_worn_pathless_plate_is_announced_twice_and_reads_back_as_an_edition
     out, _, status = cli('-m', MESSAGE, '-l', 'furrows', '-w', '--pathless', '-o', plate('worn-pathless'))
     assert_equal 0, status

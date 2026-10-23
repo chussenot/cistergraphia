@@ -373,9 +373,12 @@
   // exchange, not a leaderboard. The Read page shows it; a plate won on the
   // reader's page (read to the end, every pair balanced, whole again) adds one
   const RECORD_KEY = 'cistergraphia.record';
-  const RUNGS = ['intact', 'worn', 'broken', 'ruined', 'pathless', 'tablet'];
+  const RUNGS = ['intact', 'worn', 'broken', 'ruined', 'pathless', 'tablet', 'expert'];
   // How a count is said in the record: a rung's name, or its phrase
-  const RUNG_WORDS = { tablet: (n) => (n === 1 ? 'with its own tablet' : 'with their own tablets') };
+  const RUNG_WORDS = {
+    tablet: (n) => (n === 1 ? 'with its own tablet' : 'with their own tablets'),
+    expert: (n) => (n === 1 ? 'pathless with its own tablet' : 'pathless with their own tablets')
+  };
   function storedRecord() {
     const empty = Object.fromEntries(RUNGS.map((rung) => [rung, 0]));
     try {
@@ -554,7 +557,11 @@
   // way the plate runs, lays the way chosen over the grid (Ways), and reads
   // along it: the pairs balance to letters, or break ("not on the tablet",
   // or a sign that reads as nothing turned). The notebook keeps what each
-  // way gave and where it broke; the plate is read when a way runs to the end
+  // way gave and where it broke; the plate is read when a way runs to the end.
+  // The expert plate (pathless, with a tablet of its own): the way is found on
+  // sums alone, a sum that is a value of no tablet breaks it, and three pairs
+  // that land (fewer on a plate with fewer) open the notebook on that way,
+  // once the page has checked every pair along it; the ways are then shut
   const WAY_NAMES = { phaistos: 'the snail', rongorongo: 'the turning tablet', leap: 'the leap', furrows: 'the furrows', unwinding: 'the unwinding' };
   const capital = (words) => words.charAt(0).toUpperCase() + words.slice(1);
   function initDesk() {
@@ -564,6 +571,8 @@
     const cells = JSON.parse(frame.dataset.plateCells);
     const pathless = 'deskPathless' in desk.dataset;
     const own = 'deskOwn' in desk.dataset; // a tablet of its own: the notebook names the sums (initNotebook)
+    const expert = pathless && own; // the way first, on sums alone; then the notebook, on it
+    const onTablet = own ? new Set(JSON.parse(desk.dataset.values)) : null; // the values every tablet deals out
     const grid = pathless ? JSON.parse(frame.dataset.plateGrid) : null;
     let values = cells.map(([, , value]) => value);
     const tablet = JSON.parse(desk.dataset.tablet);
@@ -585,11 +594,18 @@
     const letterOf = (p) => {
       const [a, b] = [values[2 * p], values[(2 * p) + 1]];
       if (a === null || b === null) return '?'; // a sign that reads as nothing the way it is laid
-      return b === nullMark ? '' : (tablet[a + b] ?? '?');
+      if (b === nullMark) return '';
+      if (expert) return onTablet.has(a + b) ? 'read' : '?'; // a value of the tablet, its letter unknown
+      return tablet[a + b] ?? '?';
     };
     const waiting = () => pathless && !way;
-    const text = () => read.map((letter) => (letter === null ? '·' : (letter === ' ' ? ' ' : letter))).join('');
-    const notes = own ? initNotebook(cells.map(([, , value]) => value), textEl, nullMark) : null;
+    // A pair that lands is + (its letter the notebook's), a pair that breaks ×,
+    // and before the expert's notebook opens a null pair is ø: Latin marks
+    // every monospace face has, one per pair, so the line keeps its width ('?'
+    // would let it wrap after the mark, a line early)
+    const mark = (letter) => (letter === 'read' ? '+' : (letter === '' && expert && !notes ? 'ø' : letter));
+    const text = () => read.map((letter) => (letter === null ? '·' : (letter === '?' ? '×' : mark(letter)))).join('');
+    let notes = own && !expert ? initNotebook(cells.map(([, , value]) => value), textEl, nullMark) : null;
     const writeText = () => { if (notes) notes.render(); else textEl.textContent = text(); };
     const sumOf = (p) => values[2 * p] + values[(2 * p) + 1];
     const said = (letter) => (letter === ' ' ? 'space' : letter);
@@ -618,7 +634,7 @@
         inputs[k].removeAttribute('aria-invalid');
       });
       if (notes) letterEl.textContent = values[(2 * pair) + 1] === nullMark ? '∅' : (notes.letter(sumOf(pair)) ?? '?');
-      else letterEl.textContent = read[pair] === null ? '?' : (read[pair] === '' ? '∅' : read[pair]);
+      else letterEl.textContent = read[pair] === null || read[pair] === 'read' ? '?' : (read[pair] === '' ? '∅' : read[pair]);
       frame.plateWalk?.show(2 * pair);
     };
     const nextUnread = () => {
@@ -629,15 +645,34 @@
     const notebook = () => {
       if (!notebookEl) return;
       const lines = Array.from(tried, ([name, t]) => {
-        const given = t.read.map((l) => (l === null || l === '?' ? '·' : l)).join('').replace(/·+$/, '');
-        const end = t.broke ? ` ✗ at pair ${t.broke}` : (t.read.every((l) => l !== null && l !== '?') ? ' ✓' : '');
+        const given = t.read.map((l) => (l === null || l === '?' ? '·' : mark(l))).join('').replace(/·+$/, '');
+        const end = t.broke ? ` ✗ at pair ${t.broke}` : (t.found || t.read.every((l) => l !== null && l !== '?') ? ' ✓' : '');
         return `${WAY_NAMES[name]}${given ? `: ${given}` : ''}${end}`;
       });
-      notebookEl.textContent = lines.length ? `Tried: ${lines.join(' · ')}` : 'The notebook: what each way gave, and where it broke.';
+      notebookEl.textContent = lines.length ? `Tried: ${lines.join(' · ')}` : (expert ? 'The ways tried, and where each broke.' : 'The notebook: what each way gave, and where it broke.');
+    };
+    // The expert plate: whether every pair along the way laid lands (a value
+    // of the tablet, or a null pair), and how many must be read to open the notebook
+    const holds = () => values.every((v) => v !== null) &&
+      Array.from({ length: pairs }, (_, p) => p).every((p) => values[(2 * p) + 1] === nullMark || onTablet.has(sumOf(p)));
+    const toOpen = () => Math.min(3, Array.from({ length: pairs }, (_, p) => p).filter((p) => values[(2 * p) + 1] !== nullMark).length);
+    // The way found: the ways shut, and the notebook opens on every sum along it
+    const openNotebook = (kept) => {
+      $$('[data-desk-way]', desk).forEach((b) => { b.disabled = b.dataset.deskWay !== way; });
+      textEl.style.minHeight = `${textEl.offsetHeight}px`; // the line keeps its room: the null pairs leave it
+      textEl.classList.add('desk-text--notebook');
+      notes = initNotebook(values, textEl, nullMark, way);
+      read.forEach((letter, p) => { if (letter === 'read') notes.seen(sumOf(p)); });
+      notes.guided(mode === 'guided');
+      tried.get(way).found = true;
+      const count = $$('[data-entry]').length;
+      feedback.textContent = kept ? `Along ${WAY_NAMES[way]}, as you left it: the notebook is open on its ${count} sums.`
+        : `Along ${WAY_NAMES[way]} the pairs land on the tablet: this is the way. The notebook opens on its ${count} sums.`;
+      notebook();
     };
     // Lay a way over the grid: the signs along it (turned where it says so),
     // the walk following, the reading kept per way
-    const lay = (name) => {
+    const lay = (name, focus = true) => {
       const byCell = new Map(grid.map(([row, col, upright, turned]) => [`${row},${col}`, { upright, turned }]));
       const laid = Ways.path(Math.sqrt(grid.length), name).map(([row, col, turned]) => {
         const cell = byCell.get(`${row},${col}`);
@@ -656,7 +691,7 @@
       pair = 0;
       const next = read[0] === null ? 0 : nextUnread();
       show(next < 0 ? 0 : next);
-      inputs[0].focus();
+      if (focus) inputs[0].focus();
     };
     const reveal = (sign) => { // guided: a tapped sign shows its value in its box
       if (mode !== 'guided' || waiting()) return;
@@ -708,7 +743,8 @@
       }
       if (letter === '?') { // along a way laid over a pathless plate: the pair does not balance
         tried.get(way).broke ??= pair + 1;
-        feedback.textContent = `${a} + ${b} = ${a + b}: not on the tablet. ${capital(WAY_NAMES[way])} breaks at pair ${pair + 1}.`;
+        const off = expert ? 'a value of no tablet' : 'not on the tablet';
+        feedback.textContent = `${a} + ${b} = ${a + b}: ${off}. ${capital(WAY_NAMES[way])} breaks at pair ${pair + 1}.`;
         letterEl.textContent = '✗';
         writeText();
         notebook();
@@ -717,8 +753,10 @@
         return;
       }
       if (letter === '') feedback.textContent = `${a} + ${b}: the second sign is ${nullMark}, a null pair. Nothing to read.`;
+      else if (letter === 'read' && !notes) feedback.textContent = `${a} + ${b} = ${a + b}: a value of the tablet, its letter to find.`;
       else if (!notes) feedback.textContent = `${a} + ${b} = ${a + b}: ${letter === ' ' ? 'a space' : `“${letter}”`}.`;
       if (letter === '') letterEl.textContent = '∅';
+      else if (letter === 'read' && !notes) letterEl.textContent = '?';
       else if (!notes) letterEl.textContent = letter;
       hand('bite'); // the letter written down
       writeText();
@@ -731,6 +769,12 @@
         const after = rankFor(streak).name;
         if (after !== before) feedback.textContent += ` ${streak} in a row: you are now ${after === 'Abbot' ? 'an' : 'a'} ${after.toLowerCase()}.`;
         standing();
+      }
+      if (expert && !notes && !tried.get(way).broke && read.filter((l) => l === 'read').length >= toOpen() && holds()) {
+        openNotebook(false);
+        const after = nextUnread();
+        if (after >= 0) setTimeout(() => { show(after); inputs[0].focus(); }, reducedMotion ? 300 : 900);
+        return;
       }
       const next = nextUnread();
       if (next < 0 && notes) {
@@ -769,6 +813,14 @@
     if (!pathless) [0, 1].forEach((k) => Ink.adopt($('svg', signs[k]), values[k]));
     setMode(mode);
     standing();
+    if (expert) { // the notebook shut until the way is found, or open on the way found before, in this browser
+      $('[data-notebook]').classList.remove('awaits-script');
+      const kept = keptNotebook();
+      if (kept && WAY_NAMES[kept.way]) {
+        lay(kept.way, false); // on arrival: nothing scrolls
+        if (holds()) openNotebook(true);
+      }
+    }
     desk.classList.remove('awaits-script');
   }
 
@@ -781,15 +833,68 @@
   // the last ones, together), and go into ink, upright, for good. Guided, every
   // sum is in the notebook from the start; unaided, a sum enters it once its
   // pair is read right at the desk. Kept in this browser, by the plate's seed.
+  // The expert plate's notebook is shut until the desk finds the way: then it
+  // is built here, from the way's values, as the server draws the others.
   const NOTEBOOK_KEY = 'cistergraphia.notebook.';
-  function initNotebook(values, textEl, nullMark) {
+  const SPELLINGS = 3; // spellings shown per entry (Cistergraphia::Notebook::SPELLINGS)
+  const plateSeed = () => ($('.readback input[name="svg"]')?.value.match(/data-tablet="([^"]+)"/) || [])[1];
+  // What this browser kept of the plate's notebook, or null
+  function keptNotebook() {
+    const seed = plateSeed();
+    if (!seed) return null;
+    try { return JSON.parse(localStorage.getItem(NOTEBOOK_KEY + seed) || 'null'); } catch (error) { return null; }
+  }
+  // One entry per sum of the pairs (null pairs aside), the most seen first,
+  // then by sum: Cistergraphia::Notebook.entries
+  function notebookEntries(values, nullMark) {
+    const bySum = new Map();
+    for (let k = 0; k < values.length; k += 2) {
+      const [a, b] = [values[k], values[k + 1]];
+      if (b === nullMark) continue;
+      const entry = bySum.get(a + b) ?? { sum: a + b, seen: 0, spellings: [] };
+      entry.seen += 1;
+      if (!entry.spellings.some(([x, y]) => x === a && y === b)) entry.spellings.push([a, b]);
+      bySum.set(a + b, entry);
+    }
+    return [...bySum.values()].sort((x, y) => (y.seen - x.seen) || (x.sum - y.sum));
+  }
+  // A row of the notebook from its template (_notebook_row.erb), for one entry
+  function notebookRow(template, { sum, seen, spellings }) {
+    const pad = (n) => String(n).padStart(4, '0');
+    const span = (css, text) => Object.assign(document.createElement('span'), { className: css, textContent: text });
+    const row = template.content.firstElementChild.cloneNode(true);
+    row.dataset.entryRow = sum;
+    $('.notebook-sum', row).textContent = pad(sum);
+    $('.notebook-seen', row).textContent = seen;
+    const spelled = spellings.slice(0, SPELLINGS).map(([a, b]) => span('spelling', `${pad(a)} + ${pad(b)}`));
+    if (spellings.length > 1) spelled.push(span(`spelling-more${spellings.length > SPELLINGS ? ' spelling-more--wide' : ''}`, '…'));
+    $('.notebook-spellings', row).replaceChildren(...spelled);
+    Object.assign($('label', row), { htmlFor: `entry-${sum}`, textContent: `What ${sum} reads as` });
+    const select = $('select', row);
+    select.id = `entry-${sum}`;
+    select.dataset.entry = sum;
+    return row;
+  }
+  // The shut notebook opened on a way's values: its rows, its note, its scribe
+  function openShutNotebook(book, values, nullMark) {
+    const entries = notebookEntries(values, nullMark);
+    const template = $('[data-notebook-row]', book);
+    $('[data-notebook-rows]', book).replaceChildren(...entries.map((entry) => notebookRow(template, entry)));
+    book.dataset.notebookSums = JSON.stringify(entries.map((entry) => entry.sum));
+    $('[data-notebook-note]', book).textContent = book.dataset.notebookOpenNote;
+    $('[data-notebook-ask]', book).disabled = false;
+    book.classList.remove('is-shut');
+    delete book.dataset.notebookShut;
+  }
+  function initNotebook(values, textEl, nullMark, way = null) {
     const book = $('[data-notebook]');
+    if ('notebookShut' in book.dataset) openShutNotebook(book, values, nullMark);
     const sums = JSON.parse(book.dataset.notebookSums);
     const selects = new Map($$('[data-entry]', book).map((el) => [Number(el.dataset.entry), el]));
     const rows = new Map($$('[data-entry-row]', book).map((el) => [Number(el.dataset.entryRow), el]));
     const [countEl, verdict, ask] = ['[data-notebook-count]', '[data-notebook-verdict]', '[data-notebook-ask]'].map((q) => $(q, book));
     const svgField = $('.readback input[name="svg"]');
-    const seed = (svgField?.value.match(/data-tablet="([^"]+)"/) || [])[1];
+    const seed = plateSeed();
     const pairs = [];
     for (let k = 0; k < values.length; k += 2) if (values[k + 1] !== nullMark) pairs.push(values[k] + values[k + 1]);
     const pencil = new Map();
@@ -801,12 +906,11 @@
 
     const save = () => {
       if (!seed) return;
-      try { localStorage.setItem(NOTEBOOK_KEY + seed, JSON.stringify({ pencil: [...pencil], ink: [...ink], seen: [...seen], asked })); } catch (error) { /* private mode */ }
+      try { localStorage.setItem(NOTEBOOK_KEY + seed, JSON.stringify({ pencil: [...pencil], ink: [...ink], seen: [...seen], asked, way })); } catch (error) { /* private mode */ }
     };
     const restore = () => {
-      if (!seed) return;
       try {
-        const kept = JSON.parse(localStorage.getItem(NOTEBOOK_KEY + seed) || 'null');
+        const kept = keptNotebook();
         if (!kept) return;
         kept.ink.forEach(([sum, char]) => { if (selects.has(sum)) ink.set(sum, char); });
         kept.pencil.forEach(([sum, char]) => { if (selects.has(sum) && !ink.has(sum)) pencil.set(sum, char); });

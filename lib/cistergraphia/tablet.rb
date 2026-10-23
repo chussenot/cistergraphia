@@ -21,7 +21,8 @@ module Cistergraphia
   #   the SHA-256 of the seed, so every Ruby draws the same tablet
   # - A game's plate only, intact, under a keyless way: a sealed plate has no
   #   tablet to find, a grille plate has a key already, and the bench and the
-  #   board speak in letters
+  #   board speak in letters. The way may be withheld (the expert plate): the
+  #   pair test finds it first, on sums alone, and then the tablet is built
   module Tablet
     ALPHABET = Grille::ALPHABET
     LENGTH = Grille::LENGTH
@@ -31,7 +32,6 @@ module Cistergraphia
     NOT_UNDER_A_GRILLE = 'A grille plate has a key already: one key at a time'
     NOT_DAMAGED = 'A worn or broken plate keeps the shared tablet: the bench and the board speak in letters'
     NOT_A_SEED = "A tablet's seed has #{LENGTH} letters and digits, as a grille key".freeze
-    NOT_PATHLESS = 'One thing to find at a time: a pathless plate keeps the shared tablet'
 
     module_function
 

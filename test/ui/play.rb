@@ -51,6 +51,16 @@ def own_tablet(dir)
   Cistergraphia::Notebook.entries(values).to_h { |entry| [entry[:sum], Cistergraphia::Tablet.characters(seed)[entry[:sum]]] }
 end
 
+# The expert plate, pathless with a tablet of its own, along the unwinding: where
+# each way breaks (on sums alone: the values are every tablet's) and what each sum reads as
+def expert(dir)
+  seed = 'Q4M8T-RJ2WX'
+  values, svg = Cistergraphia.inscribe(MESSAGE, layout: :unwinding, pathless: true, tablet: seed)
+  File.write(File.join(dir, 'expert.svg'), svg)
+  tablet = Cistergraphia::Notebook.entries(values).to_h { |entry| [entry[:sum], Cistergraphia::Tablet.characters(seed)[entry[:sum]]] }
+  { way: 'unwinding', breaks: breaks(svg), tablet: tablet }
+end
+
 Dir.mktmpdir do |dir|
   answers = { message: Cistergraphia.normalize(MESSAGE) }
   File.write(File.join(dir, 'intact.svg'), Cistergraphia.inscribe(MESSAGE).last)
@@ -73,6 +83,7 @@ Dir.mktmpdir do |dir|
   File.write(File.join(dir, 'worn-pathless.svg'), worn_pathless)
   answers[:worn_pathless] = { way: 'furrows', values: values }
   answers[:own_tablet] = own_tablet(dir)
+  answers[:expert] = expert(dir)
   File.write(File.join(dir, 'answers.json'), JSON.generate(answers))
 
   ok = UiHarness.serve(dir) { |base_url| UiHarness.run_script('play.js', base_url, dir) }

@@ -22,9 +22,10 @@ module ReaderGame
     !lay(svg).nil?
   end
 
-  # One thing to find at a time: a plate with its own tablet is a game only intact, its way shown
+  # A plate with its own tablet is a game only intact: the bench and the board
+  # speak in letters. Pathless, it is the expert plate: the way, then the tablet
   def two_to_find?
-    @own && (@pathless || @weathered || @broken)
+    @own && (@weathered || @broken)
   end
 
   # What the file says of the plate: worn, broken, pathless, with its own tablet
@@ -72,10 +73,14 @@ module ReaderGame
     @desk = true
   end
 
-  # A pathless plate lays its ways itself; a plate with its own tablet opens the notebook
+  # A pathless plate lays its ways itself; a plate with its own tablet opens
+  # the notebook, on its sums when its way is shown. Pathless too (the expert
+  # plate), the notebook waits shut: its sums would tell the way, so the page
+  # lists them once the reader has found it
   def lay_desk_variant
     lay_pathless if @pathless && !submitted_grille
-    @notebook = Cistergraphia::Notebook.entries(@values) if @own
+    @expert = @own && @pathless
+    @notebook = @expert ? [] : Cistergraphia::Notebook.entries(@values) if @own
   end
 
   # The scribe's answer to the notebook: the pencilled entries that hold, as

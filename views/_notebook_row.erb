@@ -1,0 +1,22 @@
+<%#
+One entry of the notebook: a sum, how often it is seen, how it is spelled, and
+the letter written against it (_notebook.erb draws one per sum; the expert
+plate's shut notebook keeps one in a template, and app.js fills it for each sum
+of the way found: fillRow). Local: entry ({ sum:, seen:, spellings: })
+%>
+<% sum = entry[:sum] %>
+<% spellings = entry[:spellings] %>
+<tr data-entry-row="<%= sum %>">
+  <td class="notebook-sum"><%= format('%04d', sum) %></td>
+  <td class="notebook-seen"><%= entry[:seen] %></td>
+  <td class="notebook-spellings"><% spellings.first(Cistergraphia::Notebook::SPELLINGS).each do |a, b| %><span class="spelling"><%= format('%04d + %04d', a, b) %></span><% end %><% if spellings.size > 1 %><span class="spelling-more<%= ' spelling-more--wide' if spellings.size > Cistergraphia::Notebook::SPELLINGS %>">…</span><% end %></td>
+  <td class="notebook-slot">
+    <label class="visually-hidden" for="entry-<%= sum %>">What <%= sum %> reads as</label>
+    <select id="entry-<%= sum %>" class="input notebook-entry" data-entry="<%= sum %>">
+      <option value="">·</option>
+      <% (('a'..'z').to_a + [' ']).each do |char| %>
+        <option value="<%= char %>"><%= char == ' ' ? '␣' : char %></option>
+      <% end %>
+    </select>
+  </td>
+</tr>

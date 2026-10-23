@@ -352,16 +352,53 @@ class AppTest < Minitest::Test
     JSON.parse(last_response.body)['held']
   end
 
-  def test_one_thing_to_find_at_a_time_a_pathless_plate_with_its_own_tablet_goes_to_the_decoder
-    _, svg = Cistergraphia.inscribe('Ora et labora', layout: :leap, pathless: true, tablet: 'K7Q2M-ZXB4P')
-    post '/decode', svg: svg
+  def test_the_expert_plate_is_written_from_the_form_pathless_with_its_own_tablet
+    post '/generate', message: 'The relics lie under the third stone', path: 'withheld', tablet: 'own'
+    body = last_response.body
+    svg = CGI.unescapeHTML(body[/name="svg" value="([^"]*)"/, 1])
 
-    assert_includes last_response.body, 'ora et labora'
-    refute_includes last_response.body, 'data-desk'
-    post '/generate', message: 'Ora et labora', path: 'withheld', tablet: 'own'
+    assert_equal 200, last_response.status
+    assert_includes body, 'The expert plate: pathless, with a tablet of its own.'
+    assert Cistergraphia::Pathless.pathless?(svg)
+    refute_nil Cistergraphia::Tablet.seed_of(svg)
+    get '/'
+
+    assert_includes last_response.body, 'data-note="tablet-expert"'
+  end
+
+  EXPERT_PAGE = ['data-play="expert"', 'data-desk-pathless', 'data-desk-own', 'data-tablet="{}"', 'data-notebook-shut',
+                 'data-notebook-sums="[]"', '<dd>Its own: to build</dd>', 'Which way does it run?'].freeze
+
+  # The expert plate's page tells neither the way nor the tablet: the desk asks
+  # which way, the notebook waits shut, with no sum the way makes in it
+  def test_the_expert_plate_brought_to_read_opens_at_the_desk_its_notebook_shut
+    sequence, svg = Cistergraphia.inscribe('The relics lie under the third stone', layout: :leap, pathless: true,
+                                                                                   tablet: 'K7Q2M-ZXB4P')
+    post '/decode', svg: svg
+    body = last_response.body
+
+    EXPERT_PAGE.each { |said| assert_includes body, said }
+    Cistergraphia::Notebook.entries(sequence).each do |entry|
+      refute_includes body, %(data-entry="#{entry[:sum]}"), 'the notebook lists no sum of the way before it is found'
+    end
+    assert_equal Cistergraphia::CHARACTERS.keys.sort, JSON.parse(body[/data-values="([^"]*)"/, 1]),
+                 'the desk holds the values every tablet deals out, and no letter'
+  end
+
+  def test_the_scribe_reads_the_expert_plate_along_its_way
+    sequence, svg = Cistergraphia.inscribe('The relics lie under the third stone', layout: :leap, pathless: true,
+                                                                                   tablet: 'K7Q2M-ZXB4P')
+    tablet = Cistergraphia::Tablet.characters('K7Q2M-ZXB4P')
+    right = Cistergraphia::Notebook.entries(sequence).to_h { |entry| [entry[:sum], tablet[entry[:sum]]] }
+
+    assert_equal right.first(3).to_h.transform_keys(&:to_s), ask_the_scribe(svg, right.first(3).to_h)
+  end
+
+  def test_a_worn_plate_still_keeps_the_shared_tablet
+    post '/generate', message: 'Ora et labora', condition: 'worn', path: 'withheld', tablet: 'own'
 
     assert_equal 422, last_response.status
-    assert_includes last_response.body, Cistergraphia::Tablet::NOT_PATHLESS
+    assert_includes last_response.body, Cistergraphia::Tablet::NOT_DAMAGED
   end
 
   def test_a_worn_plate_can_be_pathless_from_the_form

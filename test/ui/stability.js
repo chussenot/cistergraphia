@@ -24,6 +24,7 @@ const ruinedFile = plateFile.replace(/\.svg$/, '-ruined.svg'); // and this one, 
 const pathlessFile = plateFile.replace(/\.svg$/, '-pathless.svg'); // and this one, its way withheld
 const wornPathlessFile = plateFile.replace(/\.svg$/, '-worn-pathless.svg'); // and this one, worn, its way withheld
 const ownTabletFile = plateFile.replace(/\.svg$/, '-own-tablet.svg'); // and this one, with a tablet of its own
+const expertFile = plateFile.replace(/\.svg$/, '-expert.svg'); // and this one, pathless with a tablet of its own (along the furrows)
 const VIEWPORTS = [
   { width: 320, height: 640 }, // the smallest phone
   { width: 390, height: 844 }, // a common phone
@@ -366,6 +367,28 @@ const FLOWS = [
     ]
   },
   {
+    page: 'expert',
+    open: bringToRead(expertFile, '[data-notebook]:not(.awaits-script)'),
+    steps: [
+      { name: 'choose the snail', act: (p) => p.click('[data-desk-way="phaistos"]') },
+      { name: 'read a pair: it breaks', act: async (p) => { await p.click('[data-desk-sign="0"]'); await p.click('[data-desk-sign="1"]'); await p.click('[data-desk-read]'); await p.waitForTimeout(400); } },
+      { name: 'choose the furrows', act: (p) => p.click('[data-desk-way="furrows"]') },
+      {
+        name: 'read pairs until the notebook opens',
+        anchor: '[data-notebook]',
+        act: async (p) => {
+          while (await p.locator('[data-notebook-shut]').count()) {
+            await p.click('[data-desk-sign="0"]');
+            await p.click('[data-desk-sign="1"]');
+            await p.click('[data-desk-read]');
+            await p.waitForTimeout(400);
+          }
+        }
+      },
+      { name: 'pencil the most seen sum', act: (p) => p.selectOption('[data-entry] >> nth=0', ' ') }
+    ]
+  },
+  {
     page: 'worn+pathless',
     open: bringToRead(wornPathlessFile, '[data-bench-pathless]'),
     steps: [
@@ -479,6 +502,7 @@ const PAGES = [
   { page: 'pathless', open: bringToRead(pathlessFile, '[data-desk-pathless]') },
   { page: 'worn+pathless', open: bringToRead(wornPathlessFile, '[data-bench-pathless]') },
   { page: 'notebook', open: bringToRead(ownTabletFile, '[data-notebook]') },
+  { page: 'expert', open: bringToRead(expertFile, '[data-notebook]') },
   { page: 'rejoin', open: bringToRead(brokenFile, '[data-rejoin]') },
   { page: 'ruined', open: bringToRead(ruinedFile, '[data-rejoin]') },
   { page: 'rejoined', open: openRejoinedBench },
