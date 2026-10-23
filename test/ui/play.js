@@ -190,6 +190,53 @@ async function bench() {
   await ctx.close();
 }
 
+// ---------- The bench on a pathless plate: the way to find, then the restoration ----------
+async function pathlessBench() {
+  const ctx = await context();
+  const page = await ctx.newPage();
+  await bringToRead(page, 'worn-pathless.svg', '[data-bench-pathless]');
+  const { way, values } = answers.worn_pathless;
+  expectEqual('pathless+', 'the plate opens at the bench without its way', await text(page, '[data-bench-which]'), 'Choose a way to restore');
+  expectEqual('pathless+', 'the page holds no lost value', (await cellValues(page)).filter((v) => v === null).length > 0, true);
+  const laidLacunae = () => page.evaluate(() => Array.from(document.querySelectorAll('.bench-target')).length);
+  expectEqual('pathless+', 'no lacuna is laid before a way is chosen', await laidLacunae(), 0);
+  // A wrong way: the edition shows pairs off the tablet at once, and the notebook says so
+  const wrong = Ways.NAMES.find((name) => name !== way);
+  await page.click(`[data-bench-way="${wrong}"]`);
+  const wrongEdition = await text(page, '[data-bench-edition]');
+  expectEqual('pathless+', `${wrong} laid: the edition says what it gives`, wrongEdition.includes('[?]') || wrongEdition.includes('[.]'), true);
+  expectEqual('pathless+', `${wrong}: the lacunae are laid along it`, (await laidLacunae()) > 0, true);
+  const noted = await text(page, '[data-bench-notebook]');
+  expectEqual('pathless+', 'the notebook keeps what the wrong way gave', noted.startsWith('Tried: ') && / \d+ off ✗/.test(noted), true);
+  expectEqual('pathless+', 'the verdict says the way is wrong', (await text(page, '[data-bench-verdict]')).endsWith('not the way.'), true);
+  // The way: the lacunae take their places along it (as the bench lays them: the
+  // worn cells in path order, each place the file shows); press the right digit into every one
+  await page.click(`[data-bench-way="${way}"]`);
+  const worn = await page.evaluate(() => JSON.parse(document.querySelector('[data-bench]').dataset.benchWorn));
+  const wornAt = new Map(worn.map((cell) => [`${cell.row},${cell.col}`, cell]));
+  const lacunae = Ways.path(Math.sqrt(values.length), way).flatMap(([r, c, turned], sign) => {
+    const cell = wornAt.get(`${r},${c}`);
+    const entries = cell && (turned ? cell.turned : cell.upright);
+    return (entries || []).map((entry) => ({ sign, place: entry.place, digits: entry.digits }));
+  });
+  expectEqual('pathless+', `${way} laid: the lacunae take their places`, await laidLacunae(), lacunae.length);
+  expectEqual('pathless+', `${way} laid: no pair is off the tablet`, (await text(page, '[data-bench-edition]')).includes('[?]'), false);
+  for (let i = 0; i < lacunae.length; i += 1) {
+    const { sign, place, digits } = lacunae[i];
+    const digit = Math.floor(values[sign] / place) % 10;
+    if (i === 0) expectEqual('pathless+', 'the right digit is among those offered', digits.includes(digit), true);
+    await page.click(`[data-digit="${digit}"]`);
+    if (i < lacunae.length - 1) await page.click('[data-bench-step="1"]');
+  }
+  expectEqual('pathless+', 'every lacuna restored', await text(page, '[data-bench-count]'), `${lacunae.length} of ${lacunae.length} restored`);
+  expectEqual('pathless+', 'every pair balances', await text(page, '[data-bench-verdict]'), 'Every pair balances.');
+  const edition = (await text(page, '[data-bench-edition]')).replace(/\[·\]/g, '').replace(/[[\]]/g, '').replace(/\u00a0/g, ' ');
+  expectEqual('pathless+', 'the edition, brackets aside, is the message', edition, MESSAGE);
+  expectEqual('pathless+', 'the notebook ticks the way', (await text(page, '[data-bench-notebook]')).includes(`the ${way}: restored ✓`), true);
+  expectEqual('pathless+', 'one pathless plate entered in the scriptorium', await record(page), 'Entered in your scriptorium: 1 plate read, 1 pathless.');
+  await ctx.close();
+}
+
 // ---------- The board ----------
 async function board() {
   const ctx = await context();
@@ -397,6 +444,7 @@ async function budgets() {
   await desk('rongorongo.svg', 'the turning rows', { unaided: true });
   await pathless();
   await bench();
+  await pathlessBench();
   await board();
   await lectio();
   await grille();

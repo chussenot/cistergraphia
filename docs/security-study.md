@@ -159,8 +159,9 @@ abbot's key) add a reader, not secrecy. Not measured; what the construction impl
    and reflection, forwards and backwards) before it has looked at a single letter. Turned
    glyphs read as their mirror (units ⇄ thousands, tens ⇄ hundreds), which is a fixed, public
    transformation. Choose a layout for its look, not for security. A **pathless** plate
-   withholds the way from the reader's page, not from an attacker: its file holds the same
-   signs on the same grid, and the attack reads them by position. The Zodiac's 340-character
+   (intact or worn) withholds the way from the reader's page, not from an attacker: its file
+   holds the same signs on the same grid, its patches in grid order, and the attack reads them
+   by position. The Zodiac's 340-character
    cipher is the precedent: its transposition held for 51 years against hand work and fell in
    2020 to a search over some 650,000 candidate reading orders; here there are five, and the
    search is the game. (On very short messages the pair test can pass along two routes, about

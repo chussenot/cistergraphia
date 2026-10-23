@@ -26,6 +26,9 @@ Dir.mktmpdir do |dir|
   # And a pathless one along the leap: brought to Read, it opens as the desk without its way
   srand(11)
   File.write(plate.sub(/\.svg\z/, '-pathless.svg'), Cistergraphia.inscribe(MESSAGE, layout: :leap, pathless: true).last)
+  # And a worn pathless one along the furrows: the bench opens without its way
+  File.write(plate.sub(/\.svg\z/, '-worn-pathless.svg'),
+             Cistergraphia::Lacunae.inscribe(MESSAGE, layout: :furrows, pathless: true, random: Random.new(5))[1])
   # And one with tally signs (the library's and the CLI's, not the form's): the bench checks them
   File.write(plate.sub(/\.svg\z/, '-tallied.svg'),
              Cistergraphia::Lacunae.inscribe(MESSAGE, tally: true, random: Random.new(7))[1])

@@ -8,7 +8,8 @@ require 'json'
 #
 # The page only ever holds what the file shows: where each lacuna is, its lost
 # stroke positions, the digits its surviving strokes allow, the digits of its
-# sign that are not lost, and the tally signs. Never a lost value.
+# sign that are not lost, and the tally signs. Never a lost value. On a
+# pathless plate, the same per cell and either way up, never along the way.
 module BenchHelpers
   PLACE_NAMES = { 1 => 'units', 10 => 'tens', 100 => 'hundreds', 1000 => 'thousands' }.freeze
 
@@ -37,6 +38,26 @@ module BenchHelpers
   def lacunae_from(values, layout, damage, candidates)
     path = Cistergraphia::Layout.path(Integer.sqrt(values.size), layout)
     damage.sort.flat_map { |index, lost| sign_entries(path, layout, index, lost, candidates.fetch(index)) }
+  end
+
+  # A pathless worn plate's worn cells (the reader's page): each in grid order
+  # with its lacunae read upright and turned half round (nil where its strokes
+  # read as no sign so turned), so the bench can lay any of the five ways over
+  # the grid and index them along it. Never a sign's place in the reading order
+  def worn_cells(svg)
+    Cistergraphia::Lacunae::Survey.worn_cells(svg).map do |row, col, upright, turned|
+      { row: row, col: col, upright: cell_entries(upright), turned: cell_entries(turned) }
+    end
+  end
+
+  def cell_entries(reading)
+    reading && by_place(reading[:candidates], reading[:lost])
+  end
+
+  # How many lacunae a pathless plate's bench will show along any way: one per
+  # damaged place of each worn cell (the same number either way up)
+  def pathless_lacunae(worn)
+    worn.sum { |cell| (cell[:upright] || cell[:turned]).size }
   end
 
   def sign_entries(path, layout, index, lost, options)

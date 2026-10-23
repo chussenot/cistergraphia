@@ -163,7 +163,7 @@ begin
   abort Cistergraphia::Lacunae::NOT_TWO_READERS if options[:weathered] && options[:decoy]
   abort Cistergraphia::Fragments::NOT_SEALED if options[:broken] && options[:secret]
   abort Cistergraphia::Fragments::NOT_TALLIED if options[:broken] && options[:tally]
-  abort Cistergraphia::Pathless::NOT_DAMAGED if options[:pathless] && (options[:weathered] || options[:broken])
+  abort Cistergraphia::Pathless::NOT_BROKEN if options[:pathless] && options[:broken]
   passphrase = ask_passphrase(confirm: true) if options[:secret]
   if options[:broken]
     sequence, svg, pieces, damage = Cistergraphia::Fragments.inscribe(message, layout: layout,
@@ -171,9 +171,11 @@ begin
     worn = ", #{damage.size} lacunae" if damage.any?
     puts "Broken: #{pieces.size} fragments#{worn}. Rejoin them on the board: every pair must balance (-d rejoins them)"
   elsif options[:weathered]
-    sequence, svg, damage = Cistergraphia::Lacunae.inscribe(message, layout: layout, tally: options[:tally])
+    sequence, svg, damage = Cistergraphia::Lacunae.inscribe(message, layout: layout, tally: options[:tally],
+                                                                     pathless: options[:pathless])
     lacunae = damage.size == 1 ? '1 lacuna' : "#{damage.size} lacunae"
     puts "Weathered: #{lacunae}. Restore them by balancing the pairs (-d shows the edition)"
+    puts 'Pathless: the plate says nothing of where it begins; the bench finds the way' if options[:pathless]
   elsif options[:decoy]
     given = layout if options[:grille]
     sequence, svg, layout = Cistergraphia::TwoReaders.inscribe(message, options[:decoy], passphrase: passphrase,

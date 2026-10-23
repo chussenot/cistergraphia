@@ -1334,69 +1334,94 @@
   // sign wholly lost is four lacunae, one per place. The page knows only what
   // the file shows: it says whether things balance, never whether a
   // restoration is right.
+  // On a pathless plate (docs/design.md, "Find the path") the bench asks
+  // which way the plate runs and lays the way chosen over the grid (Ways):
+  // the worn cells take their places along it, read upright or turned as it
+  // says, and the pairs form along it. The edition says at once what the way
+  // gives: letters, [.] where a lacuna waits, [?] where a pair is off the
+  // tablet whatever the lacunae held. The notebook keeps what each way gave;
+  // the plate is restored when every lacuna is pressed and every pair balances.
   function initBench() {
     const bench = $('[data-bench]');
     const frame = $('[data-plate]');
     const svg = plateSvg();
     if (!bench || !frame || !svg || !Ink.glyphTable()) return;
-    const lacunae = JSON.parse(bench.dataset.lacunae);
-    if (!lacunae.length) return;
+    const pathless = 'benchPathless' in bench.dataset;
+    const given = JSON.parse(bench.dataset.lacunae);
+    if (!pathless && !given.length) return;
     const tally = bench.dataset.tally ? JSON.parse(bench.dataset.tally) : null;
-    const cells = JSON.parse(frame.dataset.plateCells); // [row, col, value (null when worn), turned]
     const letters = Object.fromEntries(Object.entries(Ink.glyphTable().tablet).map(([char, value]) => [value, char]));
+    const sums = Object.keys(letters).map(Number);
     const NULL_MARK = 9999;
-    const bySign = new Map();
-    lacunae.forEach((lacuna) => bySign.set(lacuna.sign, [...(bySign.get(lacuna.sign) || []), lacuna]));
-    const chosen = new Map(); // "sign:place" => the digit pressed in
-    const key = (lacuna) => `${lacuna.sign}:${lacuna.place}`;
-    const [which, sumEl, verdict, tallyEl, countEl, edition] = ['which', 'sum', 'verdict', 'tally', 'count', 'edition']
-      .map((name) => $(`[data-bench-${name}]`, bench));
-    const [cellWidth, cellHeight] = JSON.parse(frame.dataset.plateLayout).cell;
+    const geometry = JSON.parse(frame.dataset.plateLayout);
+    const [cellWidth, cellHeight] = geometry.cell;
     const digits = $$('[data-digit]', bench);
+    const [which, sumEl, verdict, tallyEl, countEl, edition, notebookEl] = ['which', 'sum', 'verdict', 'tally', 'count', 'edition', 'notebook']
+      .map((name) => $(`[data-bench-${name}]`, bench));
     const digitOf = (value, place) => Math.floor(value / place) % 10;
     const canonical = (coords) => {
       const [a, b] = [coords.slice(0, 2), coords.slice(2)];
       return (a[0] < b[0] || (a[0] === b[0] && a[1] <= b[1]) ? [...a, ...b] : [...b, ...a]).join(',');
     };
+    const key = (lacuna) => `${lacuna.sign}:${lacuna.place}`;
+    // What the bench works on: the lacunae along the way, the signs ([row,
+    // col, value (null when worn, or reading as nothing this way), turned]),
+    // the lacunae by sign and the digits pressed in. On a pathless plate
+    // they are laid again for each way chosen; the digits pressed are kept per way
+    let lacunae = [];
+    let cells = JSON.parse(frame.dataset.plateCells);
+    let bySign = new Map();
+    let chosen = new Map(); // "sign:place" => the digit pressed in
     let current = 0;
+    let way = null; // a pathless plate: the way laid, once chosen
+    const tried = new Map(); // way => { chosen, summary }: the notebook
+    const grid = pathless ? JSON.parse(frame.dataset.plateGrid) : null;
+    const worn = pathless ? JSON.parse(bench.dataset.benchWorn) : null;
 
-    // A layer over each lacuna: the strokes pressed back, and a target to choose it by
+    // A layer over the lacunae: the strokes pressed back, and a target to choose each by
     const layer = document.createElementNS(SVG_NS, 'g');
     layer.setAttribute('class', 'bench-layer');
     svg.appendChild(layer);
-    lacunae.forEach((lacuna, i) => {
-      const g = document.createElementNS(SVG_NS, 'g');
-      g.setAttribute('transform', `translate(${lacuna.x} ${lacuna.y})${lacuna.turned ? ' rotate(180 50 75)' : ''}`);
-      const points = lacuna.lost.flatMap((stroke) => {
-        const n = stroke.split(',').map(Number);
-        return [[n[0], n[1]], [n[2], n[3]]];
+    function build(list) {
+      lacunae = list;
+      bySign = new Map();
+      list.forEach((lacuna) => bySign.set(lacuna.sign, [...(bySign.get(lacuna.sign) || []), lacuna]));
+      layer.replaceChildren();
+      list.forEach((lacuna, i) => {
+        const g = document.createElementNS(SVG_NS, 'g');
+        g.setAttribute('transform', `translate(${lacuna.x} ${lacuna.y})${lacuna.turned ? ' rotate(180 50 75)' : ''}`);
+        const points = lacuna.lost.flatMap((stroke) => {
+          const n = stroke.split(',').map(Number);
+          return [[n[0], n[1]], [n[2], n[3]]];
+        });
+        const xs = points.map(([x]) => x);
+        const ys = points.map(([, y]) => y);
+        // The target to choose it by: the sign's whole cell when it has one
+        // lacuna (large enough to find, and to tap, on a phone), else the corner
+        const target = document.createElementNS(SVG_NS, 'rect');
+        target.setAttribute('class', 'bench-target');
+        if (bySign.get(lacuna.sign).length === 1) { // the cell, centred on the sign (100 x 150), a hair inside its edges
+          target.setAttribute('x', (-(cellWidth - 100) / 2) + 3);
+          target.setAttribute('y', (-(cellHeight - 150) / 2) + 3);
+          target.setAttribute('width', cellWidth - 6);
+          target.setAttribute('height', cellHeight - 6);
+        } else {
+          target.setAttribute('x', Math.min(...xs) - 10);
+          target.setAttribute('y', Math.min(...ys) - 10);
+          target.setAttribute('width', Math.max(...xs) - Math.min(...xs) + 20);
+          target.setAttribute('height', Math.max(...ys) - Math.min(...ys) + 20);
+        }
+        target.setAttribute('rx', 6);
+        target.addEventListener('click', () => select(i));
+        const pressed = document.createElementNS(SVG_NS, 'g');
+        g.append(pressed, target);
+        layer.appendChild(g);
+        lacuna.view = { target, pressed };
       });
-      const xs = points.map(([x]) => x);
-      const ys = points.map(([, y]) => y);
-      // The target to choose it by: the sign's whole cell when it has one
-      // lacuna (large enough to find, and to tap, on a phone), else the corner
-      const target = document.createElementNS(SVG_NS, 'rect');
-      target.setAttribute('class', 'bench-target');
-      if (bySign.get(lacuna.sign).length === 1) { // the cell, centred on the sign (100 x 150), a hair inside its edges
-        target.setAttribute('x', (-(cellWidth - 100) / 2) + 3);
-        target.setAttribute('y', (-(cellHeight - 150) / 2) + 3);
-        target.setAttribute('width', cellWidth - 6);
-        target.setAttribute('height', cellHeight - 6);
-      } else {
-        target.setAttribute('x', Math.min(...xs) - 10);
-        target.setAttribute('y', Math.min(...ys) - 10);
-        target.setAttribute('width', Math.max(...xs) - Math.min(...xs) + 20);
-        target.setAttribute('height', Math.max(...ys) - Math.min(...ys) + 20);
-      }
-      target.setAttribute('rx', 6);
-      target.addEventListener('click', () => select(i));
-      const pressed = document.createElementNS(SVG_NS, 'g');
-      g.append(pressed, target);
-      layer.appendChild(g);
-      lacuna.view = { target, pressed };
-    });
+    }
 
-    // A sign's value as far as the reader knows it: undefined while a place is open
+    // A sign's value as far as the reader knows it: undefined while a place is
+    // open, null when it reads as no sign the way it is laid
     const valueOf = (sign) => {
       const open = bySign.get(sign);
       if (!open) return cells[sign][2];
@@ -1407,6 +1432,7 @@
     const shown = (sign) => {
       const open = bySign.get(sign);
       const known = open ? open[0].known : cells[sign][2];
+      if (known === null) return '····'; // no sign this way
       const text = String(known).padStart(4, '0').split('');
       (open || []).forEach((l) => { text[3 - Math.log10(l.place)] = chosen.has(key(l)) ? String(chosen.get(key(l))) : '?'; });
       return text.join('');
@@ -1418,11 +1444,29 @@
       const open = bySign.get(sign);
       return digitOf(open ? open[0].known : cells[sign][2], place);
     };
+    // Every value a sign may hold: its open places take any digit the strokes
+    // allow (whatever is pressed: the file's word, not the reader's); null
+    // when it reads as no sign this way
+    const candidatesOf = (sign) => {
+      const open = bySign.get(sign);
+      if (!open) return cells[sign][2] === null ? null : [cells[sign][2]];
+      return open.reduce((values, l) => values.flatMap((v) => l.digits.map((d) => v + (d * l.place))), [open[0].known]);
+    };
+    // Whether a pair can balance at all, whatever is pressed into what is open
+    const possible = (first) => {
+      const [firsts, seconds] = [candidatesOf(first), candidatesOf(first + 1)];
+      if (!firsts || !seconds) return false;
+      const others = new Set(seconds);
+      return others.has(NULL_MARK) || firsts.some((a) => sums.some((sum) => others.has(sum - a)));
+    };
+    // The pairs no digit can balance along the way laid: what tells a wrong way
+    const off = () => (pathless && way ? Array.from({ length: cells.length / 2 }, (_, k) => 2 * k).filter((first) => !possible(first)).length : 0);
     // What a pair reads as: a letter, null (an empty pair), false (no balance) or undefined (still open)
     const weigh = (first) => {
       const [a, b] = [valueOf(first), valueOf(first + 1)];
       if (b === NULL_MARK) return null;
-      if (a === undefined || b === undefined) return undefined;
+      if (a === null || b === null) return false;
+      if (a === undefined || b === undefined) return pathless && !possible(first) ? false : undefined;
       return letters[a + b] ?? false;
     };
     // A line's tally in a place: '✓', '✗', or '?' while a digit on it is open
@@ -1433,21 +1477,38 @@
       const sum = found.reduce((a, b) => a + b, 0) % 10;
       return sum === digitOf(tally[kind === 'row' ? 'rows' : 'cols'][index], place) ? '✓' : '✗';
     };
+    // Every lacuna pressed and every pair balancing: the plate restored
+    const pairs = () => Array.from({ length: cells.length / 2 }, (_, k) => weigh(2 * k));
+    const complete = () => lacunae.length > 0 && lacunae.every((l) => chosen.has(key(l))) && pairs().every((r) => r !== false);
+
+    // The notebook of a pathless plate: what each way gave, in short lines
+    // (five ways must fit three lines on a phone): the pairs off the tablet
+    // along it, else how far its restoration went
+    const notebook = () => {
+      if (!notebookEl) return;
+      const lines = Array.from(tried, ([name, t]) => {
+        const { off: away, restored, total, done } = t.summary;
+        const gave = away ? `${away} off ✗` : (done ? 'restored ✓' : `${restored} of ${total}`);
+        return `${WAY_NAMES[name]}: ${gave}`;
+      });
+      notebookEl.textContent = lines.length ? `Tried: ${lines.join(' · ')}` : 'The notebook: what each way gave.';
+    };
 
     function drawEdition() {
       const out = [];
-      for (let first = 0; first < cells.length; first += 2) {
-        const reading = weigh(first);
+      const readings = pairs();
+      readings.forEach((reading, k) => {
+        const first = 2 * k;
         // A null pair is left out when its 9999 can be seen (as the server does);
         // one whose 9999 was lost and pressed back keeps the three characters
         // its [.] took ([·], nothing written here), so the line never rewraps
-        if (reading === null && !bySign.has(first + 1)) continue;
-        if (reading === null) { out.push('[·]'); continue; }
+        if (reading === null && !bySign.has(first + 1)) return;
+        if (reading === null) { out.push('[·]'); return; }
         const open = bySign.has(first) || bySign.has(first + 1);
         if (reading === undefined) out.push('[.]');
         else if (reading === false) out.push('[?]');
-        else out.push(open ? `[${reading === ' ' ? '\u00a0' : reading}]` : reading); // a restored space: brackets, and no new break
-      }
+        else out.push(open ? `[${reading === ' ' ? ' ' : reading}]` : reading); // a restored space: brackets, and no new break
+      });
       edition.textContent = out.join('');
       const restored = lacunae.filter((l) => {
         if (!chosen.has(key(l))) return false;
@@ -1455,7 +1516,10 @@
         return reading !== undefined && reading !== false;
       }).length;
       countEl.textContent = `${restored} of ${lacunae.length} restored`;
-      if (restored === lacunae.length) recordWin();
+      const done = complete();
+      if (way) tried.get(way).summary = { off: off(), restored, total: lacunae.length, done };
+      notebook();
+      if (done) recordWin();
     }
 
     // Short lines that never wrap, even on the smallest phone: the sum, its verdict, the tallies
@@ -1465,12 +1529,14 @@
       const reading = weigh(first);
       let total = '?';
       if (reading === null && valueOf(lacuna.sign) !== undefined) total = 'null';
-      else if (reading !== undefined && reading !== null) total = valueOf(first) + valueOf(first + 1);
+      else if (reading !== undefined && reading !== null && reading !== false) total = valueOf(first) + valueOf(first + 1);
+      else if (reading === false && valueOf(first) !== undefined && valueOf(first + 1) !== undefined) total = valueOf(first) + valueOf(first + 1);
       sumEl.textContent = `${shown(first)} + ${shown(first + 1)} = ${total}`;
-      const done = lacunae.every((l) => chosen.has(key(l)))
-        && Array.from({ length: cells.length / 2 }, (_, k) => weigh(2 * k)).every((r) => r !== false);
-      if (done) verdict.textContent = 'Every pair balances.';
+      const away = off(); // a pathless plate: the pairs no digit can balance along this way
+      if (complete()) verdict.textContent = 'Every pair balances.';
       else if (reading === null) verdict.textContent = 'A null pair: any digit.';
+      else if (reading === false && !possible(first)) verdict.textContent = 'No digit balances it: not the way.';
+      else if (away) verdict.textContent = `${away} ${away === 1 ? 'pair' : 'pairs'} off the tablet: not the way.`;
       else if (reading === undefined) verdict.textContent = 'Press a digit to balance it.';
       else if (reading === false) verdict.textContent = 'Not on the tablet.';
       else verdict.textContent = `“${reading === ' ' ? 'space' : reading}”: it balances.`;
@@ -1496,6 +1562,7 @@
     }
 
     function select(i) {
+      if (!lacunae.length) return;
       current = (i + lacunae.length) % lacunae.length;
       const lacuna = lacunae[current];
       lacunae.forEach((l, k) => l.view.target.classList.toggle('is-current', k === current));
@@ -1509,7 +1576,36 @@
       drawBalance();
     }
 
+    // Lay a way over the grid: the signs along it (read turned where it says
+    // so), the worn cells' lacunae at their places along it, the walk following
+    const lay = (name) => {
+      const byCell = new Map(grid.map(([row, col, upright, turned]) => [`${row},${col}`, { upright, turned }]));
+      const wornAt = new Map(worn.map((cell) => [`${cell.row},${cell.col}`, cell]));
+      const path = Ways.path(Math.sqrt(grid.length), name);
+      cells = path.map(([row, col, turned]) => {
+        const cell = byCell.get(`${row},${col}`);
+        return [row, col, turned ? cell.turned : cell.upright, turned];
+      });
+      const list = path.flatMap(([row, col, turned], sign) => {
+        const cell = wornAt.get(`${row},${col}`);
+        const entries = cell && (turned ? cell.turned : cell.upright); // null: no sign this way up
+        if (!entries) return [];
+        const [x, y] = [geometry.padding + (col * cellWidth), geometry.padding + (row * cellHeight)];
+        return entries.map((entry) => ({ ...entry, sign, turned, x, y }));
+      });
+      way = name;
+      if (!tried.has(name)) tried.set(name, { chosen: new Map(), summary: { off: 0, restored: 0, total: list.length, done: false } });
+      chosen = tried.get(name).chosen;
+      build(list);
+      list.forEach(press);
+      $$('[data-bench-way]', bench).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.benchWay === name)));
+      frame.plateWalk?.follow(cells);
+      select(0);
+      drawEdition();
+    };
+
     digits.forEach((button) => button.addEventListener('click', () => {
+      if (!lacunae.length) return;
       const lacuna = lacunae[current];
       const digit = Number(button.dataset.digit);
       if (chosen.get(key(lacuna)) === digit) {
@@ -1523,10 +1619,19 @@
     $$('[data-bench-step]', bench).forEach((button) => button.addEventListener('click', () => {
       select(current + Number(button.dataset.benchStep));
     }));
+    $$('[data-bench-way]', bench).forEach((button) => button.addEventListener('click', () => lay(button.dataset.benchWay)));
 
     bench.classList.remove('awaits-script');
-    select(0);
-    drawEdition();
+    if (!pathless) { // the lacunae along the way the file shows
+      build(given);
+      select(0);
+      drawEdition();
+      return;
+    }
+    // A pathless bench waits for a way. The server drew the edition at its
+    // longest ([.] for every pair); a way's edition is never longer, so the
+    // line keeps that height and nothing below it moves
+    edition.style.minHeight = `${edition.getBoundingClientRect().height}px`;
   }
 
   document.addEventListener('DOMContentLoaded', () => {

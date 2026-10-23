@@ -22,6 +22,7 @@ const brokenFile = plateFile.replace(/\.svg$/, '-broken.svg'); // and this one
 const talliedFile = plateFile.replace(/\.svg$/, '-tallied.svg'); // and this one, with tally signs
 const ruinedFile = plateFile.replace(/\.svg$/, '-ruined.svg'); // and this one, broken and worn
 const pathlessFile = plateFile.replace(/\.svg$/, '-pathless.svg'); // and this one, its way withheld
+const wornPathlessFile = plateFile.replace(/\.svg$/, '-worn-pathless.svg'); // and this one, worn, its way withheld
 const VIEWPORTS = [
   { width: 320, height: 640 }, // the smallest phone
   { width: 390, height: 844 }, // a common phone
@@ -350,6 +351,17 @@ const FLOWS = [
     ]
   },
   {
+    page: 'worn+pathless',
+    open: bringToRead(wornPathlessFile, '[data-bench-pathless]'),
+    steps: [
+      { name: 'choose the snail', act: (p) => p.click('[data-bench-way="phaistos"]') },
+      { name: 'walk along it', act: async (p) => { await p.focus('[data-plate]'); for (let i = 0; i < 6; i += 1) await p.keyboard.press('ArrowRight'); } },
+      { name: 'press every digit', act: async (p) => { for (const button of await p.locator('[data-digit]:not([disabled])').all()) await button.click(); } },
+      { name: 'choose the furrows', act: (p) => p.click('[data-bench-way="furrows"]') },
+      { name: 'step through the lacunae', act: async (p) => { for (let i = 0; i < 4; i += 1) await p.click('[data-bench-step="1"]'); } }
+    ]
+  },
+  {
     page: 'restore',
     open: bringToRead(weatheredFile, '[data-bench]'),
     steps: [
@@ -449,6 +461,7 @@ const PAGES = [
   { page: 'worn+broken', open: openSamePlate({ message: MESSAGE, condition: 'ruined' }) },
   { page: 'restore', open: bringToRead(weatheredFile, '[data-bench]') },
   { page: 'pathless', open: bringToRead(pathlessFile, '[data-desk-pathless]') },
+  { page: 'worn+pathless', open: bringToRead(wornPathlessFile, '[data-bench-pathless]') },
   { page: 'rejoin', open: bringToRead(brokenFile, '[data-rejoin]') },
   { page: 'ruined', open: bringToRead(ruinedFile, '[data-rejoin]') },
   { page: 'rejoined', open: openRejoinedBench },

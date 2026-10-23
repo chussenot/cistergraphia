@@ -63,11 +63,24 @@ class CliTest < Minitest::Test
     assert_includes File.read(plate('pathless')), 'class="pathless"'
     out, _, status = cli('-d', plate('pathless'))
     assert_equal [0, MESSAGE], [status, out.strip]
-    _, err, status = cli('-m', MESSAGE, '--pathless', '-w', '-o', plate('no'))
-    assert_equal [1, Cistergraphia::Pathless::NOT_DAMAGED], [status, err.strip]
+    _, err, status = cli('-m', MESSAGE, '--pathless', '-b', '-o', plate('no'))
+    assert_equal [1, Cistergraphia::Pathless::NOT_BROKEN], [status, err.strip]
     _, err, status = cli('-m', MESSAGE, '--pathless', '-s', '-o', plate('no'),
                          env: { 'CISTERGRAPHIA_PASSPHRASE' => 'abbey of molesme' })
     assert_equal [1, Cistergraphia::Pathless::NOT_SEALED], [status, err.strip]
+  end
+
+  def test_a_worn_pathless_plate_is_announced_twice_and_reads_back_as_an_edition
+    out, _, status = cli('-m', MESSAGE, '-l', 'furrows', '-w', '--pathless', '-o', plate('worn-pathless'))
+    assert_equal 0, status
+    assert_match(/\AWeathered: \d+ lacunae?\. .*\n/, out)
+    assert_includes out, 'Pathless: the plate says nothing of where it begins; the bench finds the way'
+    svg = File.read(plate('worn-pathless'))
+    assert_includes svg, 'class="pathless"'
+    assert_includes svg, 'class="lacunae"'
+    edition, _, status = cli('-d', plate('worn-pathless'))
+    assert_equal 0, status
+    assert_match allowed(edition), MESSAGE, 'the message, within what the edition allows'
   end
 
   def test_a_worn_plate_says_its_lacunae_and_reads_back_as_an_edition

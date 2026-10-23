@@ -91,9 +91,25 @@ module ReaderGame
     return unless @layout && survey.edition(svg, @layout)
 
     @values = survey.values(svg, @layout)
+    @size = Integer.sqrt(@values.size)
+    @tally = Cistergraphia::Tally::Plate.read(svg, @layout)
+    @pathless ? lay_pathless_bench(svg) : lay_lacunae(svg, survey)
+  end
+
+  # The lacunae along the layout, as the file shows them
+  def lay_lacunae(svg, survey)
     @damage = survey.damaged(svg, @layout).to_h { |sign| [sign[:index], sign[:lost]] }
     @entries = lacunae_in(svg, @layout, @values)
-    @tally = Cistergraphia::Tally::Plate.read(svg, @layout)
-    @size = Integer.sqrt(@values.size)
+  end
+
+  # A pathless worn plate (never under a grille: Pathless.check): the page
+  # gets the grid (every cell's readings, none for a worn cell) and what each
+  # worn cell may hold read either way, never the way nor a lacuna's place
+  # along it; the bench lays the five ways itself
+  def lay_pathless_bench(svg)
+    lay_pathless(svg)
+    @worn = worn_cells(svg)
+    @entries = []
+    @damage = {}
   end
 end

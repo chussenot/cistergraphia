@@ -70,12 +70,12 @@ module FormParams
   end
 
   # What cannot be pathless, in the library's words (@path_error goes back
-  # to the form): a sealed plate, a grille plate, a damaged one (not yet)
+  # to the form): a sealed plate, a grille plate, a broken one
   def path_problem
     return Cistergraphia::Pathless::NOT_SEALED if passphrase
     return Cistergraphia::Pathless::NOT_UNDER_A_GRILLE if @layout.is_a?(Cistergraphia::Grille)
 
-    Cistergraphia::Pathless::NOT_DAMAGED if @weathered || @broken
+    Cistergraphia::Pathless::NOT_BROKEN if @broken
   end
 
   # What cannot be, in the library's words (@condition_error goes back to the
@@ -131,7 +131,7 @@ module FormParams
       @damage = damage unless damage.empty?
       @fragments = Cistergraphia::Fragments.read(svg)
     else
-      sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout)
+      sequence, svg, @damage = Cistergraphia::Lacunae.inscribe(@message, layout: @layout, pathless: @pathless)
     end
     [sequence, svg, @layout]
   end

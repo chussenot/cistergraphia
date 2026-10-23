@@ -27,7 +27,8 @@ Constraints:
   carried on to the decoder is still the broken one
 %>
 <% rung = if @broken || @rejoined then @weathered ? 'ruined' : 'broken'
-          elsif @desk then @grid ? 'pathless' : 'intact'
+          elsif @grid then 'pathless'
+          elsif @desk then 'intact'
           else 'worn'
           end %>
 <section class="leaf" aria-labelledby="play-title" data-play="<%= rung %>">
@@ -38,6 +39,8 @@ Constraints:
                                             end %></h1>
   <% if @rejoined %>
     <p class="lede">Whole again: the fragments are rejoined, and the plate has lost <%= @entries.size %> <%= @entries.size == 1 ? 'stroke position' : 'stroke positions' %>, hatched where the surface is worn. Now restore it: press the lost digits back in, each pair of signs must sum to a value on the tablet, and where two or three letters balance, the words decide.</p>
+  <% elsif @grid && !@desk %>
+    <p class="lede">The plate is worn and pathless: <%= @values.size / 2 %> pairs of signs, <%= pathless_lacunae(@worn) %> <%= pathless_lacunae(@worn) == 1 ? 'stroke position' : 'stroke positions' %> lost where the surface is hatched, and nothing says which way it runs. Choose one of the five ways at the bench: along it the pairs form, and read as letters or do not. Along the way, press the lost digits back in: each pair must sum to a value on the tablet, and where two or three letters balance, the words decide.</p>
   <% elsif @grid %>
     <p class="lede">The plate is whole and pathless: <%= @values.size / 2 %> pairs of signs, but nothing says which way it runs. Choose one of the five ways at the desk and read along it: the pairs form, and each sums to a letter on the tablet, or does not. Along the wrong way the letters stop; the notebook keeps what each way gave.</p>
   <% elsif @desk %>
@@ -61,6 +64,8 @@ Constraints:
       <div><dt>Condition</dt><dd><%= @weathered ? "Ruined: #{fragments_count(@fragments.size)}, worn" : "Broken, in #{fragments_count(@fragments.size)}" %></dd></div>
     <% elsif @rejoined %>
       <div><dt>Condition</dt><dd>Ruined, rejoined: worn</dd></div>
+    <% elsif @grid && !@desk %>
+      <div><dt>Condition</dt><dd><%= @tally ? 'Worn, pathless, with tally signs' : 'Worn, pathless' %></dd></div>
     <% elsif @grid %>
       <div><dt>Condition</dt><dd>Intact, pathless</dd></div>
     <% elsif @desk %>
@@ -75,6 +80,9 @@ Constraints:
 
   <% if @broken %>
     <%== erb :_board, layout: false, locals: { svg: @svg_content, fragments: @fragments, size: @size, worn: @weathered } %>
+  <% elsif @grid && !@desk %>
+    <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: pathless_cells_json(@grid), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size, grid: @grid } %>
+    <%== erb :_bench, layout: false, locals: { entries: @entries, values: @values, damage: @damage, tally: @tally, pathless: true, worn: @worn } %>
   <% elsif @grid %>
     <%== erb :_plate, layout: false, locals: { svg: @svg_content, cells: pathless_cells_json(@grid), geometry: plate_layout_json(@values, @layout), layout: @layout, decoy: nil, size: @size, grid: @grid } %>
     <%== erb :_desk, layout: false, locals: { values: @values, tablet: Cistergraphia::CHARACTERS, pathless: true } %>

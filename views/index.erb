@@ -115,16 +115,16 @@ Constraints:
             </label>
             <label class="segment segment--path-withheld">
               <input type="radio" name="path" value="withheld"<%= ' checked' if @pathless %>
-                     aria-describedby="note-withheld note-path-sealed note-path-grille note-path-damaged path-error"<%= ' aria-invalid="true"' if @path_error %>>
+                     aria-describedby="note-withheld note-path-sealed note-path-grille note-path-broken path-error"<%= ' aria-invalid="true"' if @path_error %>>
               <span class="segment-title">Withheld</span>
             </label>
           </div>
           <div class="choice-notes">
             <p class="choice-note" id="note-shown" data-note="shown">The reader’s desk opens on the way the plate runs.</p>
-            <p class="choice-note" id="note-withheld" data-note="withheld">A pathless plate: nothing says where it begins. The reader finds the way among the five.</p>
+            <p class="choice-note" id="note-withheld" data-note="withheld">A pathless plate: nothing says where it begins. The reader finds the way among the five, intact or worn.</p>
             <p class="choice-note" id="note-path-sealed" data-note="path-sealed">A sealed plate reads as no letters along any way: nothing to find. Choose Game.</p>
             <p class="choice-note" id="note-path-grille" data-note="path-grille">A grille plate hides its way by its key already. Choose another layout.</p>
-            <p class="choice-note" id="note-path-damaged" data-note="path-damaged">A worn or broken plate cannot be pathless yet. Choose Intact.</p>
+            <p class="choice-note" id="note-path-broken" data-note="path-broken">A broken plate follows the snail: the board rejoins it along it. Choose Intact or Worn.</p>
             <p class="choice-note field-error" id="path-error" aria-live="polite"><%= @path_error %></p>
           </div>
         </fieldset>

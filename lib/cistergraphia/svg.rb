@@ -26,12 +26,12 @@ module Cistergraphia
       <<~SVG
         <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="#{width}" height="#{height}" viewBox="0 0 #{width} #{height}"#{%( class="#{Pathless::CLASS}") if pathless}>
           <rect width="100%" height="100%" fill="white"/>
-          #{Lacunae.patches(cols, layout, damage)}
+          #{Lacunae.patches(cols, layout, damage, pathless: pathless)}
           <g fill="black">
         #{pressed(signs, layout, damage).map { |outline| %(    <path d="#{outline}"/>) }.join("\n")}
           </g>
         #{lines_layer(signs, layout, damage)}
-        #{Lacunae.hidden(cols, layout, damage)}
+        #{Lacunae.hidden(cols, layout, damage, pathless: pathless)}
         #{Tally::Plate.layer(sequence, cols, layout) if tally}
         </svg>
       SVG

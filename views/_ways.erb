@@ -1,0 +1,17 @@
+<%#
+A pathless plate's question, "Which way does it run?", with the five ways to
+choose from, each a small figure of its reading order (app.js lays the way
+chosen over the grid: initDesk, initBench). Local: at ('desk' or 'bench'), the
+piece of furniture asking: its buttons carry data-<at>-way
+%>
+<div class="ways-ask">
+  <p class="ways-question" id="<%= at %>-question">Which way does it run?</p>
+  <div class="segments segments--ways ways" role="group" aria-labelledby="<%= at %>-question">
+    <% ViewHelpers::LAYOUT_NAMES.each do |way, title| %>
+      <button type="button" class="segment segment--way" data-<%= at %>-way="<%= way %>" aria-pressed="false">
+        <span class="segment-figure" aria-hidden="true"><%== snail_svg(4, layout: way) %></span>
+        <span class="segment-title"><%= title %></span>
+      </button>
+    <% end %>
+  </div>
+</div>

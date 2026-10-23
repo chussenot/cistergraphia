@@ -18,19 +18,7 @@ notebook of the ways tried; the pair boxes wait empty for a way)
       <button type="button" class="segment" data-desk-set-mode="unaided" aria-pressed="false"><span class="segment-title">Unaided</span></button>
     </div>
   </div>
-  <% if pathless_desk %>
-    <div class="desk-ways-ask">
-      <p class="desk-question" id="desk-question">Which way does it run?</p>
-      <div class="segments segments--ways desk-ways" role="group" aria-labelledby="desk-question">
-        <% { phaistos: 'Phaistos', rongorongo: 'Rongorongo', leap: 'Leap', furrows: 'Furrows', unwinding: 'Unwinding' }.each do |way, title| %>
-          <button type="button" class="segment segment--way" data-desk-way="<%= way %>" aria-pressed="false">
-            <span class="segment-figure" aria-hidden="true"><%== snail_svg(4, layout: way) %></span>
-            <span class="segment-title"><%= title %></span>
-          </button>
-        <% end %>
-      </div>
-    </div>
-  <% end %>
+  <% if pathless_desk %><%== erb :_ways, layout: false, locals: { at: 'desk' } %><% end %>
   <div class="desk-nav">
     <button type="button" class="btn btn--small" data-desk-step="-1" aria-label="Previous pair">‹</button>
     <span class="desk-which" data-desk-which aria-live="polite"><%= pathless_desk ? 'Choose a way to read' : "Pair 1 of #{values.size / 2} · signs 1 and 2" %></span>

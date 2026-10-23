@@ -25,6 +25,10 @@ Metrics/ModuleLength:
 Metrics/MethodLength:
   CountAsOne: [array, hash]
 
+# A plate's options are named: keyword arguments say what they are
+Metrics/ParameterLists:
+  CountKeywordArgs: false
+
 Metrics/ClassLength:
   Exclude:
     - 'test/**/*'
