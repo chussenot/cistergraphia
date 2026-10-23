@@ -46,4 +46,9 @@ namespace :ui do
   task :play do
     ruby 'test/ui/play.rb'
   end
+
+  desc 'End to end: every choice of the form, its plate drawn whole, read back on Read (needs Node, Playwright)'
+  task :e2e do
+    ruby 'test/ui/e2e.rb'
+  end
 end

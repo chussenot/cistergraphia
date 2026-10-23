@@ -69,6 +69,32 @@ jobs:
         env:
           BROWSER: ${{ matrix.browser }}
 
+  # End to end: every choice of the form makes a plate drawn whole, or a
+  # refusal that says why; every plate opens on Read and deciphers back
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.1-${{ matrix.browser }}
+      - run: npm install --no-save --no-package-lock playwright@1.56.1
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: bundle exec rake ui:e2e | tee /tmp/e2e.log && tail -1 /tmp/e2e.log >> "$GITHUB_STEP_SUMMARY"
+        env:
+          BROWSER: ${{ matrix.browser }}
+      - if: failure()
+        run: grep -A4 '^FAIL' /tmp/e2e.log >> "$GITHUB_STEP_SUMMARY" || true
+
   # Keeps docs/design.md honest: nothing on a page moves under the reader
   stability:
     runs-on: ubuntu-latest
