@@ -79,7 +79,8 @@ edition. The form offers these as a ladder, Intact, Worn, Broken, Ruined. Send a
 and Read opens it as its puzzle, built from the file alone: the reading desk for an intact plate
 (read it pair by pair, guided or unaided), the bench to restore a worn one, the board to rejoin a
 broken one, the decoder's answer one click below. A plate whose path is withheld (intact or worn)
-opens without its way: the desk or the bench asks which of the five it runs, and the reader finds out. Plates won are counted, by rung, in a
+opens without its way: the desk or the bench asks which of the five it runs, and the reader finds out. A plate with a tablet of its own opens at the desk with the notebook under it: the reader writes a
+letter in pencil against each sum, and the scribe confirms entries three at a time. Plates won are counted, by rung, in a
 scriptorium record kept in the browser. A small plate loses one pair in two, a large one one in
 three: measured ([experiments/weathering](experiments/weathering/README.md)), a small plate
 damaged one in three was a lesson rather than a puzzle.
@@ -136,6 +137,7 @@ bundle exec rackup                                      # then open http://local
 ./cistergraphia -m "Vespers at six" -l leap -o plate.svg          # or rongorongo, furrows, unwinding: -d finds the way
 ./cistergraphia -m "Vespers at six" -l leap --pathless -o plate.svg  # the reader finds the way; -d still does
 ./cistergraphia -m "Vespers at six" -l leap -w --pathless -o plate.svg  # worn and pathless: the bench finds the way, then restores
+./cistergraphia -m "Meet me at the old abbey after vespers" --own-tablet -o plate.svg  # its own tablet: the reader builds it in the notebook
 ./cistergraphia -d tmp/inline.svg -g K7Q2M-ZXB4P                          # read it under its grille
 ./cistergraphia -m "The relics are under the third stone" --decoy "Vespers at six" -g K7Q2M-ZXB4P
                                      # two readers: K7Q2M-ZXB4P reads both, the novice's key only the decoy

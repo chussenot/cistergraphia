@@ -35,6 +35,8 @@ require_relative 'web/view_helpers'
 require_relative 'web/bench_helpers'
 require_relative 'web/tray_helpers'
 require_relative 'web/form_params'
+require_relative 'web/refusals'
+require_relative 'web/plate_input'
 require_relative 'web/plate_file'
 require_relative 'web/reader_game'
 require_relative 'web/figures'
@@ -46,7 +48,7 @@ class CistergraphiaApp < Sinatra::Base
   CONTENT_SECURITY_POLICY = ["default-src 'self'", "img-src 'self' data: blob:", "object-src 'none'", "base-uri 'none'",
                              "form-action 'self'", "frame-ancestors 'none'"].join('; ')
 
-  helpers ViewHelpers, BenchHelpers, TrayHelpers, Figures, FormParams, ReaderGame
+  helpers ViewHelpers, BenchHelpers, TrayHelpers, Figures, FormParams, Refusals, PlateInput, ReaderGame
 
   # Pages and assets go compressed to a browser that accepts it: the scripts and
   # styles weigh a quarter of their raw size on the wire (the behaviour suite's
@@ -152,24 +154,9 @@ class CistergraphiaApp < Sinatra::Base
     raise Cistergraphia::DecodeError, "#{e.message}. If this image was made in secret mode, enter its passphrase."
   end
 
-  private
-
-  # SVG from the file upload when one was chosen, otherwise from the textarea
-  def submitted_svg
-    svg = uploaded_svg.to_s
-    svg = params[:svg].to_s if svg.empty?
-    halt_with 413, "SVG is limited to #{MAX_SVG_BYTES / 1024} KB" if svg.bytesize > MAX_SVG_BYTES
-    svg
-  end
-
-  # Reads one byte past the limit so oversized uploads are detected without loading them whole
-  def uploaded_svg
-    upload = params[:file]
-    upload[:tempfile].read(MAX_SVG_BYTES + 1) if upload.is_a?(Hash) && upload[:tempfile]
-  end
-
-  def halt_with(status, message)
-    @error_message = message
-    halt status, erb(:error)
+  # The scribe confirms a notebook's entries, three at a time (app.js, initNotebook)
+  post '/ask' do
+    content_type :json
+    JSON.generate(held: scribe_answer(submitted_svg))
   end
 end

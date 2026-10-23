@@ -1,0 +1,48 @@
+<%#
+The notebook under the desk of a plate with a tablet of its own (app.js,
+initNotebook): one entry per sum the plate's pairs make, the most seen first,
+with how often and how it was spelled, and a letter to write against it. A
+letter in pencil goes into the text line at once, in grey italics; Ask the
+scribe confirms entries three at a time, and those go into ink, upright. Its
+first state is drawn here as the script draws it (every entry in pencil, none
+written), so nothing moves when the script arrives. ␣ is the space. A phone
+shows one spelling per sum, a wider screen three; … says there are more.
+Locals: entries (Cistergraphia::Notebook.entries: [{ sum:, seen:, spellings: }])
+%>
+<% letters = ('a'..'z').to_a + [' '] %>
+<section class="notebook awaits-script" aria-labelledby="notebook-title" data-notebook data-notebook-sums="<%= JSON.generate(entries.map { |entry| entry[:sum] }) %>">
+  <div class="notebook-head">
+    <h2 id="notebook-title" class="index-heading">The notebook</h2>
+    <span class="notebook-count" data-notebook-count aria-live="polite">0 of <%= entries.size %> in ink · asked 0 times</span>
+  </div>
+  <p class="notebook-note">Each sum is one letter, however its pair is spelled. Write a letter in pencil against a sum; the scribe confirms entries three at a time.</p>
+  <div class="notebook-scroll">
+    <table class="notebook-table">
+      <thead><tr><th scope="col">Sum</th><th scope="col">Seen</th><th scope="col">Spelled</th><th scope="col">Reads as</th></tr></thead>
+      <tbody>
+        <% entries.each do |entry| %>
+          <% sum = entry[:sum] %>
+          <tr data-entry-row="<%= sum %>">
+            <td class="notebook-sum"><%= format('%04d', sum) %></td>
+            <td class="notebook-seen"><%= entry[:seen] %></td>
+            <% spellings = entry[:spellings] %>
+            <td class="notebook-spellings"><% spellings.first(Cistergraphia::Notebook::SPELLINGS).each do |a, b| %><span class="spelling"><%= format('%04d + %04d', a, b) %></span><% end %><% if spellings.size > 1 %><span class="spelling-more<%= ' spelling-more--wide' if spellings.size > Cistergraphia::Notebook::SPELLINGS %>">…</span><% end %></td>
+            <td class="notebook-slot">
+              <label class="visually-hidden" for="entry-<%= sum %>">What <%= sum %> reads as</label>
+              <select id="entry-<%= sum %>" class="input notebook-entry" data-entry="<%= sum %>">
+                <option value="">·</option>
+                <% letters.each do |char| %>
+                  <option value="<%= char %>"><%= char == ' ' ? '␣' : char %></option>
+                <% end %>
+              </select>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <div class="notebook-ask">
+    <button type="button" class="btn btn--primary" data-notebook-ask>Ask the scribe</button>
+    <p class="notebook-verdict" data-notebook-verdict aria-live="polite">The scribe answers only when three entries hold at once.</p>
+  </div>
+</section>

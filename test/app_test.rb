@@ -317,16 +317,51 @@ class AppTest < Minitest::Test
     readings.flatten.each { |entry| assert_lacuna_shows_only_the_file(entry) }
   end
 
-  def test_a_plate_with_its_own_tablet_brought_to_read_goes_to_the_decoder_and_keeps_its_seed
-    _, svg = Cistergraphia.inscribe('Ora et labora', layout: :furrows, tablet: 'K7Q2M-ZXB4P')
+  def test_a_plate_with_its_own_tablet_brought_to_read_opens_at_the_desk_with_its_notebook
+    sequence, svg = Cistergraphia.inscribe('Meet me at the old abbey', layout: :furrows, tablet: 'K7Q2M-ZXB4P')
+    post '/decode', svg: svg
+    body = last_response.body
+
+    ['data-play="tablet"', 'data-desk-own', 'data-tablet="{}"', 'data-notebook', 'Ask the scribe',
+     '<dd>Its own: to build</dd>'].each { |said| assert_includes body, said }
+    assert_equal Cistergraphia::Notebook.entries(sequence).size, body.scan('data-entry-row=').size
+    refute_includes body, 'tablet-value', 'the reader is not shown the tablet'
+    assert_equal 'K7Q2MZXB4P', Cistergraphia::Tablet.seed_of(CGI.unescapeHTML(body[/name="svg" value="([^"]*)"/, 1])),
+                 'the file goes back to the decoder and the scribe with its seed'
+    post '/decode', svg: svg, decipher: '1'
+
+    assert_includes last_response.body, 'meet me at the old abbey', 'the decoder reads by the seed'
+  end
+
+  def test_the_scribe_answers_the_notebook_three_at_a_time
+    sequence, svg = Cistergraphia.inscribe('Meet me at the old abbey', tablet: 'K7Q2M-ZXB4P')
+    tablet = Cistergraphia::Tablet.characters('K7Q2M-ZXB4P')
+    right = Cistergraphia::Notebook.entries(sequence).to_h { |entry| [entry[:sum], tablet[entry[:sum]]] }
+
+    assert_equal({}, ask_the_scribe(svg, right.first(2).to_h))
+    assert_equal right.first(3).to_h.transform_keys(&:to_s), ask_the_scribe(svg, right.first(3).to_h)
+    assert_equal 'application/json', last_response.media_type
+    post '/ask', svg: svg, pencil: 'not json', inked: '[]'
+
+    assert_equal 400, last_response.status
+  end
+
+  # What the scribe holds of the pencilled entries ({ sum => character })
+  def ask_the_scribe(svg, pencil)
+    post '/ask', svg: svg, pencil: JSON.generate(pencil), inked: '[]'
+    JSON.parse(last_response.body)['held']
+  end
+
+  def test_one_thing_to_find_at_a_time_a_pathless_plate_with_its_own_tablet_goes_to_the_decoder
+    _, svg = Cistergraphia.inscribe('Ora et labora', layout: :leap, pathless: true, tablet: 'K7Q2M-ZXB4P')
     post '/decode', svg: svg
 
-    assert_includes last_response.body, 'ora et labora', 'the decoder reads by the seed'
-    refute_includes last_response.body, 'data-desk', 'no desk until the notebook can open it'
-    cleaned = PlateFile.clean(svg)
+    assert_includes last_response.body, 'ora et labora'
+    refute_includes last_response.body, 'data-desk'
+    post '/generate', message: 'Ora et labora', path: 'withheld', tablet: 'own'
 
-    assert_equal 'K7Q2MZXB4P', Cistergraphia::Tablet.seed_of(cleaned), 'the page keeps the seed on the file'
-    assert_equal 'ora et labora', Cistergraphia.decode(cleaned)
+    assert_equal 422, last_response.status
+    assert_includes last_response.body, Cistergraphia::Tablet::NOT_PATHLESS
   end
 
   def test_a_worn_plate_can_be_pathless_from_the_form
