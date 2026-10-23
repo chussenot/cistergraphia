@@ -128,6 +128,21 @@
     update();
   }
 
+  // ---------- The reader's puzzle: its summary says what it holds ----------
+  function initPuzzle() {
+    const puzzle = $('[data-puzzle]');
+    const state = $('[data-puzzle-state]');
+    if (!puzzle || !state) return;
+    const checked = (name) => $(`input[name="${name}"]:checked`, puzzle);
+    const say = () => {
+      const rung = checked('condition')?.closest('label').querySelector('.segment-title').textContent || 'Intact';
+      const tablet = checked('tablet')?.value === 'own' ? 'its own tablet' : 'shared tablet';
+      const path = checked('path')?.value === 'withheld' ? 'path withheld' : 'path shown';
+      state.textContent = `${rung}, ${tablet}, ${path}`; // FormParams#puzzle_state
+    };
+    puzzle.addEventListener('change', say);
+  }
+
   // ---------- Show / hide passphrase ----------
   function initReveal() {
     $$('[data-reveal]').forEach((button) => {
@@ -1887,6 +1902,7 @@
     initModes();
     initLayouts();
     initCounter();
+    initPuzzle();
     initReveal();
     initActions();
     initDropzone();

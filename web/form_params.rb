@@ -71,6 +71,18 @@ module FormParams
     @tablet_error = tablet_problem if @own_tablet
   end
 
+  # The reader's puzzle as its summary says it: the rung, the tablet, the path
+  def puzzle_state
+    [RUNGS.fetch(@condition || 'intact'), @own_tablet ? 'its own tablet' : 'shared tablet',
+     @pathless ? 'path withheld' : 'path shown'].join(', ')
+  end
+
+  # The puzzle's disclosure is open when any of it was chosen or refused
+  def puzzle_open?
+    chosen = @pathless || @own_tablet || (@condition || 'intact') != 'intact'
+    chosen || [@condition_error, @path_error, @tablet_error].any?
+  end
+
   # What sends the form back, to explain
   def form_errors
     [@passphrase_error, @grille_error, @decoy_error, @condition_error, @path_error, @tablet_error]

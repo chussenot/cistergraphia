@@ -158,6 +158,7 @@ const openRejoinedBench = async (page) => {
 const openWeatheredPlate = async (page) => {
   await page.goto(`${baseUrl}/`);
   await page.fill('#message', MESSAGE);
+  await page.click('.puzzle-summary'); // the reader's puzzle, shut on a plain plate
   await page.check('input[value="worn"]', { force: true });
   await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
   await page.waitForSelector('[data-plate] svg');
@@ -167,6 +168,7 @@ const openWeatheredPlate = async (page) => {
 const openBrokenPlate = async (page) => {
   await page.goto(`${baseUrl}/`);
   await page.fill('#message', MESSAGE);
+  await page.click('.puzzle-summary'); // the reader's puzzle, shut on a plain plate
   await page.check('input[value="broken"]', { force: true });
   await Promise.all([page.waitForURL('**/generate'), page.click('[data-submit]')]);
   await page.waitForSelector('[data-plate] svg');
@@ -218,6 +220,7 @@ const FLOWS = [
       { name: 'type a message', act: async (p) => { await p.click('#message'); await p.keyboard.type(MESSAGE); } },
       { name: 'edit at the start', act: async (p) => { await p.keyboard.press('Control+Home'); await p.keyboard.type('Brother, '); } },
       { name: 'delete', act: async (p) => { await p.keyboard.press('Control+End'); for (let i = 0; i < 30; i += 1) await p.keyboard.press('Backspace'); } },
+      { name: "open the reader's puzzle", anchor: '.puzzle', act: (p) => p.click('.puzzle-summary') },
       { name: 'choose its own tablet', act: (p) => p.click('label.segment--tablet-own') },
       { name: 'back to the shared tablet', act: (p) => p.click('label.segment--tablet-shared') },
       { name: 'wear the plate', act: (p) => p.click('label.segment--worn') },
