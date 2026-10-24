@@ -385,6 +385,12 @@ async function zoom() {
     return { frame: [f.width, f.height].map(Math.round), plate: [s.width, s.height].map(Math.round), inside: focus ? focus.left >= f.left - 1 && focus.right <= f.right + 1 && focus.top >= f.top - 1 && focus.bottom <= f.bottom + 1 : null, level: document.querySelector('[data-zoom-level]').textContent };
   });
   const before = await boxes();
+  // Docked on the frame's mount, bottom right: inside the frame, below the plate, over no sign
+  const docked = await page.evaluate(() => {
+    const [frame, plate, control] = ['[data-plate]', '[data-plate] svg', '[data-plate-zoom]'].map((q) => document.querySelector(q).getBoundingClientRect());
+    return control.top >= plate.bottom - 1 && control.bottom <= frame.bottom && control.right <= frame.right && control.right > frame.right - 40;
+  });
+  expectEqual('zoom', 'the control is docked on the mount, bottom right, over no sign', docked, true);
   await page.click('[data-zoom-step="1"]');
   await page.click('[data-zoom-step="1"]');
   const zoomed = await boxes();

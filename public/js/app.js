@@ -575,8 +575,8 @@
     const svg = frame && plateSvg();
     if (!controls || !svg) return;
     const [out, into] = ['-1', '1'].map((k) => $(`[data-zoom-step="${k}"]`, controls));
-    const fit = $('[data-zoom-fit]', controls);
-    const level = $('[data-zoom-level]', controls);
+    const level = $('[data-zoom-level]', controls); // the level, a button that fits the whole plate again
+    const said = $('[data-zoom-said]', controls);
     let zoom = 1;
     let base = null; // the plate's box and the frame's height at ×1
     const set = (next, at) => {
@@ -604,8 +604,10 @@
         frame.scrollTop += (after.top + (fy * after.height)) - py;
       }
       level.textContent = `×${zoom}`;
+      level.setAttribute('aria-label', zoom === 1 ? '×1: the whole plate' : `×${zoom}: back to the whole plate`);
+      said.textContent = `Zoom ×${zoom}`;
       out.disabled = zoom === 1;
-      fit.disabled = zoom === 1;
+      level.disabled = zoom === 1;
       into.disabled = zoom === ZOOMS.at(-1);
     };
     const step = (by, at) => set(ZOOMS[Math.min(Math.max(ZOOMS.indexOf(zoom) + by, 0), ZOOMS.length - 1)], at);
@@ -640,7 +642,7 @@
 
     into.addEventListener('click', () => step(1));
     out.addEventListener('click', () => step(-1));
-    fit.addEventListener('click', () => set(1));
+    level.addEventListener('click', () => set(1));
     frame.addEventListener('keydown', (event) => {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === '+' || event.key === '=') step(1);
