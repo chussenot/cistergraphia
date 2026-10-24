@@ -560,6 +560,144 @@
     frame.plateWalk = { show, cellAt, follow, reveal: (on) => { revealing = on; if (current >= 0) show(current); } };
   }
 
+  // ---------- Zoom: a plate of many signs, looked at closely ----------
+  // The frame keeps its size and becomes a window the plate grows behind: its
+  // width and height grow, never a transform, so the walk, the bench and the
+  // grille read the plate's box as they always do. The window scrolls, or is
+  // dragged with the mouse; the point under the pointer (the window's centre,
+  // from the buttons) stays where it is, and the sign the walk is on is kept
+  // in view. Ctrl or ⌘ with the wheel (a trackpad's pinch) zooms, and + − 0
+  // on the focused plate
+  const ZOOMS = [1, 1.5, 2, 3, 4];
+  function initPlateZoom() {
+    const controls = $('[data-plate-zoom]');
+    const frame = $('[data-plate]');
+    const svg = frame && plateSvg();
+    if (!controls || !svg) return;
+    const [out, into] = ['-1', '1'].map((k) => $(`[data-zoom-step="${k}"]`, controls));
+    const level = $('[data-zoom-level]', controls); // the level, a button that fits the whole plate again
+    const said = $('[data-zoom-said]', controls);
+    let zoom = 1;
+    let base = null; // the plate's box and the frame's height at ×1
+    const set = (next, at) => {
+      if (next === zoom) return;
+      if (zoom === 1) {
+        const plate = svg.getBoundingClientRect();
+        base = { width: plate.width, height: plate.height, frame: frame.getBoundingClientRect().height };
+      }
+      // The point that stays, as a fraction of the plate
+      const box = frame.getBoundingClientRect();
+      const before = svg.getBoundingClientRect();
+      const [px, py] = at ? [at.clientX, at.clientY] : [box.left + (box.width / 2), box.top + (box.height / 2)];
+      const [fx, fy] = [(px - before.left) / before.width, (py - before.top) / before.height];
+      zoom = next;
+      frame.classList.toggle('is-zoomed', zoom > 1);
+      if (zoom === 1) {
+        ['width', 'height'].forEach((name) => svg.style.removeProperty(name));
+        frame.style.removeProperty('height');
+      } else {
+        frame.style.height = `${base.frame}px`;
+        svg.style.width = `${base.width * zoom}px`;
+        svg.style.height = `${base.height * zoom}px`;
+        const after = svg.getBoundingClientRect();
+        frame.scrollLeft += (after.left + (fx * after.width)) - px;
+        frame.scrollTop += (after.top + (fy * after.height)) - py;
+      }
+      level.textContent = `×${zoom}`;
+      level.setAttribute('aria-label', zoom === 1 ? '×1: the whole plate' : `×${zoom}: back to the whole plate`);
+      said.textContent = `Zoom ×${zoom}`;
+      out.disabled = zoom === 1;
+      level.disabled = zoom === 1;
+      into.disabled = zoom === ZOOMS.at(-1);
+    };
+    const step = (by, at) => set(ZOOMS[Math.min(Math.max(ZOOMS.indexOf(zoom) + by, 0), ZOOMS.length - 1)], at);
+
+    // The sign the walk is on, kept in the window: from the focus's place in the plate's own units
+    const keepInView = () => {
+      const focus = $('.plate-focus', svg);
+      const at = focus?.style.transform.match(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)/);
+      if (zoom === 1 || !at || !focus.classList.contains('is-visible')) return;
+      const view = svg.viewBox.baseVal;
+      const plate = svg.getBoundingClientRect();
+      const turned = frame.classList.contains('is-turned');
+      const edge = (offset, size, origin, span, length) => {
+        const from = (offset - origin) / span;
+        const to = (offset + size - origin) / span;
+        return turned ? [1 - to, 1 - from].map((f) => f * length) : [from * length, to * length];
+      };
+      const [left, right] = edge(Number(at[1]), Number(focus.getAttribute('width')), view.x, view.width, plate.width);
+      const [top, bottom] = edge(Number(at[2]), Number(focus.getAttribute('height')), view.y, view.height, plate.height);
+      const box = frame.getBoundingClientRect();
+      const margin = 24;
+      const [x0, x1, y0, y1] = [plate.left + left, plate.left + right, plate.top + top, plate.top + bottom];
+      if (x0 < box.left + margin) frame.scrollLeft -= (box.left + margin) - x0;
+      else if (x1 > box.right - margin) frame.scrollLeft += x1 - (box.right - margin);
+      if (y0 < box.top + margin) frame.scrollTop -= (box.top + margin) - y0;
+      else if (y1 > box.bottom - margin) frame.scrollTop += y1 - (box.bottom - margin);
+    };
+    if (frame.plateWalk) { // the desk and the bench move the walk too
+      const { show } = frame.plateWalk;
+      frame.plateWalk.show = (i) => { show(i); keepInView(); };
+    }
+
+    into.addEventListener('click', () => step(1));
+    out.addEventListener('click', () => step(-1));
+    level.addEventListener('click', () => set(1));
+    frame.addEventListener('keydown', (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === '+' || event.key === '=') step(1);
+      else if (event.key === '-' || event.key === '_') step(-1);
+      else if (event.key === '0') set(1);
+      else if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) requestAnimationFrame(keepInView);
+      else return;
+      event.preventDefault();
+    });
+    // Ctrl or ⌘ and the wheel, or a pinch on a trackpad (the same events): a step per notch
+    let wheel = 0;
+    frame.addEventListener('wheel', (event) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      wheel += event.deltaY * ([1, 40, 800][event.deltaMode] || 1); // pixels, lines (Firefox) or pages
+      if (Math.abs(wheel) < 40) return;
+      step(wheel < 0 ? 1 : -1, event);
+      wheel = 0;
+    }, { passive: false });
+    // Dragged with the mouse when zoomed (a finger scrolls the window as it is);
+    // a drag is not a click on a sign
+    let drag = null;
+    frame.addEventListener('pointerdown', (event) => {
+      if (zoom === 1 || event.pointerType !== 'mouse' || event.button !== 0) return;
+      drag = { x: event.clientX, y: event.clientY, left: frame.scrollLeft, top: frame.scrollTop, moved: false };
+    });
+    window.addEventListener('pointermove', (event) => {
+      if (!drag) return;
+      const [dx, dy] = [event.clientX - drag.x, event.clientY - drag.y];
+      if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+      drag.moved = true;
+      frame.classList.add('is-panning');
+      frame.scrollLeft = drag.left - dx;
+      frame.scrollTop = drag.top - dy;
+    });
+    window.addEventListener('pointerup', () => {
+      if (drag?.moved) {
+        const swallow = (event) => { event.stopPropagation(); event.preventDefault(); };
+        frame.addEventListener('click', swallow, { capture: true });
+        setTimeout(() => frame.removeEventListener('click', swallow, { capture: true }), 0);
+      }
+      drag = null;
+      frame.classList.remove('is-panning');
+    });
+    // A new width for the page: back to the whole plate, measured again when zoomed next
+    // (a phone's toolbar sliding away changes only the height: the zoom stays)
+    let width = window.innerWidth;
+    window.addEventListener('resize', () => {
+      if (window.innerWidth === width) return;
+      width = window.innerWidth;
+      set(1);
+    });
+    controls.classList.remove('awaits-script');
+  }
+
   // ---------- The reading desk: an intact plate, read pair by pair ----------
   // The current pair is shown large; the reader types the two numbers; the
   // page adds them and finds the letter on the tablet; the text grows below.
@@ -1914,6 +2052,7 @@
     initRecord();
     inkPlate();
     initPlateWalk();
+    initPlateZoom();
     initDesk();
     initGrille();
     initBench();

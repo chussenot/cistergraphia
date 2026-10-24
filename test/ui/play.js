@@ -372,6 +372,51 @@ async function room() {
   await ctx.close();
 }
 
+// ---------- Zoom: a plate of many signs, looked at closely ----------
+async function zoom() {
+  const ctx = await context({ viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  await inscribe(page, { message: LONG });
+  await page.waitForSelector('[data-plate-zoom]:not(.awaits-script)');
+  const boxes = () => page.evaluate(() => {
+    const frame = document.querySelector('[data-plate]');
+    const [f, s] = [frame, frame.querySelector('svg')].map((el) => el.getBoundingClientRect());
+    const focus = frame.querySelector('.plate-focus')?.getBoundingClientRect();
+    return { frame: [f.width, f.height].map(Math.round), plate: [s.width, s.height].map(Math.round), inside: focus ? focus.left >= f.left - 1 && focus.right <= f.right + 1 && focus.top >= f.top - 1 && focus.bottom <= f.bottom + 1 : null, level: document.querySelector('[data-zoom-level]').textContent };
+  });
+  const before = await boxes();
+  // Docked on the frame's mount, bottom right: inside the frame, below the plate, over no sign
+  const docked = await page.evaluate(() => {
+    const [frame, plate, control] = ['[data-plate]', '[data-plate] svg', '[data-plate-zoom]'].map((q) => document.querySelector(q).getBoundingClientRect());
+    return control.top >= plate.bottom - 1 && control.bottom <= frame.bottom && control.right <= frame.right && control.right > frame.right - 40;
+  });
+  expectEqual('zoom', 'the control is docked on the mount, bottom right, over no sign', docked, true);
+  await page.click('[data-zoom-step="1"]');
+  await page.click('[data-zoom-step="1"]');
+  const zoomed = await boxes();
+  expectEqual('zoom', 'the plate grows twice over', zoomed.level === '×2' && Math.abs(zoomed.plate[0] - (2 * before.plate[0])) <= 2, true);
+  expectEqual('zoom', 'within a frame that keeps its size', zoomed.frame.join(), before.frame.join());
+  await page.focus('[data-plate]');
+  for (let i = 0; i < 40; i += 1) await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(400);
+  expectEqual('zoom', 'the sign the walk is on stays in view', (await boxes()).inside, true);
+  await page.keyboard.press('0');
+  expectEqual('zoom', 'zero fits the plate again', (await boxes()).plate.join(), before.plate.join());
+  // Ctrl and the wheel, as a trackpad's pinch sends it (dispatched: Playwright's Firefox delivers no wheel to the page)
+  await page.evaluate(() => {
+    const frame = document.querySelector('[data-plate]');
+    const box = frame.getBoundingClientRect();
+    frame.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, ctrlKey: true, clientX: box.left + (box.width / 2), clientY: box.top + (box.height / 2), bubbles: true, cancelable: true }));
+  });
+  expectEqual('zoom', 'ctrl and the wheel zoom in', (await boxes()).level, '×1.5');
+  await page.click('[data-zoom-fit]');
+  expectEqual('zoom', 'Fit gives the whole plate back', (await boxes()).level, '×1');
+  // A small plate has no zoom: its signs are large enough
+  await inscribe(page, { message: 'Ora' });
+  expectEqual('zoom', 'a small plate has no zoom', await page.locator('[data-plate-zoom]').count(), 0);
+  await ctx.close();
+}
+
 // ---------- The board ----------
 async function board() {
   const ctx = await context();
@@ -596,6 +641,7 @@ async function budgets() {
   await notebook();
   await expert();
   await room();
+  await zoom();
   await board();
   await lectio();
   await grille();

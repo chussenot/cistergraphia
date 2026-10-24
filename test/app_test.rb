@@ -182,6 +182,16 @@ class AppTest < Minitest::Test
     assert_includes last_response.body, 'Worn, shared tablet, path shown'
   end
 
+  def test_a_plate_of_many_signs_can_be_zoomed_a_small_one_need_not
+    post '/generate', message: 'the brothers will gather in the chapter house at dawn'
+
+    assert_includes last_response.body, 'data-plate-zoom'
+    assert_includes last_response.body, 'aria-label="Zoom in"'
+    post '/generate', message: 'Ora'
+
+    refute_includes last_response.body, 'data-plate-zoom', 'a 4 × 4 plate: its signs are large enough'
+  end
+
   def test_index_offers_six_layouts
     get '/'
 
@@ -530,8 +540,15 @@ class AppTest < Minitest::Test
     assert_includes body, 'Ora et labora'
   end
 
+  # A grille plate whose splits are drawn from a fixed seed: under a wrong key,
+  # one plate of these in 500 reads as letters by chance (measured), and the key is not refused
+  def seeded_grille_plate
+    srand(3)
+    Cistergraphia.inscribe('Vespers at six', layout: Cistergraphia::Grille.new('K7Q2M-ZXB4P')).last
+  end
+
   def test_a_grille_plate_is_read_with_its_key_and_asks_for_it_without
-    _, svg = Cistergraphia.inscribe('Vespers at six', layout: Cistergraphia::Grille.new('K7Q2M-ZXB4P'))
+    svg = seeded_grille_plate
 
     post '/decode', svg: svg
     assert_equal 400, last_response.status

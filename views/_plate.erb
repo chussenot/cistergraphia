@@ -2,13 +2,29 @@
 A plate, walkable: the figure the plate page and the reader's page share.
 Locals: svg, cells (plate_cells_json), geometry (plate_layout_json), layout, decoy, size (the grid's side),
 grid (a pathless plate's cells with both readings, for the desk to lay the ways over; nil otherwise)
+From ZOOM_FROM signs a side, the plate can be zoomed inside its frame (app.js, initPlateZoom): the
+frame keeps its size, the plate grows within it and scrolls. The control is docked on the frame's mount,
+bottom right, where maps keep theirs: part of the plate, under the thumb on a phone, level with nothing it
+could be mistaken for (the file's actions above, the desk beside). The mount is deeper there, so at ×1 it
+covers no sign. − and + step; the level between them is a button that fits the whole plate again
 %>
 <% plate_grid = defined?(grid) ? grid : nil %>
+<% zoomable = size >= ViewHelpers::ZOOM_FROM %>
 <figure class="plate<%= plate_size_class(size) %>">
-  <div class="plate-frame" id="svg-display" data-plate tabindex="0" role="group"
-       aria-label="The plate. Use the arrow keys to walk its signs in reading order."
-       data-plate-cells="<%= cells %>" data-plate-layout="<%= geometry %>"<% if plate_grid %> data-plate-grid="<%= JSON.generate(plate_grid) %>"<% end %>>
-    <%== svg %>
+  <div class="plate-view">
+    <div class="plate-frame<%= ' plate-frame--zoomable' if zoomable %>" id="svg-display" data-plate tabindex="0" role="group"
+         aria-label="The plate. Use the arrow keys to walk its signs in reading order<%= zoomable ? ', and plus, minus and zero to zoom' : '' %>."
+         data-plate-cells="<%= cells %>" data-plate-layout="<%= geometry %>"<% if plate_grid %> data-plate-grid="<%= JSON.generate(plate_grid) %>"<% end %>>
+      <%== svg %>
+    </div>
+    <% if zoomable %>
+      <div class="plate-zoom awaits-script" role="group" aria-label="Zoom on the plate" data-plate-zoom>
+        <button type="button" class="plate-zoom-button" data-zoom-step="-1" aria-label="Zoom out" title="Zoom out (−)" disabled>−</button>
+        <button type="button" class="plate-zoom-button plate-zoom-level" data-zoom-fit data-zoom-level aria-label="×1: the whole plate" title="The whole plate (0)" disabled>×1</button>
+        <button type="button" class="plate-zoom-button" data-zoom-step="1" aria-label="Zoom in" title="Zoom in (+)">+</button>
+        <span class="visually-hidden" data-zoom-said aria-live="polite"></span>
+      </div>
+    <% end %>
   </div>
   <figcaption>
     <span class="plate-reading">
@@ -25,6 +41,6 @@ grid (a pathless plate's cells with both readings, for the desk to lay the ways 
       <% end %>
       <span class="plate-reading-live" data-plate-reading aria-live="polite"></span>
     </span>
-    <span class="plate-hint awaits-script" data-plate-hint>Point at a sign, or focus the plate and use the arrow keys, to walk it in reading order.</span>
+    <span class="plate-hint awaits-script" data-plate-hint>Point at a sign, or focus the plate and use the arrow keys, to walk it in reading order<%= zoomable ? "; + and − zoom in and out" : '' %>.</span>
   </figcaption>
 </figure>
