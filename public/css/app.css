@@ -486,10 +486,14 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .entry:has(input[name="condition"]:is([value="broken"], [value="ruined"]):checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-broken"],
   .entry:has(input[name="layout"][value="grille"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-grille"],
   .entry:has(input[name="mode"][value="secret"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-sealed"] { visibility: visible; }
-  /* A condition sent back with an error: the error takes its note's place
-     (the class twice: this weighs more than the reasons above) */
-  .entry .choice-notes:has(.field-error:not(:empty)) .choice-note.choice-note:not(.field-error) { visibility: hidden; }
+  /* A choice sent back with an error: the error takes its note's place
+     (important: the tablet's and the path's reasons weigh more than any class count) */
+  .entry .choice-notes:has(.field-error:not(:empty)) .choice-note:not(.field-error) { visibility: hidden !important; }
   .entry .choice-notes .choice-note.field-error:not(:empty) { visibility: visible; }
+  /* One reason at a time, the first that holds: sealed, then grille, then broken
+     (as heavy as the reasons above, and later) */
+  .entry:has(input[name="mode"][value="secret"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note:is([data-note="path-grille"], [data-note="path-broken"]),
+  .entry:has(input[name="layout"][value="grille"]:checked) .choice--path:has(.segment--path-withheld input:checked) .choice-note[data-note="path-broken"] { visibility: hidden; }
 }
 
 /* Layout: six ways, each a small figure of its reading order over its name,
@@ -742,6 +746,9 @@ input[aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px 
   .entry:has(input[name="condition"]:not([value="intact"]):checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-damaged"],
   .entry:has(input[name="layout"][value="grille"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-grille"],
   .entry:has(input[name="mode"][value="secret"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-sealed"] { visibility: visible; }
+  /* One reason at a time, the first that holds: sealed, then grille, then damaged */
+  .entry:has(input[name="mode"][value="secret"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note:is([data-note="tablet-grille"], [data-note="tablet-damaged"]),
+  .entry:has(input[name="layout"][value="grille"]:checked) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-damaged"] { visibility: hidden; }
   /* Pathless and its own: the expert plate, said when nothing above is */
   .entry:has(input[name="path"][value="withheld"]:checked):not(.is-short):not(:has(input[name="mode"][value="secret"]:checked)):not(:has(input[name="layout"][value="grille"]:checked)):not(:has(input[name="condition"]:not([value="intact"]):checked)) .choice--tablet:has(.segment--tablet-own input:checked) .choice-note[data-note="tablet-expert"] { visibility: visible; }
 }
