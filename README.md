@@ -150,7 +150,8 @@ bundle exec rackup                                      # then open http://local
 ```
 
 A web server sees what you seal on it: serve it over HTTPS, or use the command line, which keeps
-everything on your own machine (`./cistergraphia --help`). It needs Ruby 3.2 or later (4.0 is
+everything on your own machine (`./cistergraphia --help`). To serve it for others (workers, the
+health check, what a request costs, what is logged), see [docs/serving.md](docs/serving.md). It needs Ruby 3.2 or later (4.0 is
 pinned in `mise.toml`) and, to export PNGs, librsvg (`rsvg-convert`) or ImageMagick.
 
 For builders

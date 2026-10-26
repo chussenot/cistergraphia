@@ -222,7 +222,7 @@ module Cistergraphia
       def by_cell(group, layer)
         lines = []
         group.each_recursive do |node|
-          lines << %w[x1 y1 x2 y2].map { |attr| SVG.coordinate(node.attributes[attr]) } if SVG.in_layer?(node, layer)
+          lines << SVG::Layers.line(node) if SVG::Layers.layer_of(node) == layer
         end
         lines.group_by { |line| Layout.cell_of(line) }
       end

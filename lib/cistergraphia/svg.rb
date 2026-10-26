@@ -134,21 +134,55 @@ module Cistergraphia
     end
 
     # Every <line> of the document as [x1, y1, x2, y2] integers: the strokes,
-    # or (layer: :lacunae) the stroke positions a weathered plate has lost
+    # or (layer: :lacunae) the stroke positions a weathered plate has lost, or
+    # (layer: :tally) the tally signs. Frozen: the layers are read once per file
     def lines(svg, layer: :strokes)
-      root = parse(svg).root
-      raise DecodeError, 'Not an SVG document' unless root&.name == 'svg'
-
-      lines = []
-      root.each_recursive do |node|
-        lines << %w[x1 y1 x2 y2].map { |attr| coordinate(node.attributes[attr]) } if in_layer?(node, layer)
-      end
-      lines
+      Layers.of(svg).fetch(layer)
     end
 
-    # Strokes are lines in no named layer; lacunae and tally signs have their own
-    def in_layer?(node, layer)
-      node.name == 'line' && node.parent.attributes['class'] == { lacunae: Lacunae::CLASS, tally: Tally::CLASS }[layer]
+    # A file's lines by layer, read in one pass and kept for the file last read
+    # on this thread: a page lays a puzzle from one file a dozen times (the
+    # survey, the tally, the decoder, the way), and parsing a large plate costs
+    # half a second each time. One file per thread: nothing grows, and no
+    # thread sees another's
+    module Layers
+      module_function
+
+      def of(svg)
+        text = svg.to_s
+        kept = (Thread.current[:cistergraphia_layers] ||= {})
+        kept.fetch(text) do
+          kept.clear
+          kept[text] = read(text)
+        end
+      end
+
+      def read(text)
+        root = SVG.parse(text).root
+        raise DecodeError, 'Not an SVG document' unless root&.name == 'svg'
+
+        found = { strokes: [], lacunae: [], tally: [] }
+        root.each_recursive do |node|
+          layer = layer_of(node)
+          found[layer] << line(node) if layer
+        end
+        found.transform_values { |lines| lines.each(&:freeze).freeze }.freeze
+      end
+
+      # Strokes are lines in no named layer; lacunae and tally signs have their own
+      def layer_of(node)
+        return unless node.name == 'line'
+
+        case node.parent.attributes['class']
+        when nil then :strokes
+        when Lacunae::CLASS then :lacunae
+        when Tally::CLASS then :tally
+        end
+      end
+
+      def line(node)
+        %w[x1 y1 x2 y2].map { |attr| SVG.coordinate(node.attributes[attr]) }
+      end
     end
 
     # (quoted: true writes the elements back with double quotes, as the library draws them)
