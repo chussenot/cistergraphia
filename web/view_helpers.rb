@@ -121,6 +121,12 @@ module ViewHelpers
     @layout.is_a?(Cistergraphia::Grille) || !@grille_error.nil?
   end
 
+  # The site's address as the page names it (its social links): the
+  # request's, or a stand-in on a page kept for every reader (ChapterPage)
+  def page_base_url
+    @base_url || request.base_url
+  end
+
   def nav_class(page)
     @page == page ? 'is-current' : nil
   end

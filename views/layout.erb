@@ -28,8 +28,8 @@ Constraints:
   <meta property="og:site_name" content="Cistergraphia">
   <meta property="og:title" content="<%= @title || 'Cistergraphia' %>">
   <meta property="og:description" content="<%= page_description %>">
-  <meta property="og:url" content="<%= request.base_url %><%= request.path %>">
-  <meta property="og:image" content="<%= request.base_url %>/og.png">
+  <meta property="og:url" content="<%= page_base_url %><%= request.path %>">
+  <meta property="og:image" content="<%= page_base_url %>/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Cistergraphia: your secrets, in a monk’s handwriting. Beside it, a plate of Cistercian numerals.">

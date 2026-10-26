@@ -110,10 +110,17 @@ Never set it in production: it freezes the chapter on one day.
 ## Serving it
 
 - **Cost.** The chapter page is the same for every reader, so each server keeps the rendered
-  page in memory: `Chapter.kept`, 16 pages, with today's link to "the day after" as part of the
-  key. The first request of the day costs 0.1 to 0.6 s (drawing the plate, then laying the bench
-  or the board). Every later request costs about 2 ms. Only one page is drawn at a time, so a
-  crowd at midnight draws the new plate once.
+  page in memory (`Chapter.kept`, the 16 pages asked for most recently).
+  - The cache key is the page's address, `rejoined=1` and today's date (the link to "the day
+    after" depends on it).
+  - The first request for a page costs 0.1 to 0.6 s: drawing the plate, then laying the bench or
+    the board. Every later request costs about 2 ms.
+  - A page that is still being drawn does not block one already kept. At midnight each server
+    thread may draw the new plate once, then all of them find it kept.
+- **What a kept page depends on.** Nothing in the request lays the page except `rejoined`: a
+  grille key or a passphrase in the query string is dropped. The host the page was requested from
+  (in its social links) is written in on each request, so one reader's `Host` header never shows
+  up on another reader's page.
 - **HTTP caching.** `/chapter` is sent with `Cache-Control: public, max-age` set to the seconds
   left until midnight UTC, so a CDN may keep it until the day turns. Dated chapters are kept for
   an hour. Nothing on the page depends on the reader: their record lives in their browser.

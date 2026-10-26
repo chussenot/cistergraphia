@@ -65,7 +65,7 @@ namespace :chapter do
   desc "Every text of the day's chapter under every rung, then the next DAYS days (90), drawn and read back"
   task :check, [:days] do |_task, args|
     chapter_loaded
-    troubles = Chapter.check(days: Integer(args[:days] || 90))
+    troubles = Chapter::Check.check(days: Integer(args[:days] || 90))
     troubles.each { |trouble| warn trouble }
     abort "#{troubles.size} chapter(s) would not read" unless troubles.empty?
     puts "Every text reads under every rung, and the next #{args[:days] || 90} days are set."

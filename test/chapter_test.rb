@@ -84,22 +84,22 @@ class ChapterTest < Minitest::Test
 
   def test_the_next_two_weeks_each_read_back_as_their_text
     from = [Date.today, Chapter::FIRST].max
-    troubles = (0...14).filter_map { |i| Chapter.trouble(Chapter.set(from + i)) }
+    troubles = (0...14).filter_map { |i| Chapter::Check.trouble(Chapter.set(from + i)) }
     assert_empty troubles
   end
 
   def test_the_check_tries_a_text_under_every_rung_and_names_what_would_not_read
-    assert_empty Chapter.check(days: 1, from: Chapter::FIRST, texts: Chapter::READINGS.first(1))
+    assert_empty Chapter::Check.check(days: 1, from: Chapter::FIRST, texts: Chapter::READINGS.first(1))
     short = Chapter::Day.new(number: 3, date: Chapter::FIRST, rung: :broken, layout: :phaistos, text: 'ab')
     assert_match(/\AChapter 3, 2026-10-26 \(broken, phaistos\): ab: Too short a message to break/,
-                 Chapter.trouble(short))
+                 Chapter::Check.trouble(short))
   end
 
   def test_an_edition_holds_a_text_letter_by_letter_or_among_a_brackets
-    assert Chapter.holds?('h[e]ll[o/p]', 'hello')
-    assert Chapter.holds?('a[ ]b', 'a b')
-    refute Chapter.holds?('h[a/i]llo', 'hello')
-    refute Chapter.holds?('hell', 'hello')
+    assert Chapter::Check.holds?('h[e]ll[o/p]', 'hello')
+    assert Chapter::Check.holds?('a[ ]b', 'a b')
+    refute Chapter::Check.holds?('h[a/i]llo', 'hello')
+    refute Chapter::Check.holds?('hell', 'hello')
   end
 
   def test_the_runway_counts_the_days_of_new_readings_left
@@ -144,6 +144,19 @@ class ChapterTest < Minitest::Test
         assert_predicate last_response, :ok?
         assert_includes last_response.body, mark, "day #{offset + 1}"
       end
+    end
+  end
+
+  def test_a_page_kept_for_every_reader_names_each_request_s_host_and_nothing_else_lays_it
+    at(Chapter::FIRST + 6) do
+      get '/chapter/2026-10-26', {}, 'HTTP_HOST' => 'abbey.example'
+      get '/chapter/2026-10-26?grille=K7Q2M-ZXB4P', {}, 'HTTP_HOST' => 'scriptorium.example'
+
+      assert_predicate last_response, :ok?
+      assert_includes last_response.body, 'content="http://scriptorium.example/chapter/2026-10-26"'
+      refute_includes last_response.body, 'abbey.example'
+      refute_includes last_response.body, Chapter::BASE_URL
+      assert_includes last_response.body, 'data-desk'
     end
   end
 

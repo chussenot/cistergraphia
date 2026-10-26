@@ -8,15 +8,22 @@ module ChapterPage
 
   # The day's chapter, laid as any game plate brought to Read: the page knows
   # the day, the rung and the source, never the text. It is the same for every
-  # reader, so it is kept (Chapter.kept) by what changes it: the day, the
-  # board's rejoined=1, today (the link to the day after) and the address it
-  # is served at (the page's own link)
+  # reader, so it is kept (Chapter.kept) by what changes it: the address, the
+  # board's rejoined=1 and today (the link to the day after). Nothing else a
+  # request carries lays it (a grille key, a passphrase), and the host it was
+  # asked of is written in per request: a page kept is never another's
   def chapter_page(date)
     day = date && Chapter.of(date)
     halt_with 404, not_a_chapter(date) unless day
 
-    Chapter.kept([day.date, params[:rejoined] == '1', Chapter.today, request.base_url]) do
+    params.select! { |name, _| name == 'rejoined' }
+    kept_page(day).gsub(Chapter::BASE_URL, Rack::Utils.escape_html(request.base_url))
+  end
+
+  def kept_page(day)
+    Chapter.kept([request.path, params[:rejoined] == '1', Chapter.today]) do
       lay_chapter(day)
+      @base_url = Chapter::BASE_URL
       erb :play
     end
   end

@@ -19,9 +19,9 @@ require 'yaml'
 # - The day turns at midnight UTC, the same instant for everyone: a chapter is
 #   the same plate wherever it is shared
 # - The page is the same for every reader, so it is kept in memory once
-#   drawn and laid (CACHE days): drawing a plate and laying its bench or board
-#   cost a tenth of a second to half a second, and the day's chapter is the
-#   page every reader asks for
+#   drawn and laid (CACHE pages): drawing a plate and laying its bench or
+#   board cost a tenth of a second to half a second, and the day's chapter is
+#   the page every reader asks for
 #
 # Constraints:
 # - No chapter before FIRST, and none ahead of today: the archive runs back,
@@ -46,6 +46,7 @@ module Chapter
   READINGS = TEXTS.fetch('readings').freeze
   FEASTS = TEXTS.fetch('feasts').freeze
   CACHE = 16 # pages kept in memory: today and the days just before, with room for the day after
+  BASE_URL = 'https://chapter.invalid' # where a kept page names its host: the request's is written in
 
   Day = Struct.new(:number, :date, :rung, :layout, :text, :source, :feast, keyword_init: true) do
     def path
@@ -80,50 +81,17 @@ module Chapter
             source: reading.fetch('source'), feast: feast&.fetch('name'))
   end
 
-  # Days of new readings left after today, before the order starts again:
-  # negative once it has (the chapters then repeat)
-  def runway(date = today)
-    READINGS.size - (date - FIRST).to_i - 1
-  end
-
-  # What would not do, as lines to print: every text under every rung (a
-  # text that cannot make a plate of some rung would fail on its day), then
-  # the days ahead as they are set, each drawn and deciphered back to its text
-  def check(days:, from: [today, FIRST].max, texts: READINGS + FEASTS.values)
-    ahead = (0...days).map { |i| set(from + i) }
-    (trials(texts, from) + ahead).filter_map { |day| trouble(day) }
-  end
-
-  # Every text under every rung, each on a day of its own (its own seed)
-  def trials(texts, from)
-    texts.product(WEEK.values).each_with_index.map do |(reading, (rung, layout)), i|
-      date = from + i
-      Day.new(number: 0, date: date, rung: rung, layout: way(layout, date), text: reading.fetch('text'))
-    end
-  end
-
-  # Why a chapter's plate does not read back as its text, or nil
-  def trouble(day)
-    label = "#{day.number.positive? ? "Chapter #{day.number}, #{day.date}" : 'A trial'} (#{day.rung}, " \
-            "#{day.layout}): #{day.text}"
-    edition = Cistergraphia.decode(draw(day))
-    "#{label}: reads #{edition}" unless holds?(edition, Cistergraphia.normalize(day.text))
-  rescue Cistergraphia::Error => e
-    "#{label}: #{e.message}"
-  end
-
-  # Whether an edition holds a text: each letter as it stands, or among a
-  # bracket's ([r] restored, [b/l] for the words to decide)
-  def holds?(edition, text)
-    readings = edition.scan(/\[([^\]]*)\]|([^\[])/).map { |bracket, plain| plain ? [plain] : bracket.split('/', -1) }
-    readings.size == text.size && readings.zip(text.chars).all? { |options, char| options.include?(char) }
-  end
-
   # A date written as the chapter's address (2026-10-26), or nil
   def parse(text)
     Date.strptime(text, '%Y-%m-%d') if text
   rescue Date::Error
     nil
+  end
+
+  # Days of new readings left after today, before the order starts again:
+  # negative once it has (the chapters then repeat)
+  def runway(date = today)
+    READINGS.size - (date - FIRST).to_i - 1
   end
 
   # The day's plate, as the page shows it (PlateFile.clean, as a file brought
@@ -133,14 +101,19 @@ module Chapter
   end
 
   # What a block makes for a key, made once and kept while it is asked for:
-  # the oldest kept goes first. One page is made at a time, so a crowd at the
-  # turn of the day draws the new plate once
+  # the oldest kept goes first. The block runs outside the lock, so a page
+  # being made never holds up one already kept; at the turn of the day each
+  # server thread may draw the new plate once, then all find it kept
   def kept(key)
+    found = @lock.synchronize { @kept[key] = @kept.delete(key) if @kept.key?(key) } # asked again: kept longest
+    return found if found
+
+    made = yield
     @lock.synchronize do
-      @kept[key] = @kept.delete(key) || yield # asked for again: kept longest
+      @kept[key] = made
       @kept.shift while @kept.size > CACHE
-      @kept[key]
     end
+    made
   end
 
   # The plate a chapter is: the day's seed decides the splits, the wear, the
@@ -187,3 +160,5 @@ module Chapter
     (Time.utc(tomorrow.year, tomorrow.month, tomorrow.day).to_i - now.to_i).clamp(1, 86_400)
   end
 end
+
+require_relative 'chapter_check'
