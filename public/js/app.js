@@ -408,6 +408,31 @@
     const listed = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0];
     return `${total} ${total === 1 ? 'plate' : 'plates'} read, ${listed}.`;
   }
+  // The day's chapters read, by date (2026-10-26): a count, never a streak.
+  // A chapter read twice is counted once, as a plate is not read twice
+  const CHAPTERS_KEY = 'cistergraphia.chapters';
+  function storedChapters() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(CHAPTERS_KEY) || '[]');
+      return Array.isArray(stored) ? stored.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)) : [];
+    } catch (error) { return []; }
+  }
+  function chaptersLine(chapters) {
+    return chapters.length ? `${chapters.length} ${chapters.length === 1 ? 'chapter' : 'chapters'} of the day.` : '';
+  }
+  // A chapter read: its date entered once, and its source shown
+  function recordChapter() {
+    const date = $('[data-chapter]')?.dataset.chapter;
+    if (!date) return '';
+    const source = $('[data-chapter-source]');
+    if (source) source.hidden = false;
+    const chapters = storedChapters();
+    if (!chapters.includes(date)) {
+      chapters.push(date);
+      try { localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chapters.sort())); } catch (error) { /* private mode: not kept */ }
+    }
+    return chaptersLine(chapters);
+  }
   let recordedHere = false;
   function recordWin() {
     const rung = $('[data-play]')?.dataset.play;
@@ -417,14 +442,19 @@
     const record = storedRecord();
     record[rung] += 1;
     try { localStorage.setItem(RECORD_KEY, JSON.stringify(record)); } catch (error) { /* private mode: not kept */ }
+    const chapters = recordChapter();
     const line = $('[data-record="play"]');
-    if (line) line.textContent = `Entered in your scriptorium: ${recordLine(record)}`;
+    if (line) line.textContent = `Entered in your scriptorium: ${recordLine(record)}${chapters ? ` ${chapters}` : ''}`;
   }
   function initRecord() {
+    // A chapter already read on this browser says so, before it is read again
+    const date = $('[data-chapter]')?.dataset.chapter;
+    const play = $('[data-record="play"]');
+    if (date && play && storedChapters().includes(date)) play.textContent = 'This chapter is in your scriptorium already.';
     const line = $('[data-record="read"]');
     if (!line) return;
     // One line of standing: the rank Lectio or the desk earned, then the plates read
-    const text = recordLine(storedRecord());
+    const text = [recordLine(storedRecord()), chaptersLine(storedChapters())].filter(Boolean).join(' ');
     const rank = rankFor(storedBest()).name;
     line.textContent = text ? `Your scriptorium: ${rank} · ${text}` : (storedBest() ? `Your scriptorium: ${rank}.` : '');
   }

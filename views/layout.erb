@@ -59,6 +59,7 @@ Constraints:
     <nav class="nav" aria-label="Main">
       <a href="/" class="<%= nav_class(:inscribe) %>"<%== ' aria-current="page"' if @page == :inscribe %>>Inscribe</a>
       <a href="/decode" class="<%= nav_class(:read) %>"<%== ' aria-current="page"' if @page == :read %>>Read</a>
+      <a href="/chapter" class="<%= nav_class(:chapter) %>"<%== ' aria-current="page"' if @page == :chapter %>>Chapter</a>
       <a href="/about" class="<%= nav_class(:about) %>"<%== ' aria-current="page"' if @page == :about %>>About</a>
     </nav>
   </header>

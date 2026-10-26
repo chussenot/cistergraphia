@@ -33,6 +33,10 @@ Constraints:
 - A ruined plate is the board first, then (rejoined=1, from the board once
   whole) the bench on the plate drawn whole from its own fragments; the file
   carried on to the decoder is still the broken one
+- The day's chapter (@chapter, web/chapter.rb) is this page on the abbey's
+  plate of the day: a line says which chapter, which day and which rung; its
+  source shows once it is read, and the record counts the chapters read. A
+  ruined chapter's board asks the chapter itself for its bench
 %>
 <% rung = if @broken || @rejoined then @weathered ? 'ruined' : 'broken'
           elsif @expert then 'expert'
@@ -41,8 +45,11 @@ Constraints:
           elsif @desk then 'intact'
           else 'worn'
           end %>
-<section class="leaf" aria-labelledby="play-title" data-play="<%= rung %>">
+<section class="leaf" aria-labelledby="play-title" data-play="<%= rung %>"<% if @chapter %> data-chapter="<%= @chapter.date.iso8601 %>"<% end %>>
   <p class="folio-mark" aria-hidden="true">fol. 2<sup>v</sup></p>
+  <% if @chapter %>
+    <p class="chapter-mark"><span class="chapter-number">Chapter <%= @chapter.number %></span> · <%= chapter_day(@chapter) %><% if @chapter.feast %> · <span class="chapter-feast"><%= @chapter.feast %></span><% end %></p>
+  <% end %>
   <h1 id="play-title" class="rubric"><%= if @broken then @weathered ? 'A plate to rejoin and restore' : 'A plate to rejoin'
                                             elsif @desk then 'A plate to read'
                                             else 'A plate to restore'
@@ -65,6 +72,10 @@ Constraints:
     <p class="lede">The plate came in <%= fragments_count(@fragments.size) %>. Lay them on the board, turned where need be: only one arrangement makes every pair of signs balance, and the shapes alone will not tell you which.</p>
   <% else %>
     <p class="lede">The plate has lost <%= @entries.size %> <%= @entries.size == 1 ? 'stroke position' : 'stroke positions' %>, hatched where the surface is worn. Press the lost digits back in: each pair of signs must sum to a value on the tablet. Where two or three letters balance, the words decide.</p>
+  <% end %>
+
+  <% if @chapter %>
+    <p class="chapter-week"><%= chapter_week(@chapter) %></p>
   <% end %>
 
   <dl class="specs">
@@ -128,6 +139,9 @@ Constraints:
   <% end %>
 
   <p class="record" data-record="play" aria-live="polite"></p>
+  <% if @chapter %>
+    <p class="chapter-source" data-chapter-source hidden>From <%= @chapter.source %>.</p>
+  <% end %>
 
   <form class="readback" method="post" action="/decode">
     <h2 class="index-heading">Ask the decoder</h2>
@@ -142,4 +156,15 @@ Constraints:
       <a class="btn btn--quiet" href="/decode">Read another</a>
     </div>
   </form>
+
+  <% if @chapter %>
+    <% before = Chapter.of(@chapter.date - 1)
+       after = Chapter.of(@chapter.date + 1) %>
+    <% if before || after %>
+      <nav class="chapter-nav" aria-label="Chapters">
+        <% if before %><a href="<%= before.path %>">Chapter <%= before.number %>, the day before</a><% end %>
+        <% if after %><a class="chapter-nav-after" href="<%= after.path %>">Chapter <%= after.number %>, the day after</a><% end %>
+      </nav>
+    <% end %>
+  <% end %>
 </section>

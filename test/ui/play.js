@@ -115,6 +115,34 @@ async function desk(file, label, { unaided = false } = {}) {
   await ctx.close();
 }
 
+// ---------- The day's chapter: the abbey's plate, the same for every reader ----------
+// Chapter 1 (a Monday, at the desk) is set for good once the chapters begin
+async function chapter() {
+  const ctx = await context();
+  const page = await ctx.newPage();
+  await page.goto(`${baseUrl}/chapter/2026-10-26`);
+  await page.waitForSelector('[data-desk]');
+  expectEqual('chapter', 'the line says which chapter', (await text(page, '.chapter-mark')).startsWith('Chapter 1 · Monday 26 October 2026'), true);
+  expectEqual('chapter', 'its source waits until it is read', await page.isVisible('[data-chapter-source]'), false);
+  const values = await cellValues(page);
+  const pairs = values.length / 2;
+  for (let pair = 0; pair < pairs; pair += 1) {
+    await page.fill('#desk-first', String(values[2 * pair]));
+    await page.fill('#desk-second', String(values[(2 * pair) + 1]));
+    await page.click('[data-desk-read]');
+    if (pair < pairs - 1) await page.waitForFunction((n) => document.querySelector('[data-desk-which]').textContent.startsWith(`Pair ${n + 2} of`), pair);
+  }
+  expectEqual('chapter', 'read to the end, the text is the chapter', await text(page, '[data-desk-text]'), answers.chapter);
+  expectEqual('chapter', 'its source shows once read', await page.isVisible('[data-chapter-source]'), true);
+  expectEqual('chapter', 'the record counts the chapter', await record(page), 'Entered in your scriptorium: 1 plate read, 1 intact. 1 chapter of the day.');
+  await page.reload();
+  await page.waitForSelector('[data-desk]');
+  expectEqual('chapter', 'come back to it, the page knows it is read', await record(page), 'This chapter is in your scriptorium already.');
+  await page.goto(`${baseUrl}/decode`);
+  expectEqual('chapter', 'Read counts it in the scriptorium', (await text(page, '[data-record="read"]')).endsWith('1 plate read, 1 intact. 1 chapter of the day.'), true);
+  await ctx.close();
+}
+
 // ---------- A pathless plate: the way is to find ----------
 const Ways = require(path.join(__dirname, '../../public/js/ways.js'));
 async function pathless() {
@@ -571,6 +599,7 @@ async function accessibility() {
     board: (p) => bringToRead(p, 'broken.svg', '[data-rejoin]'),
     expert: (p) => bringToRead(p, 'expert.svg', '[data-notebook]:not(.awaits-script)'),
     read: (p) => p.goto(`${baseUrl}/decode`),
+    chapter: (p) => p.goto(`${baseUrl}/chapter/2026-10-31`).then(() => p.waitForSelector('[data-rejoin]')),
     about: (p) => p.goto(`${baseUrl}/about`),
     erratum: (p) => p.goto(`${baseUrl}/nowhere`)
   };
@@ -635,6 +664,7 @@ async function budgets() {
   await preview();
   await desk('intact.svg', 'the snail');
   await desk('rongorongo.svg', 'the turning rows', { unaided: true });
+  await chapter();
   await pathless();
   await bench();
   await pathlessBench();

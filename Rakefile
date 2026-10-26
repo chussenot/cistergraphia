@@ -52,3 +52,31 @@ namespace :ui do
     ruby 'test/ui/e2e.rb'
   end
 end
+
+# The day's chapter's content checks (docs/operations.md). Slow (a minute and
+# a half): CI runs them on a change to the chapter, and every Monday
+namespace :chapter do
+  def chapter_loaded
+    require_relative 'lib/cistergraphia'
+    require_relative 'web/plate_file'
+    require_relative 'web/chapter'
+  end
+
+  desc "Every text of the day's chapter under every rung, then the next DAYS days (90), drawn and read back"
+  task :check, [:days] do |_task, args|
+    chapter_loaded
+    troubles = Chapter.check(days: Integer(args[:days] || 90))
+    troubles.each { |trouble| warn trouble }
+    abort "#{troubles.size} chapter(s) would not read" unless troubles.empty?
+    puts "Every text reads under every rung, and the next #{args[:days] || 90} days are set."
+  end
+
+  desc 'Days of new readings left before the order starts again; fails under RUNWAY (14)'
+  task :runway do
+    chapter_loaded
+    left = Chapter.runway
+    floor = Integer(ENV.fetch('RUNWAY', 14))
+    puts "#{Chapter::READINGS.size} readings; #{left} days of new readings left after today."
+    abort "Under #{floor} days: append readings to web/chapters.yml (docs/operations.md)" if left < floor
+  end
+end
