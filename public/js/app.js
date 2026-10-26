@@ -806,7 +806,16 @@
       notes?.guided(mode === 'guided');
       try { localStorage.setItem(DESK_MODE_KEY, mode); } catch (error) { /* private mode */ }
     };
+    // The desk moves on by itself a moment after a pair is read; any other
+    // move (a way chosen, a step, a sign tapped) cancels it, or the move
+    // meant for one way would land on the next, a pair skipped
+    let moving = null;
+    const moveOn = (p) => {
+      clearTimeout(moving);
+      moving = setTimeout(() => { show(p); inputs[0].focus(); }, reducedMotion ? 300 : 900);
+    };
     const show = (p) => {
+      clearTimeout(moving);
       if (waiting()) return;
       pair = Math.min(Math.max(p, 0), pairs - 1);
       which.textContent = `Pair ${pair + 1} of ${pairs} · signs ${(2 * pair) + 1} and ${(2 * pair) + 2}`;
@@ -933,7 +942,7 @@
         writeText();
         notebook();
         const next = nextUnread();
-        if (next >= 0) setTimeout(() => { show(next); inputs[0].focus(); }, reducedMotion ? 300 : 900);
+        if (next >= 0) moveOn(next);
         return;
       }
       if (letter === '') feedback.textContent = `${a} + ${b}: the second sign is ${nullMark}, a null pair. Nothing to read.`;
@@ -957,7 +966,7 @@
       if (expert && !notes && !tried.get(way).broke && read.filter((l) => l === 'read').length >= toOpen() && holds()) {
         openNotebook(false);
         const after = nextUnread();
-        if (after >= 0) setTimeout(() => { show(after); inputs[0].focus(); }, reducedMotion ? 300 : 900);
+        if (after >= 0) moveOn(after);
         return;
       }
       const next = nextUnread();
@@ -975,7 +984,7 @@
         recordWin();
         return;
       }
-      setTimeout(() => { show(next); inputs[0].focus(); }, reducedMotion ? 300 : 900);
+      moveOn(next);
     });
     $$('[data-desk-way]', desk).forEach((button) => button.addEventListener('click', () => lay(button.dataset.deskWay)));
 

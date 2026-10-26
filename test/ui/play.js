@@ -184,6 +184,7 @@ async function pathless() {
   expectEqual('pathless', 'the notebook keeps where it broke', (await text(page, '[data-desk-notebook]')).includes(`✗ at pair ${at}`), true);
   // The way: every pair reads, the plate is read along it, one pathless plate in the record
   await page.click(`[data-desk-way="${way}"]`);
+  await page.waitForTimeout(400); // past the move the wrong way's break set off: choosing a way cancels it
   const values = along(way);
   const pairs = values.length / 2;
   for (let p = 0; p < pairs; p += 1) {
