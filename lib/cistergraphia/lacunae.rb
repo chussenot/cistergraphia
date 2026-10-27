@@ -67,7 +67,7 @@ module Cistergraphia
 
     # [sequence, damage] for a message: with tally signs, whole signs may be lost
     def weathered(message, layout, tally, random)
-      sequence = Cistergraphia.encode(message, even: layout.is_a?(Grille))
+      sequence = Cistergraphia.encode(message, even: layout.is_a?(Grille), random: random)
       lines = Tally.lines(Integer.sqrt(sequence.size), layout) if tally
       [sequence, Weathering.weather(sequence, random: random, lines: lines)]
     end

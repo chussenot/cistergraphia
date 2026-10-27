@@ -14,6 +14,8 @@
 #   what the pairs decide, as an edition in the Leiden conventions
 # - A game plate can be broken (two to four fragments in a tray); decoding
 #   one rejoins it by its sums
+# - The day's chapter: one plate the abbey sets each day, the same for every
+#   reader, opened as the reader's game (web/chapter.rb)
 #
 # Design Decisions:
 # - Modular Sinatra app (sinatra/base), no classic top-level DSL
@@ -40,6 +42,8 @@ require_relative 'web/plate_input'
 require_relative 'web/plate_file'
 require_relative 'web/reader_game'
 require_relative 'web/figures'
+require_relative 'web/chapter'
+require_relative 'web/chapter_page'
 
 class CistergraphiaApp < Sinatra::Base
   MAX_MESSAGE_LENGTH = 500 # ~1000 symbols, a 32x32 grid
@@ -48,7 +52,8 @@ class CistergraphiaApp < Sinatra::Base
   CONTENT_SECURITY_POLICY = ["default-src 'self'", "img-src 'self' data: blob:", "object-src 'none'", "base-uri 'none'",
                              "form-action 'self'", "frame-ancestors 'none'"].join('; ')
 
-  helpers ViewHelpers, BenchHelpers, TrayHelpers, Figures, FormParams, Refusals, PlateInput, ReaderGame
+  helpers ViewHelpers, BenchHelpers, TrayHelpers, Figures, FormParams, Refusals, PlateInput, ReaderGame,
+          ChapterPage
 
   # Pages and assets go compressed to a browser that accepts it: the scripts and
   # styles weigh a quarter of their raw size on the wire (the behaviour suite's
@@ -94,7 +99,7 @@ class CistergraphiaApp < Sinatra::Base
   end
 
   not_found do
-    @error_message = 'This page is not in the index.'
+    @error_message ||= 'This page is not in the index.'
     erb :error
   end
 
@@ -152,6 +157,24 @@ class CistergraphiaApp < Sinatra::Base
     raise if passphrase || submitted_grille
 
     raise Cistergraphia::DecodeError, "#{e.message}. If this image was made in secret mode, enter its passphrase."
+  end
+
+  # The day's chapter, the same for every reader until midnight UTC; a shared
+  # cache may keep it until then
+  get '/chapter' do
+    cache_control :public, max_age: Chapter.seconds_left
+    chapter_page(Chapter.today)
+  end
+
+  # A chapter already set: the archive runs back to the first, never ahead
+  get %r{/chapter/(\d{4}-\d{2}-\d{2})} do |date|
+    cache_control :public, max_age: 3600
+    chapter_page(Chapter.parse(date))
+  end
+
+  # A ruined chapter's board, whole again, asks for its bench (rejoined=1)
+  post %r{/chapter/(\d{4}-\d{2}-\d{2})} do |date|
+    chapter_page(Chapter.parse(date))
   end
 
   # The scribe confirms a notebook's entries, three at a time (app.js, initNotebook)

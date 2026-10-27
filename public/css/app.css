@@ -278,6 +278,15 @@ code { font-family: var(--mono); font-size: 0.82em; background: var(--vellum); p
 .record { margin: 0 0 var(--space-5); min-height: 1.4em; min-height: 1lh; font-family: var(--sans); font-size: 0.85rem; letter-spacing: 0.02em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .lede + .record { margin-top: calc(-1 * var(--space-4)); }
 
+/* The day's chapter: which chapter, which day, which rung; its source once read */
+.chapter-mark { margin: 0 0 var(--space-2); font-family: var(--sans); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+.chapter-number, .chapter-feast { color: var(--accent); font-weight: 600; }
+.chapter-week { margin: calc(-1 * var(--space-4)) 0 var(--space-5); max-width: var(--measure); color: var(--ink-soft); }
+.chapter-source { margin: calc(-1 * var(--space-4)) 0 var(--space-5); font-style: italic; color: var(--ink-soft); }
+.chapter-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-5); font-family: var(--sans); font-size: 0.9rem; }
+.chapter-nav-after { margin-left: auto; }
+.chapter-invite { margin: 0 0 var(--space-5); color: var(--ink-soft); }
+
 .lede {
   font-style: italic;
   color: var(--ink-soft);
@@ -1350,7 +1359,7 @@ input[type="number"] { font-variant-numeric: lining-nums; font-size: 1.3rem; }
 /* ---------- Print: the plate alone, black on white ---------- */
 @media print {
   body { background: #fff; color: #000; }
-  .masthead nav, .colophon, .actions, .readback, .skip-link, .toast, .folio-mark, .plate-zoom { display: none !important; }
+  .masthead nav, .colophon, .actions, .readback, .skip-link, .toast, .folio-mark, .plate-zoom, .chapter-nav { display: none !important; }
   .leaf { box-shadow: none; border: 0; padding: 0; }
   .leaf::before { display: none; }
   .plate-frame { border: 0; box-shadow: none; max-height: none; overflow: visible; }

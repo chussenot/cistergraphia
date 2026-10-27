@@ -2,7 +2,8 @@
 A broken plate: the board, the tray, and the rejoining panel (app.js, initFragments).
 Locals: svg, fragments (Fragments.read), size, worn (whether the plate is weathered
 too: then "Restore it", enabled once the board is whole, posts the file back with
-rejoined=1 and the bench opens on the plate rejoined)
+rejoined=1 and the bench opens on the plate rejoined; on the day's chapter, to the
+chapter itself)
 %>
 <figure class="plate plate--broken">
   <div class="plate-frame" id="svg-display" data-plate role="group"
@@ -23,7 +24,7 @@ rejoined=1 and the bench opens on the plate rejoined)
       <button type="button" class="btn btn--small" data-rejoin-turn disabled>Turn half round</button>
       <button type="button" class="btn btn--small" data-rejoin-reset>Back to the tray</button>
       <% if worn %>
-        <form method="post" action="/decode" class="rejoin-restore">
+        <form method="post" action="<%= @chapter ? @chapter.path : '/decode' %>" class="rejoin-restore">
           <input type="hidden" name="svg" value="<%= svg %>">
           <input type="hidden" name="rejoined" value="1">
           <button type="submit" class="btn btn--small btn--primary" data-rejoin-restore disabled>Restore it</button>

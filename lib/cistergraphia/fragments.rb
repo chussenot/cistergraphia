@@ -141,7 +141,7 @@ module Cistergraphia
       refuse(layout)
 
       100.times do
-        sequence = Cistergraphia.encode(message)
+        sequence = Cistergraphia.encode(message, random: random)
         raise Error, TOO_SMALL if Integer.sqrt(sequence.size) < 2 * MIN_SIDE
 
         damage = weathered ? Weathering.weather(sequence, random: random) : {}

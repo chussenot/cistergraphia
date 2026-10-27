@@ -13,6 +13,8 @@
 
 require 'json'
 require_relative 'harness'
+require_relative '../../web/plate_file'
+require_relative '../../web/chapter'
 
 MESSAGE = 'Meet me at the old abbey after vespers'
 
@@ -84,6 +86,8 @@ Dir.mktmpdir do |dir|
   answers[:worn_pathless] = { way: 'furrows', values: values }
   answers[:own_tablet] = own_tablet(dir)
   answers[:expert] = expert(dir)
+  answers[:chapter] = Cistergraphia.normalize(Chapter.set(Chapter::FIRST).text) # chapter 1: the desk
+  ENV['CHAPTER_DATE'] = '2026-11-01' # the server's today: the first week set, every rung in it
   File.write(File.join(dir, 'answers.json'), JSON.generate(answers))
 
   ok = UiHarness.serve(dir) { |base_url| UiHarness.run_script('play.js', base_url, dir) }

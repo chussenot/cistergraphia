@@ -121,7 +121,31 @@ module ViewHelpers
     @layout.is_a?(Cistergraphia::Grille) || !@grille_error.nil?
   end
 
+  # The site's address as the page names it (its social links): the
+  # request's, or a stand-in on a page kept for every reader (ChapterPage)
+  def page_base_url
+    @base_url || request.base_url
+  end
+
   def nav_class(page)
     @page == page ? 'is-current' : nil
+  end
+
+  RUNG_NAMES = { intact: 'intact', worn: 'worn', pathless: 'pathless', broken: 'broken',
+                 tablet: 'with a tablet of its own', ruined: 'ruined' }.freeze
+
+  # A chapter's day, as a catalogue dates it: Monday 26 October 2026
+  def chapter_day(day)
+    day.date.strftime('%A %-d %B %Y')
+  end
+
+  # Where the day stands in the week's climb
+  def chapter_week(day)
+    if day.rung == :expert
+      return 'Sunday: the expert plate, pathless with a tablet of its own, the top of the week’s climb.'
+    end
+
+    "#{day.date.strftime('%A')}: #{RUNG_NAMES.fetch(day.rung)}. " \
+      'The week climbs from Monday’s intact plate to Sunday’s expert one.'
   end
 end
