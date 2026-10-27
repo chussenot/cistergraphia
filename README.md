@@ -86,6 +86,18 @@ scriptorium record kept in the browser. A small plate loses one pair in two, a l
 three: measured ([experiments/weathering](experiments/weathering/README.md)), a small plate
 damaged one in three was a lesson rather than a puzzle.
 
+The day's chapter
+-----------------
+
+A plate needs a scribe and a reader, and a visitor who comes alone has only their own messages.
+So the abbey sets one plate a day, the same for every reader, as the chapter house heard one
+chapter of the Rule each morning: [`/chapter`](docs/operations.md). The week climbs the ladder,
+from Monday's intact plate to Sunday's expert one; the lines come from the Rule, the scribes'
+margins, the Psalms and the Latin authors, and a few feasts keep their own: Saint Bernard on 20
+August, the Phaistos Disc on 3 July. Read it, and its source shows; the record counts the
+chapters read, never a streak. How it runs, and how its readings are kept, is in
+[docs/operations.md](docs/operations.md).
+
 Why two ways to send it?
 ------------------------
 
@@ -165,6 +177,8 @@ bundle exec rake ui:stability         # nothing on a page moves under the reader
 bundle exec rake ui:play              # the reader who does the work gets the message (needs Playwright, axe-core)
 BROWSER=firefox bundle exec rake ui:play  # the same in another engine (firefox, webkit); CI runs all three
 experiments/cryptanalysis/run.sh      # attack both modes (needs python3, wamerican, wfrench)
+bundle exec rake chapter:check        # the day's chapter: every text under every rung, the next 90 days
+bundle exec rake chapter:runway       # days of new readings left (docs/operations.md)
 bundle exec rake og:image             # social preview images (needs Chromium)
 ```
 

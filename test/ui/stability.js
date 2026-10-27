@@ -521,7 +521,8 @@ const PAGES = [
   { page: 'read', open: (page) => page.goto(`${baseUrl}/decode`) },
   { page: 'desk', open: bringToRead(plateFile, '[data-desk]') },
   { page: 'decoded', open: bringToRead(plateFile, '[data-transcription]', true) },
-  { page: 'about', open: (page) => page.goto(`${baseUrl}/about`) }
+  { page: 'about', open: (page) => page.goto(`${baseUrl}/about`) },
+  { page: 'chapter', open: (page) => page.goto(`${baseUrl}/chapter/2026-10-26`) } // chapter 1: set for good
 ];
 
 async function ready(page, javaScriptEnabled = true) {

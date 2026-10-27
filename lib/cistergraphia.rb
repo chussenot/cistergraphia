@@ -82,11 +82,13 @@ module Cistergraphia
   # With a passphrase the message is encrypted (secret mode), otherwise enciphered (game).
   # even: a square with an even side, as a grille needs. Game sequences always
   # have one: they are made of pairs, and an even square has an even side.
-  def encode(message, passphrase: nil, even: false, tablet: nil)
+  # random: where the splits and the evil pairs are drawn from (Random, the
+  # process's own, unless a seeded one asks for the same plate every time)
+  def encode(message, passphrase: nil, even: false, tablet: nil, random: Random)
     return Secret.encrypt(message, passphrase, even: even) if passphrase
 
-    sequence = cister(message, tablet)
-    inject_evil_symbols(sequence) until perfect_square?(sequence.size)
+    sequence = cister(message, tablet, random: random)
+    inject_evil_symbols(sequence, random) until perfect_square?(sequence.size)
     sequence
   end
 
@@ -129,12 +131,13 @@ module Cistergraphia
   # 100 two-letter ones) is drawn again with new random splits, so the
   # decoder's layout detection is never wrong. Secret plates need no check: the
   # wrong layout fails authentication instead of yielding a false message.
-  # With a tablet (a seed), the plate is written by a tablet of its own.
-  def inscribe(message, passphrase: nil, layout: :phaistos, tally: false, pathless: false, tablet: nil)
+  # With a tablet (a seed), the plate is written by a tablet of its own. A
+  # seeded random draws the same game plate every time (the day's chapter).
+  def inscribe(message, passphrase: nil, layout: :phaistos, tally: false, pathless: false, tablet: nil, random: Random)
     Pathless.check(passphrase, layout) if pathless
     Tablet.check(passphrase, layout) if tablet
     100.times do
-      sequence = encode(message, passphrase: passphrase, even: layout.is_a?(Grille), tablet: tablet)
+      sequence = encode(message, passphrase: passphrase, even: layout.is_a?(Grille), tablet: tablet, random: random)
       svg = to_svg(sequence, layout: layout, tally: tally, pathless: pathless, tablet: tablet)
       return [sequence, svg] if passphrase || layout.is_a?(Grille) || unambiguous?(svg, layout)
     end
@@ -161,13 +164,13 @@ module Cistergraphia
 
   # Converts a message into a sequence of numbers by the tablet: the shared
   # one, or the one a seed draws
-  def cister(message, tablet = nil)
+  def cister(message, tablet = nil, random: Random)
     chars = normalize(message).chars
     raise EmptyMessageError, 'Message has no characters that can be enciphered' if chars.empty?
 
     values = tablet ? Tablet.draw(tablet) : VALUES
     chars.map { |c| values.fetch(c) }
-         .flat_map { |n| split(n) }
+         .flat_map { |n| split(n, random) }
   end
 
   # Inverse of #encode: drops evil symbols and joins the pairs back, each read
@@ -184,14 +187,14 @@ module Cistergraphia
   end
 
   # Splits a number into two random parts that add up to it
-  def split(num)
-    part = rand(num)
-    [num - part, part].shuffle
+  def split(num, random = Random)
+    part = random.rand(num)
+    [num - part, part].shuffle(random: random)
   end
 
   # Inserts a pair of 'evil' symbols between two character pairs
-  def inject_evil_symbols(array)
-    array.insert(2 * rand(0..(array.length / 2)), rand(EVIL_MARKER), EVIL_MARKER)
+  def inject_evil_symbols(array, random = Random)
+    array.insert(2 * random.rand(0..(array.length / 2)), random.rand(EVIL_MARKER), EVIL_MARKER)
   end
 
   # Removes every [noise, EVIL_MARKER] pair. Each marker removes the value right

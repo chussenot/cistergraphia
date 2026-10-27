@@ -1,0 +1,40 @@
+name: Chapter
+
+# The day's chapter's content (docs/operations.md): every text drawn under every
+# rung, the next 90 days drawn and read back, and the reading order's runway.
+# On a change to the chapter, and every Monday morning, whatever changed: a
+# scheduled run that fails is the editor's notice (GitHub mails the failure).
+on:
+  pull_request:
+    paths:
+      - 'web/chapter.rb'
+      - 'web/chapters.yml'
+      - 'lib/**'
+  push:
+    branches: [master]
+    paths:
+      - 'web/chapter.rb'
+      - 'web/chapters.yml'
+      - 'lib/**'
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  content:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+      - run: bundle exec rake chapter:check | tee /tmp/check.log && tail -1 /tmp/check.log >> "$GITHUB_STEP_SUMMARY"
+      - run: bundle exec rake chapter:runway | tee /tmp/runway.log && tail -1 /tmp/runway.log >> "$GITHUB_STEP_SUMMARY"

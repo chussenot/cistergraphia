@@ -1,0 +1,151 @@
+# The day's chapter: what the abbey sets each day (web/chapter.rb, docs/operations.md)
+#
+# readings: the reading order, a lectionary. Chapter n reads the nth line, from
+#   the top; past the last, the order starts again from the top. Append new
+#   lines at the end: a line inserted or removed above today's moves every
+#   chapter after it, today's included. Reorder only what is not yet read.
+# feasts: by month and day, every year. A feast sets its own line and its name;
+#   the rung stays the weekday's, and the reading it displaces waits a cycle.
+#
+# Every text: letters and spaces only (what the plate carries is what is shown),
+# 6 words or more (a plate with its own tablet needs them: docs/design.md), and
+# 50 letters and spaces at most (a 10 × 10 plate). test/chapter_test.rb checks.
+# Sources are public domain; the translations from Latin are the house's own.
+
+readings:
+  - text: Listen my son to the precepts of the master
+    source: The Rule of Saint Benedict, prologue
+  - text: Let no day pass without a line
+    source: After Pliny the Elder, on the painter Apelles
+  - text: So teach us to number our days
+    source: Psalm 90
+  - text: Three fingers write but the whole body labours
+    source: A scribe’s colophon
+  - text: Idleness is the enemy of the soul
+    source: The Rule of Saint Benedict, chapter 48
+  - text: It is the glory of God to conceal a thing
+    source: Proverbs 25
+  - text: You will find more in woods than in books
+    source: Bernard of Clairvaux, letter 106
+  - text: For a he writes b and for b he writes c
+    source: Suetonius, on the cipher of Augustus
+  - text: Seven times a day I have given you praise
+    source: Psalm 119, as the Rule of Saint Benedict keeps it
+  - text: Spoken words fly away but written ones remain
+    source: A Latin proverb
+  - text: Thank God it will soon be dark
+    source: An Irish scribe, in the margin
+  - text: Who will guard the guards themselves
+    source: Juvenal, satire 6
+  - text: Make peace before the sun goes down
+    source: The Rule of Saint Benedict, chapter 4
+  - text: It is better to write books than to tend vines
+    source: Alcuin of York, verses for the scriptorium
+  - text: Write the vision and make it plain upon tables
+    source: Habakkuk 2
+  - text: Love seeks no cause beyond itself
+    source: Bernard of Clairvaux, sermons on the Song of Songs
+  - text: Dripping water hollows out the stone
+    source: Ovid, letters from the Black Sea
+  - text: New parchment bad ink I say nothing more
+    source: A scribe, in the margin
+  - text: Run while you have the light of life
+    source: The Rule of Saint Benedict, prologue
+  - text: He wrote in cipher so that no word could be read
+    source: Suetonius, on Julius Caesar
+  - text: Of making many books there is no end
+    source: Ecclesiastes 12
+  - text: I found rest only in a corner with a book
+    source: Attributed to Thomas à Kempis
+  - text: Let all guests be received as Christ
+    source: The Rule of Saint Benedict, chapter 53
+  - text: Art is long and life is short
+    source: Hippocrates, the first aphorism
+  - text: Pangur Ban and I each have our own craft
+    source: Pangur Bán, an Irish poem of the ninth century
+  - text: Thou art weighed in the balances
+    source: Daniel 5, the writing on the wall
+  - text: Nothing is said that has not been said before
+    source: Terence, The Eunuch
+  - text: Let reading never be lacking at the table
+    source: The Rule of Saint Benedict, chapter 38
+  - text: The measure of love is to love without measure
+    source: Bernard of Clairvaux, On Loving God
+  - text: Every word copied is a wound to the devil
+    source: After Cassiodorus, on the copyists
+  - text: Time flies and cannot be regained
+    source: Virgil, Georgics 3
+  - text: The words of a book that is sealed
+    source: Isaiah 29
+  - text: Let nothing be put before the work of God
+    source: The Rule of Saint Benedict, chapter 43
+  - text: The last line is sweet to the scribe
+    source: A scribe’s colophon
+  - text: Done well enough is done quickly enough
+    source: Suetonius, a saying of Augustus
+  - text: That they were graven with an iron pen
+    source: Job 19
+  - text: Do not love to speak too much
+    source: The Rule of Saint Benedict, chapter 4
+  - text: Here let them sit who copy the holy law
+    source: Alcuin of York, verses for the scriptorium
+  - text: To every thing there is a season
+    source: Ecclesiastes 3
+  - text: I came and I saw and I conquered
+    source: Julius Caesar, as Suetonius tells it
+  - text: Let the brothers serve one another
+    source: The Rule of Saint Benedict, chapter 35
+  - text: This is all written for Christ give me a drink
+    source: A scribe’s colophon
+  - text: Seize the day trusting little in tomorrow
+    source: Horace, Odes 1.11
+  - text: I love because I love and I love that I may love
+    source: Bernard of Clairvaux, sermons on the Song of Songs
+  - text: The wise are known by their few words
+    source: The Rule of Saint Benedict, chapter 7
+  - text: It dims the eyes and bends the back
+    source: After Florentius of Valeránica, on the scribe’s work
+  - text: Hold every hour in your grasp
+    source: Seneca, letter 1
+  - text: There is no new thing under the sun
+    source: Ecclesiastes 1
+  - text: Treat every tool as a vessel of the altar
+    source: The Rule of Saint Benedict, chapter 31
+  - text: Let no one be troubled in the house of God
+    source: The Rule of Saint Benedict, chapter 31
+  - text: At midnight I rose to give you thanks
+    source: Psalm 119, as the Rule of Saint Benedict keeps it
+  - text: Keep death daily before your eyes
+    source: The Rule of Saint Benedict, chapter 4
+  - text: Be still and know that I am God
+    source: Psalm 46
+  - text: This little rule written for beginners
+    source: The Rule of Saint Benedict, chapter 73
+  - text: Never despair of the mercy of God
+    source: The Rule of Saint Benedict, chapter 4
+
+feasts:
+  "01-26":
+    name: The Founders of Cîteaux
+    text: One charity and one rule and like customs
+    source: Stephen Harding, the Charter of Charity
+  "03-21":
+    name: Cîteaux founded, 1098
+    text: A place of horror and of vast solitude
+    source: The Little Exordium, on the wood of Cîteaux
+  "07-03":
+    name: The Phaistos Disc found, 1908
+    text: The signs run in a spiral from the rim inward
+    source: The abbey, for the disc found at Phaistos on 3 July 1908
+  "07-11":
+    name: Saint Benedict
+    text: Incline the ear of your heart and listen
+    source: The Rule of Saint Benedict, prologue
+  "08-20":
+    name: Saint Bernard of Clairvaux
+    text: Trees and stones teach what masters cannot
+    source: Bernard of Clairvaux, letter 106
+  "12-11":
+    name: The Zodiac’s second cipher read, 2020
+    text: Fifty one years to find the way it runs
+    source: The abbey, for the reading of the 340 made public on 11 December 2020

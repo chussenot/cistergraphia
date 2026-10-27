@@ -105,7 +105,7 @@ fourth voice, and is declined.
 |---|---|
 | The catalogue | The leaves: Inscribe, Read, About, the Erratum. Index headings, folio marks, the lede in italic. It describes; it does not perform |
 | The collection | The plates: clay pressed by a stylus, sometimes worn, broken or ruined; the grille cut from parchment; the tablet of values. Objects have conditions, layouts and keys |
-| The scriptorium | Where the reader works: the desk, the bench, the board; Lectio; the ranks from novice to abbot; the record of plates read; on a pathless plate, the way to find and the notebook of ways tried; on a plate with a tablet of its own, the notebook of sums and the scribe who confirms it; on the expert plate (pathless, with a tablet of its own), the way first, on sums alone, then the notebook. Its verbs are manual: read, press, lay, turn, restore |
+| The scriptorium | Where the reader works: the desk, the bench, the board; Lectio; the ranks from novice to abbot; the record of plates read; on a pathless plate, the way to find and the notebook of ways tried; on a plate with a tablet of its own, the notebook of sums and the scribe who confirms it; on the expert plate (pathless, with a tablet of its own), the way first, on sums alone, then the notebook; the day's chapter, the plate the abbey sets each day (docs/operations.md). Its verbs are manual: read, press, lay, turn, restore |
 
 **Voice.** A careful epigrapher writing a catalogue entry: declarative, exact, unhurried, with a
 dry wit that never winks ("Without it, the plate is an anagram of itself").
@@ -147,6 +147,7 @@ dry wit that never winks ("Without it, the plate is an anagram of itself").
 | the tablet; a plate with a tablet of its own; Its own | the mapping of values to characters, and a plate whose reader must build it (Tablet on the form) | key (the grille's word), alphabet, cipher table, substitution, unknown tablet in copy |
 | Which way does it run?; the notebook | the desk's or the bench's question on a pathless plate, and its line of the ways tried: what each gave, where it broke; on a plate with a tablet of its own, the notebook is the table of sums | select transposition, history, log, glossary, legend |
 | in pencil, in ink; Ask the scribe; Nothing holds yet | an entry written and one the scribe confirmed; the confirmation, three at a time; its answer when fewer than three hold | guess, validated, locked, correct; Check, Submit; Wrong, Incorrect, 2 of 3 |
+| the day's chapter; Chapter 7 | the plate the abbey sets each day, the same for every reader, and its number from the first (counted in the record as "chapters of the day", never in a row) | daily puzzle, challenge, streak, daily |
 | Lectio; novice, monk, prior, abbot | the reading exercise and the ranks it and the desk award | level, XP, badge |
 | your scriptorium | the record of plates read, kept in the browser | history, stats, profile |
 | transcription | what the decoder hands back | output, result, decoded message |
@@ -154,7 +155,7 @@ dry wit that never winks ("Without it, the plate is an anagram of itself").
 | the bite, the lift, the sherd, the join, the turn, the parchment, the bell | the seven sounds, named by the material that makes them | click, whoosh, snap, chime, ding, success sound |
 
 **The codex.** The folios follow the order the story is read: Inscribe `1r`, the plate `1v`,
-Read `2r`, the scriptorium `2v`, the transcription `3r`, About `4r`. The Erratum has no folio: a
+Read `2r`, the scriptorium `2v` (the day's chapter is the scriptorium's leaf too), the transcription `3r`, About `4r`. The Erratum has no folio: a
 slip of paper in the book.
 
 ## Interaction: "the silence of the monks"
