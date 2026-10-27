@@ -103,6 +103,15 @@ class CistergraphiaApp < Sinatra::Base
     erb :error
   end
 
+  # For a load balancer or a platform: the app answers, and nothing more (a
+  # check that read a plate would fail with a slow page, and restart a server
+  # that was only busy)
+  get '/up' do
+    cache_control :no_store
+    content_type :text
+    'up'
+  end
+
   get '/' do
     @page = :inscribe
     erb :index

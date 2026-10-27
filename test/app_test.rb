@@ -32,6 +32,38 @@ class AppTest < Minitest::Test
     refute_match(/<script>|<style>| style="| on[a-z]+="/, last_response.body) # nothing inline for the CSP to block
   end
 
+  def test_the_health_check_answers_and_is_never_cached
+    get '/up'
+
+    assert_predicate last_response, :ok?
+    assert_equal 'up', last_response.body
+    assert_includes last_response.headers['Cache-Control'], 'no-store'
+  end
+
+  # Counts the plates parsed on this thread while Thread.current[:parses] is set
+  module CountParses
+    def initialize(*args)
+      Thread.current[:parses] += 1 if Thread.current[:parses] && args.first.is_a?(String) && args.first.size > 1000
+      super
+    end
+  end
+  REXML::Document.prepend(CountParses)
+
+  # Parsing a large plate costs half a second: a page laid from one file must
+  # not parse it again for each thing it reads (SVG.layers)
+  def test_a_plate_brought_to_read_is_parsed_once_to_clean_it_and_once_to_read_it
+    srand(4)
+    svg = Cistergraphia::Lacunae.inscribe('meet me at the old abbey after vespers by the well')[1]
+    Thread.current[:cistergraphia_layers] = nil # nothing kept from the inscription
+    Thread.current[:parses] = 0
+    post '/decode', svg: svg
+
+    assert_includes last_response.body, 'data-bench'
+    assert_equal 2, Thread.current[:parses]
+  ensure
+    Thread.current[:parses] = nil
+  end
+
   def test_results_carrying_messages_are_never_cached
     post '/generate', message: 'hello', mode: 'secret', passphrase: 'abbey of molesme'
 
