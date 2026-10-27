@@ -96,7 +96,7 @@ module Cistergraphia
 
     # True for a plate written under a grille: only those are square
     def square?(svg)
-      root = parse(svg).root
+      root = Parsed.of(svg).root
       width = root&.attributes&.[]('width').to_s
       root&.name == 'svg' && !width.empty? && width == root.attributes['height'].to_s
     end
@@ -140,11 +140,9 @@ module Cistergraphia
       Layers.of(svg).fetch(layer)
     end
 
-    # A file's lines by layer, read in one pass and kept for the file last read
-    # on this thread: a page lays a puzzle from one file a dozen times (the
-    # survey, the tally, the decoder, the way), and parsing a large plate costs
-    # half a second each time. One file per thread: nothing grows, and no
-    # thread sees another's
+    # A file's lines by layer, read in one pass from its document (Parsed)
+    # and kept for the file last read on this thread: a page lays a puzzle from
+    # one file a dozen times (the survey, the tally, the decoder, the way)
     module Layers
       module_function
 
@@ -158,7 +156,7 @@ module Cistergraphia
       end
 
       def read(text)
-        root = SVG.parse(text).root
+        root = Parsed.of(text).root
         raise DecodeError, 'Not an SVG document' unless root&.name == 'svg'
 
         found = { strokes: [], lacunae: [], tally: [] }
@@ -182,6 +180,31 @@ module Cistergraphia
 
       def line(node)
         %w[x1 y1 x2 y2].map { |attr| SVG.coordinate(node.attributes[attr]) }
+      end
+    end
+
+    # A file's document, parsed once and kept for the file last parsed on this
+    # thread: the cleaner, the grille's test, the lines, the fragments and the
+    # way all read one file, and parsing a large plate costs a quarter of a
+    # second. Read, never changed: a reader that rewrites a plate parses its own
+    # (SVG.parse). One file per thread, and the app forgets it after each request
+    module Parsed
+      module_function
+
+      def of(svg)
+        text = svg.to_s
+        kept = (Thread.current[:cistergraphia_document] ||= {})
+        kept.fetch(text) do
+          kept.clear
+          kept[text] = SVG.parse(text)
+        end
+      end
+
+      # What the thread keeps of the last file read (its document, its lines),
+      # let go: after a request, nothing of a reader's plate stays in memory
+      def forget
+        Thread.current[:cistergraphia_document] = nil
+        Thread.current[:cistergraphia_layers] = nil
       end
     end
 

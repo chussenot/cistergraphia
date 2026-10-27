@@ -14,29 +14,49 @@ module PlateFile
   VALUE = /\A[\w\s#().,%-]*\z/ # a number, a word, a colour, a list of points, a transform: never markup or a URL
   PAINT = /\Aurl\(#[\w-]+\)\z/ # a pattern of the file's own (fill="url(#worn)")
   XMLNS = 'http://www.w3.org/2000/svg'
-  QUOTED = { attribute_quote: :quote }.freeze # as the library writes them, and tests for them
 
   module_function
 
-  # The file as the page shows it; nil when it is not a plate at all
+  # The file as the page shows it; nil when it is not a plate at all. Its
+  # document is the one every reader of the request reads (SVG::Parsed)
   def clean(svg)
-    root = REXML::Document.new(svg.to_s).root
+    root = Cistergraphia::SVG::Parsed.of(svg).root
     return unless root&.name == 'svg'
 
-    copy = REXML::Document.new
-    element(root, copy).add_attribute('xmlns', XMLNS)
-    copy.to_s
-  rescue REXML::ParseException
+    write(root, +'', xmlns: true)
+  rescue Cistergraphia::DecodeError
     nil
   end
 
-  # An element with its kept attributes and children; one not a plate's is
-  # left out with everything inside it
-  def element(node, parent)
-    copy = REXML::Element.new(node.name, parent, QUOTED)
-    node.attributes.each { |name, value| copy.add_attribute(name, value) if keep?(name, value) }
-    node.elements.each { |child| element(child, copy) if ELEMENTS.include?(child.name) }
-    copy
+  # An element with its kept attributes and children, written out as REXML
+  # would write a copy (attributes by name, double quotes, empty elements
+  # closed), without building one: a large plate has ten thousand elements,
+  # and the copy cost more than the parse. One not a plate's is left out with
+  # everything inside it; text is never kept
+  def write(node, out, xmlns: false)
+    out << '<' << node.name << attributes(node, xmlns)
+    children = kept_children(node)
+    return out << '/>' if children.empty?
+
+    children.each_with_object(out << '>') { |child, written| write(child, written) } << "</#{node.name}>"
+  end
+
+  # The child elements a plate is made of (children, not elements: REXML's
+  # elements walk through XPath, and cost half the cleaning)
+  def kept_children(node)
+    node.children.select { |child| child.is_a?(REXML::Element) && ELEMENTS.include?(child.name) }
+  end
+
+  # The kept attributes, by name as REXML writes them
+  def attributes(node, xmlns)
+    kept = node.attributes.each.select { |name, value| keep?(name, value) }
+    kept << ['xmlns', XMLNS] if xmlns
+    kept.sort_by(&:first).map { |name, value| %( #{name}="#{escape(value)}") }.join
+  end
+
+  # A kept value holds no markup (VALUE, PAINT); escaped all the same, as REXML does
+  def escape(value)
+    value.gsub('&', '&amp;').gsub('<', '&lt;').gsub('"', '&quot;')
   end
 
   def keep?(name, value)
