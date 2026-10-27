@@ -49,17 +49,31 @@ class AppTest < Minitest::Test
   end
   REXML::Document.prepend(CountParses)
 
-  # Parsing a large plate costs half a second: a page laid from one file must
-  # not parse it again for each thing it reads (SVG.layers)
-  def test_a_plate_brought_to_read_is_parsed_once_to_clean_it_and_once_to_read_it
+  # Parsing a large plate costs a quarter of a second: a page laid from one
+  # file, or its transcription, parses it once (SVG::Parsed), cleaner and
+  # readers alike, and keeps nothing of it past the request. The ruined plate
+  # rejoined draws a new plate from its fragments, and cleans that one too
+  def test_every_plate_brought_to_read_is_parsed_once_and_forgotten
+    message = 'meet me at the old abbey after vespers by the well'
     srand(4)
-    svg = Cistergraphia::Lacunae.inscribe('meet me at the old abbey after vespers by the well')[1]
-    Thread.current[:cistergraphia_layers] = nil # nothing kept from the inscription
-    Thread.current[:parses] = 0
-    post '/decode', svg: svg
+    plates = { worn: Cistergraphia::Lacunae.inscribe(message)[1], intact: Cistergraphia.inscribe(message)[1],
+               expert: Cistergraphia.inscribe(message, layout: :unwinding, pathless: true, tablet: 'K7Q2MZXB4P')[1],
+               ruined: Cistergraphia::Fragments.inscribe(message, weathered: true)[1] }
+    plates.each do |name, svg|
+      [{}, { decipher: '1' }].each { |extra| assert_parses(1, name, svg, extra) }
+    end
+    assert_parses(2, :ruined, plates[:ruined], rejoined: '1')
+  end
 
-    assert_includes last_response.body, 'data-bench'
-    assert_equal 2, Thread.current[:parses]
+  def assert_parses(expected, name, svg, extra)
+    Cistergraphia::SVG::Parsed.forget # nothing kept from the inscription
+    Thread.current[:parses] = 0
+    post '/decode', { svg: svg }.merge(extra)
+
+    assert_predicate last_response, :ok?, "#{name} #{extra}"
+    assert_equal expected, Thread.current[:parses], "#{name} #{extra}: parses"
+    assert_nil Thread.current[:cistergraphia_document], "#{name} #{extra}: nothing kept"
+    assert_nil Thread.current[:cistergraphia_layers], "#{name} #{extra}: no lines kept"
   ensure
     Thread.current[:parses] = nil
   end

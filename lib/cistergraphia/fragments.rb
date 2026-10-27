@@ -170,8 +170,9 @@ module Cistergraphia
     end
 
     # The one way a broken plate's fragments rejoin (along a layout, if given)
-    def rejoin(svg, layout = nil)
-      found = Join.all(read(svg), layout ? [layout] : Layout::KEYLESS)
+    # (fragments: the fragments already read from this file, not read again)
+    def rejoin(svg, layout = nil, fragments: read(svg))
+      found = Join.all(fragments, layout ? [layout] : Layout::KEYLESS)
       raise DecodeError, 'The fragments do not rejoin: no arrangement balances every pair' if found.empty?
       raise DecodeError, 'The fragments rejoin into more than one message' if found.map(&:message).uniq.size > 1
 
@@ -181,12 +182,12 @@ module Cistergraphia
     # A weathered broken plate rejoined (one way, or DecodeError), for the bench
     def rejoined(svg)
       fragments = read(svg)
-      Rejoined.of(svg, fragments, rejoin(svg))
+      Rejoined.of(svg, fragments, rejoin(svg, fragments: fragments))
     end
 
     # The fragments of a broken plate, in the order the file lists them
     def read(svg)
-      root = SVG.parse(svg).root
+      root = SVG::Parsed.of(svg).root
       raise DecodeError, 'Not an SVG document' unless root&.name == 'svg'
 
       groups = []
@@ -484,12 +485,16 @@ module Cistergraphia
         Layout.cell(:phaistos).map { |length| (length * side) + (2 * Layout::PADDING) }
       end
 
+      # The fragments' groups, copied out of the file's document (SVG::Parsed:
+      # read, never changed) into one that writes double quotes, as the library
+      # draws them: moving a copy costs a third of parsing the file again
       def groups(svg)
+        holder = REXML::Document.new(nil, attribute_quote: :quote).add_element('fragments')
         groups = []
-        SVG.parse(svg, quoted: true).root.each_recursive do |node|
+        SVG::Parsed.of(svg).root.each_recursive do |node|
           groups << node if node.name == 'g' && node.attributes['class'] == CLASS
         end
-        groups
+        groups.map { |group| holder.add_element(group.deep_clone) }
       end
 
       def transform(fragment, (row, col), turned)

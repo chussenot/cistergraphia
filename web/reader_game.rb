@@ -69,7 +69,7 @@ module ReaderGame
     return unless @layout && (@values = letters(svg, @layout))
 
     @size = Integer.sqrt(@values.size)
-    lay_desk_variant
+    lay_desk_variant(svg)
     @desk = true
   end
 
@@ -77,8 +77,8 @@ module ReaderGame
   # the notebook, on its sums when its way is shown. Pathless too (the expert
   # plate), the notebook waits shut: its sums would tell the way, so the page
   # lists them once the reader has found it
-  def lay_desk_variant
-    lay_pathless if @pathless && !submitted_grille
+  def lay_desk_variant(svg)
+    lay_pathless(svg) if @pathless && !submitted_grille
     @expert = @own && @pathless
     @notebook = @expert ? [] : Cistergraphia::Notebook.entries(@values) if @own
   end
@@ -100,7 +100,7 @@ module ReaderGame
 
   # A pathless plate: the page gets every cell's readings in grid order and
   # not the way, nor the values along it; the desk lays the five ways itself
-  def lay_pathless(svg = @svg_content)
+  def lay_pathless(svg)
     @grid = Cistergraphia::Pathless.grid(svg)
     @layout = :phaistos # the figure's geometry; the plate walk starts row by row
     @values = @grid.map { |_, _, upright, _| upright || 0 }
@@ -126,8 +126,8 @@ module ReaderGame
   # wrong key is for the decoder to explain
   def lay_bench(svg)
     survey = Cistergraphia::Lacunae::Survey
-    @layout = submitted_grille || survey.layout(svg)
-    return unless @layout && survey.edition(svg, @layout)
+    @layout = submitted_grille || survey.layout(svg) # a keyless layout is found by its edition: not read twice
+    return unless @layout && (!submitted_grille || survey.edition(svg, @layout))
 
     @values = survey.values(svg, @layout)
     @size = Integer.sqrt(@values.size)

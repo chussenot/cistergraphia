@@ -86,6 +86,9 @@ class CistergraphiaApp < Sinatra::Base
     cache_control :no_store if request.post?
   end
 
+  # A plate read in the request is not kept past it (SVG::Parsed)
+  after { Cistergraphia::SVG::Parsed.forget }
+
   error Cistergraphia::Error do
     status 400
     @error_message = env['sinatra.error'].message
