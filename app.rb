@@ -106,11 +106,7 @@ class CistergraphiaApp < Sinatra::Base
   # For a load balancer or a platform: the app answers, and nothing more (a
   # check that read a plate would fail with a slow page, and restart a server
   # that was only busy)
-  get '/up' do
-    cache_control :no_store
-    content_type :text
-    'up'
-  end
+  get('/up') { [200, { 'cache-control' => 'no-store', 'content-type' => 'text/plain' }, ['up']] }
 
   get '/' do
     @page = :inscribe
@@ -182,9 +178,7 @@ class CistergraphiaApp < Sinatra::Base
   end
 
   # A ruined chapter's board, whole again, asks for its bench (rejoined=1)
-  post %r{/chapter/(\d{4}-\d{2}-\d{2})} do |date|
-    chapter_page(Chapter.parse(date))
-  end
+  post(%r{/chapter/(\d{4}-\d{2}-\d{2})}) { |date| chapter_page(Chapter.parse(date)) }
 
   # The scribe confirms a notebook's entries, three at a time (app.js, initNotebook)
   post '/ask' do
