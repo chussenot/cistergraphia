@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars (which git ignores) and fill in.
+project_id = "my-project"
+# region     = "europe-west1"
+
+# With a domain on Cloudflare: the front door, the rate limit, HTTPS forced.
+# Leave out for the run.app address alone.
+# domain                = "cistergraphia.example"
+# cloudflare_account_id = "0123456789abcdef0123456789abcdef"
+# cloudflare_zone_id    = "0123456789abcdef0123456789abcdef"

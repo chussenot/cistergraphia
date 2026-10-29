@@ -39,54 +39,70 @@ that did would fail on a busy server and restart it for being busy.
 ## Deploying to Cloud Run
 
 The site runs on Google Cloud Run, in `europe-west1`: one container per instance, none when nobody
-reads, HTTPS included, and a free tier that covers a game's traffic. The pieces:
+reads, HTTPS included, and a free tier that covers a game's traffic. With a domain, Cloudflare
+stands in front of it. The pieces:
 
 | Piece | What it does |
 |---|---|
 | `Dockerfile` | The app under Puma on port 8080, as a user with no privileges, without the development and test gems |
+| `infra/` | Terraform: the Google Cloud project (APIs, the image repository, two service accounts, the federation that lets GitHub deploy without a key, the service itself) and, with a domain, the Cloudflare front door |
 | `deploy/smoke.sh BASE_URL` | Asks every page of a served Cistergraphia and fails at the first wrong answer. CI runs it against the container; the deploy runs it against the live service |
-| `deploy/gcp-setup.sh` | Everything a Google Cloud project needs, once (below) |
-| `.github/workflows/ci.yml`, job `container` | Builds the image and runs the smoke test on every change, so a broken image never reaches the deploy |
-| `.github/workflows/deploy.yml` | After CI passes on master: builds the image, pushes it to Artifact Registry, deploys it, runs the smoke test on the result |
+| `.github/workflows/ci.yml` | Job `container` builds the image and runs the smoke test on every change; job `infra` checks the Terraform's format and validity against the providers' schemas |
+| `.github/workflows/deploy.yml` | After CI passes on master: builds the image, pushes it to Artifact Registry, deploys it as a new revision, runs the smoke test on the result |
+
+**Who owns what.** Terraform owns the shape of the service: CPU, memory, concurrency, scaling,
+the account it runs as, its environment. The Deploy workflow changes one thing, the image: it
+deploys a new revision with the image alone, and every other setting carries over. So the image
+is the one attribute Terraform ignores (`lifecycle.ignore_changes`), and the workflow refuses to
+run against a service Terraform did not make.
 
 ### Once: the project
 
-```
-PROJECT_ID=my-project deploy/gcp-setup.sh
-```
+1. **A bucket for the state**, once, by hand (the one thing Terraform cannot make for itself):
+   ```
+   gcloud storage buckets create gs://STATE_BUCKET --project PROJECT_ID --location europe-west1 \
+     --uniform-bucket-level-access && gcloud storage buckets update gs://STATE_BUCKET --versioning
+   ```
+2. **Apply**, as a project owner signed in to `gcloud` (`gcloud auth application-default login`):
+   ```
+   cd infra
+   cp terraform.tfvars.example terraform.tfvars   # and fill it in
+   terraform init -backend-config="bucket=STATE_BUCKET"
+   terraform apply
+   ```
+3. **Set the four repository variables** that `terraform output github_variables` prints
+   (Settings, Secrets and variables, Actions, Variables). The Deploy workflow runs once they exist.
+4. **Deploy once by hand** (Actions, Deploy, Run workflow), or merge to master. Until then the
+   service runs Google's hello image.
 
-Run it as an owner of the project, signed in to `gcloud`. It enables the APIs, makes the Artifact
-Registry repository, two service accounts and the Workload Identity Federation that lets the
-workflow deploy without any stored key, and prints five repository variables to set on GitHub.
-Running it again only adds what is missing.
+What Terraform makes, and why:
 
 - **The runtime service account has no role.** The app calls no Google API, so it needs none. The
   default compute account has Editor on the whole project, and a server that reads uploaded files
-  should not run as it.
-- **The deployer can do three things:** deploy to Cloud Run, push to the one repository, and act as
-  the runtime account. It can be used only by GitHub Actions running from this repository
-  (`assertion.repository == 'chussenot/cistergraphia'`).
-- **No key exists.** The workflow proves who it is with its OpenID token. Nothing to rotate, nothing
-  to leak.
+  must not run as it.
+- **The deployer can do three things:** push to the one image repository, deploy a revision of the
+  one service (`roles/run.developer` on the service, not the project), and let the service run as
+  the runtime account. GitHub Actions becomes it only from this repository
+  (`assertion.repository == "chussenot/cistergraphia"`), with its OpenID token. No key exists.
+- **The image repository keeps the ten most recent images** and drops any older than thirty days:
+  an image is about 150 MB, and storage is billed.
+- **The service:**
 
-### Every deploy
-
-A merge to master runs CI; when CI is green, Deploy ships it. The service is deployed with:
-
-| Setting | Value | Why |
-|---|---|---|
-| CPU, memory | 1 vCPU, 512 MiB | A request is CPU-bound Ruby for up to 1.3 s. Half a vCPU would double it. A worker uses under 300 MB with the largest plate |
-| Concurrency | 3 | Matches `PUMA_THREADS=3`: three requests share the one vCPU inside Puma before a second instance starts |
-| Instances | 0 to 3 | None when nobody reads: the first reader of the day starts one (3 to 5 s, with CPU boost). Three at most: the bill is bounded |
-| Timeout | 60 s | The slowest request is under 2 s |
-| Startup CPU boost | on | A faster cold start, for nothing while idle |
-| Access | public, runtime account with no role | |
+  | Setting | Value | Why |
+  |---|---|---|
+  | CPU, memory | 1 vCPU, 512 MiB | A request is CPU-bound Ruby for up to 1.3 s. Half a vCPU would double it. A worker uses under 300 MB with the largest plate |
+  | Concurrency | 3 | Matches `PUMA_THREADS=3`: three requests share the one vCPU inside Puma before a second instance starts |
+  | Instances | 0 to 3 | None when nobody reads: the first reader of the day starts one (3 to 5 s, with CPU boost). Three at most: the bill is bounded |
+  | CPU | only while a request runs, boosted at startup | An idle instance costs nothing; a cold start is shorter |
+  | Timeout | 60 s | The slowest request is under 2 s |
+  | Access | public | |
+  | Deletion protection | off | Nothing is stored in the service: a destroy loses no plate |
 
 **Cost.** Request-based billing, with the free tier of 180,000 vCPU-seconds, 360,000 GiB-seconds
 and 2 million requests a month. At about one vCPU-second per plate read, that is roughly 150,000
 plate reads a month before the first cent. Three instances running flat out all month would cost
-about $190, which is what `--max-instances=3` bounds. Region: `europe-west1` is tier 1 pricing and
-supports domain mappings; Paris (`europe-west9`) is tier 2 and does not.
+about $190, which is what `max_instance_count = 3` bounds. Region: `europe-west1` is tier 1
+pricing; Paris (`europe-west9`) is tier 2.
 
 **The day's chapter** is drawn by each instance on its first request for it (0.1 to 0.6 s) and
 kept in memory. With instances that come and go, that happens a few times a day. It is the same
@@ -96,16 +112,37 @@ plate every time: the drawing is seeded by the date.
 --to-revisions REVISION=100`. Every deploy is a revision; `gcloud run revisions list` names them.
 
 **A deploy by hand**, from a signed-in machine, without the workflow:
-`gcloud run deploy cistergraphia --source . --region europe-west1`. It builds the same Dockerfile
-with Cloud Build and uploads only what `.gcloudignore` allows.
+`gcloud run deploy cistergraphia --image IMAGE --region europe-west1`, or with `--source .` to
+build the same Dockerfile with Cloud Build (`.gcloudignore` keeps the upload to what it needs).
 
-### A domain, and the rate limit
+### The front door: a domain on Cloudflare
 
-Cloud Run gives `https://cistergraphia-….run.app`. For a domain of your own, map it in Cloud Run
-(Domain mappings, free, a Google-managed certificate; `europe-west1` supports it), then put
-Cloudflare's free plan in front, proxied: it caches the static files, hides the origin, and its one
-free rate-limiting rule is where the limits under "What to put in front" go. Cloud Run has no rate
-limiting of its own short of a load balancer and Cloud Armor, which cost more than the app.
+Set `domain`, `cloudflare_account_id` and `cloudflare_zone_id` in `terraform.tfvars`, put a
+Cloudflare API token in `CLOUDFLARE_API_TOKEN`, and apply again. The token needs, on the zone:
+Workers Scripts (edit), Workers Routes (edit), Zone WAF (edit), Zone Settings (edit), Zone (read).
+
+- **Why a Worker.** Cloud Run routes by the Host header, and a request for the domain carries the
+  domain: sent straight to the service it would be a 404, and rewriting the Host at Cloudflare is
+  an Enterprise feature. So the domain is a Worker's (`infra/worker.js`): it re-addresses each
+  request to the service's own `run.app` host, as it came (method, headers, body), and names the
+  domain the reader used in `X-Forwarded-Host`, which the app's links (`og:url`) read. The free
+  plan's 100,000 Worker requests a day are far more than the game sees.
+- **The rate limit** the section below asks for: posts to `/generate`, `/decode` and `/ask`, ten in
+  ten seconds from one address, then blocked for ten (`rate_limit_posts_per_10s`). A reader makes
+  a few a minute; ten in ten seconds is a script. It is the one rule the free plan includes.
+- **HTTPS is forced** on the zone: a passphrase travels in the request.
+- **What it does not do.** The `run.app` address stays reachable, behind no rate limit: it is the
+  address the Deploy workflow smoke-tests. Closing it would need a load balancer in front of Cloud
+  Run, which costs more than the app. For a game, the open back door is fine.
+
+Without a domain, none of this is made, and the site is its `run.app` address.
+
+### Changing the infrastructure
+
+Edit `infra/`, `terraform plan`, read the plan, `terraform apply`. CI checks the format and the
+validity of every change against the providers' schemas; it never plans or applies, so the
+credentials stay on your machine. The lock file (`infra/.terraform.lock.hcl`) pins the providers;
+update it with `terraform init -upgrade` on purpose.
 
 ## What a request costs
 

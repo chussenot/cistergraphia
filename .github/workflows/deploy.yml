@@ -4,7 +4,9 @@ name: Deploy
 # image is built here, pushed to Artifact Registry and deployed, then every
 # page of the live service is asked for (deploy/smoke.sh).
 #
-# Nothing runs until the GitHub variables are set (deploy/gcp-setup.sh prints
+# The service itself is Terraform's (infra/): its CPU, memory, scaling and
+# account are set there, and this workflow changes one thing, the image.
+# Nothing runs until the GitHub variables are set (terraform output prints
 # them): a fork, or the repository before its project exists, stays green.
 # No key is stored anywhere: the job proves who it is to Google with its
 # OpenID token (Workload Identity Federation).
@@ -64,10 +66,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # One vCPU and three threads, as config/puma.rb runs it; a request is
-      # CPU-bound Ruby for up to 1.3 s (docs/serving.md). No instance when
-      # nobody reads, at most three when everybody does: the bill is bounded.
-      # The runtime account has no role: the app calls no Google API.
+      # The service must exist, as Terraform made it: a deploy that created
+      # it would run as the default account, with Editor on the project
+      - run: |
+          gcloud run services describe "$SERVICE" --region "${{ vars.GCP_REGION }}" --project "${{ vars.GCP_PROJECT_ID }}" \
+            --format 'value(name)' >/dev/null \
+            || { echo "::error::No service $SERVICE in ${{ vars.GCP_REGION }}: apply infra/ first (docs/serving.md)"; exit 1; }
+
+      # Only the image: every other setting carries over from the revision
+      # Terraform shaped. No labels of the action's own, which Terraform
+      # would see as drift
       - id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
@@ -75,20 +83,6 @@ jobs:
           region: ${{ vars.GCP_REGION }}
           project_id: ${{ vars.GCP_PROJECT_ID }}
           image: ${{ steps.image.outputs.name }}:${{ github.event.workflow_run.head_sha || github.sha }}
-          flags: >-
-            --allow-unauthenticated
-            --service-account=${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}
-            --cpu=1
-            --memory=512Mi
-            --concurrency=3
-            --min-instances=0
-            --max-instances=3
-            --cpu-boost
-            --timeout=60
-            --port=8080
-          env_vars: |
-            RACK_ENV=production
-            PUMA_THREADS=3
-            WEB_CONCURRENCY=0
+          skip_default_labels: true
 
       - run: deploy/smoke.sh "${{ steps.deploy.outputs.url }}" | tee /tmp/smoke.log && tail -1 /tmp/smoke.log >> "$GITHUB_STEP_SUMMARY"

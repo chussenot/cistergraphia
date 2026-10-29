@@ -3,3 +3,7 @@ tmp
 .bundle/
 node_modules/
 __pycache__/
+infra/.terraform/
+infra/terraform.tfvars
+*.tfstate
+*.tfstate.*

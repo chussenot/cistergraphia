@@ -127,3 +127,14 @@ jobs:
       - run: deploy/smoke.sh http://127.0.0.1:8080 | tee /tmp/smoke.log && tail -1 /tmp/smoke.log >> "$GITHUB_STEP_SUMMARY"
       - run: docker logs web
         if: always()
+
+  # The infrastructure as code (infra/): formatted, and valid against the
+  # providers' schemas. No credentials: nothing is planned or applied here
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=infra fmt -check -diff
+      - run: terraform -chdir=infra init -backend=false -input=false
+      - run: terraform -chdir=infra validate
