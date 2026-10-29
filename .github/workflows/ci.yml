@@ -107,3 +107,23 @@ jobs:
       - run: npm install --no-save --no-package-lock playwright@1.56.1
       - run: npx playwright install --with-deps chromium
       - run: bundle exec rake ui:stability | tee /tmp/stability.log && tail -1 /tmp/stability.log >> "$GITHUB_STEP_SUMMARY"
+
+  # The container the site is served from (Dockerfile): built, run, and every
+  # page asked for (deploy/smoke.sh), so a change cannot break the image
+  # before the deploy workflow ships it
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: cistergraphia:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - run: docker run --detach --name web --publish 8080:8080 cistergraphia:ci
+      - run: deploy/smoke.sh http://127.0.0.1:8080 | tee /tmp/smoke.log && tail -1 /tmp/smoke.log >> "$GITHUB_STEP_SUMMARY"
+      - run: docker logs web
+        if: always()

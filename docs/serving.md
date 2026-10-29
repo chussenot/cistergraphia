@@ -36,6 +36,77 @@ every page down.
 **Health check:** `GET /up` answers `up` (200, never cached). It does not read a plate: a check
 that did would fail on a busy server and restart it for being busy.
 
+## Deploying to Cloud Run
+
+The site runs on Google Cloud Run, in `europe-west1`: one container per instance, none when nobody
+reads, HTTPS included, and a free tier that covers a game's traffic. The pieces:
+
+| Piece | What it does |
+|---|---|
+| `Dockerfile` | The app under Puma on port 8080, as a user with no privileges, without the development and test gems |
+| `deploy/smoke.sh BASE_URL` | Asks every page of a served Cistergraphia and fails at the first wrong answer. CI runs it against the container; the deploy runs it against the live service |
+| `deploy/gcp-setup.sh` | Everything a Google Cloud project needs, once (below) |
+| `.github/workflows/ci.yml`, job `container` | Builds the image and runs the smoke test on every change, so a broken image never reaches the deploy |
+| `.github/workflows/deploy.yml` | After CI passes on master: builds the image, pushes it to Artifact Registry, deploys it, runs the smoke test on the result |
+
+### Once: the project
+
+```
+PROJECT_ID=my-project deploy/gcp-setup.sh
+```
+
+Run it as an owner of the project, signed in to `gcloud`. It enables the APIs, makes the Artifact
+Registry repository, two service accounts and the Workload Identity Federation that lets the
+workflow deploy without any stored key, and prints five repository variables to set on GitHub.
+Running it again only adds what is missing.
+
+- **The runtime service account has no role.** The app calls no Google API, so it needs none. The
+  default compute account has Editor on the whole project, and a server that reads uploaded files
+  should not run as it.
+- **The deployer can do three things:** deploy to Cloud Run, push to the one repository, and act as
+  the runtime account. It can be used only by GitHub Actions running from this repository
+  (`assertion.repository == 'chussenot/cistergraphia'`).
+- **No key exists.** The workflow proves who it is with its OpenID token. Nothing to rotate, nothing
+  to leak.
+
+### Every deploy
+
+A merge to master runs CI; when CI is green, Deploy ships it. The service is deployed with:
+
+| Setting | Value | Why |
+|---|---|---|
+| CPU, memory | 1 vCPU, 512 MiB | A request is CPU-bound Ruby for up to 1.3 s. Half a vCPU would double it. A worker uses under 300 MB with the largest plate |
+| Concurrency | 3 | Matches `PUMA_THREADS=3`: three requests share the one vCPU inside Puma before a second instance starts |
+| Instances | 0 to 3 | None when nobody reads: the first reader of the day starts one (3 to 5 s, with CPU boost). Three at most: the bill is bounded |
+| Timeout | 60 s | The slowest request is under 2 s |
+| Startup CPU boost | on | A faster cold start, for nothing while idle |
+| Access | public, runtime account with no role | |
+
+**Cost.** Request-based billing, with the free tier of 180,000 vCPU-seconds, 360,000 GiB-seconds
+and 2 million requests a month. At about one vCPU-second per plate read, that is roughly 150,000
+plate reads a month before the first cent. Three instances running flat out all month would cost
+about $190, which is what `--max-instances=3` bounds. Region: `europe-west1` is tier 1 pricing and
+supports domain mappings; Paris (`europe-west9`) is tier 2 and does not.
+
+**The day's chapter** is drawn by each instance on its first request for it (0.1 to 0.6 s) and
+kept in memory. With instances that come and go, that happens a few times a day. It is the same
+plate every time: the drawing is seeded by the date.
+
+**Rollback:** `gcloud run services update-traffic cistergraphia --region europe-west1
+--to-revisions REVISION=100`. Every deploy is a revision; `gcloud run revisions list` names them.
+
+**A deploy by hand**, from a signed-in machine, without the workflow:
+`gcloud run deploy cistergraphia --source . --region europe-west1`. It builds the same Dockerfile
+with Cloud Build and uploads only what `.gcloudignore` allows.
+
+### A domain, and the rate limit
+
+Cloud Run gives `https://cistergraphia-….run.app`. For a domain of your own, map it in Cloud Run
+(Domain mappings, free, a Google-managed certificate; `europe-west1` supports it), then put
+Cloudflare's free plan in front, proxied: it caches the static files, hides the origin, and its one
+free rate-limiting rule is where the limits under "What to put in front" go. Cloud Run has no rate
+limiting of its own short of a load balancer and Cloud Armor, which cost more than the app.
+
 ## What a request costs
 
 Measured in-process (Rack::Test, production templates, one core) on plates of 100 and 500

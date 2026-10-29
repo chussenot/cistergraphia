@@ -1,0 +1,25 @@
+# What the image does not need: the app is app.rb, config.ru, config/, lib/,
+# web/, views/, public/ and the Gemfile (Dockerfile). Everything else is
+# development, test, documentation or the command line.
+.git
+.github
+.claude
+.bundle
+.dockerignore
+.gcloudignore
+.gitignore
+.rubocop.yml
+Dockerfile
+Procfile
+README.md
+Rakefile
+cistergraphia
+deploy
+docs
+experiments
+mise.toml
+node_modules
+test
+tmp
+__pycache__
+*.md
