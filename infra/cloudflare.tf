@@ -95,3 +95,67 @@ resource "cloudflare_zone_setting" "min_tls" {
   setting_id = "min_tls_version"
   value      = "1.2"
 }
+
+# Cloudflare's Free Managed Ruleset: the rules against what is widely
+# exploited (Log4j, Shellshock, the known scanners), the one managed ruleset
+# the free plan deploys. Not a defence the app relies on, a filter that costs
+# nothing in front of it. A zone that already has it must import it first
+# (docs/going-live.md): a phase has one entry point ruleset
+resource "cloudflare_ruleset" "managed_waf" {
+  count = local.fronted * (var.managed_waf ? 1 : 0)
+
+  zone_id     = var.cloudflare_zone_id
+  name        = "Cistergraphia: managed WAF"
+  description = "Cloudflare Free Managed Ruleset on every request"
+  kind        = "zone"
+  phase       = "http_request_firewall_managed"
+
+  rules = [{
+    ref         = "free_managed_ruleset"
+    description = "Cloudflare Free Managed Ruleset"
+    expression  = "true"
+    action      = "execute"
+    action_parameters = {
+      id = "77454fe2d30c4220b5701f6fdfb893ba"
+    }
+  }]
+}
+
+# The domain sends no mail, and says so: a receiver that checks refuses a
+# message forged in the site's name (a passphrase asked for by "the abbey").
+# No MX (the null MX of RFC 7505), SPF that allows no sender, DMARC that
+# rejects. Skipped when domain_sends_mail is set
+locals {
+  mail_locked = local.fronted == 1 && !var.domain_sends_mail ? 1 : 0
+}
+
+resource "cloudflare_dns_record" "null_mx" {
+  count = local.mail_locked
+
+  zone_id  = var.cloudflare_zone_id
+  name     = var.domain
+  type     = "MX"
+  content  = "."
+  priority = 0
+  ttl      = 3600
+}
+
+resource "cloudflare_dns_record" "spf" {
+  count = local.mail_locked
+
+  zone_id = var.cloudflare_zone_id
+  name    = var.domain
+  type    = "TXT"
+  content = "\"v=spf1 -all\""
+  ttl     = 3600
+}
+
+resource "cloudflare_dns_record" "dmarc" {
+  count = local.mail_locked
+
+  zone_id = var.cloudflare_zone_id
+  name    = "_dmarc.${var.domain}"
+  type    = "TXT"
+  content = "\"v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s\""
+  ttl     = 3600
+}

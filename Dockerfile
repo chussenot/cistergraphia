@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # Cistergraphia, as a container (docs/serving.md): the web app under Puma,
 # listening on PORT (8080), as a user with no privileges.
 #
@@ -7,10 +5,12 @@
 # extension) and copied into an image that has none. Development and test
 # gems are left out. Nothing of the app is built: it is Ruby, templates and
 # static files, copied as they are (what .dockerignore lets through).
+#
+# The base image is named by its digest as well as its tag: a tag can be
+# moved, a digest cannot, so the image built is the one that was reviewed.
+# Dependabot proposes the next one (tag and digest together).
 
-ARG RUBY_VERSION=4.0
-
-FROM ruby:${RUBY_VERSION}-slim AS gems
+FROM ruby:4.0.9-slim@sha256:e41d40671d359ccc3431371e0af7c6430bd1b3886b47ac0667443525b7dcec1a AS gems
 ENV BUNDLE_WITHOUT=development:test \
     BUNDLE_DEPLOYMENT=1 \
     BUNDLE_PATH=/usr/local/bundle \
@@ -23,7 +23,7 @@ COPY Gemfile Gemfile.lock ./
 RUN bundle install \
     && rm -rf "${BUNDLE_PATH}"/ruby/*/cache
 
-FROM ruby:${RUBY_VERSION}-slim
+FROM ruby:4.0.9-slim@sha256:e41d40671d359ccc3431371e0af7c6430bd1b3886b47ac0667443525b7dcec1a
 ENV RACK_ENV=production \
     BUNDLE_WITHOUT=development:test \
     BUNDLE_DEPLOYMENT=1 \

@@ -13,3 +13,9 @@ project_id = "my-project"
 # alert_email        = "you@example.com"
 # billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
 # budget_currency    = "EUR"
+
+# With a domain: the mail records that say the domain sends none, and
+# Cloudflare's Free Managed Ruleset (import it first if the zone has it:
+# docs/going-live.md). Both on by default.
+# domain_sends_mail = false
+# managed_waf       = true

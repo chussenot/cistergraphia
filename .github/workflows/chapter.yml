@@ -31,8 +31,10 @@ jobs:
   content:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           ruby-version: '4.0'
           bundler-cache: true

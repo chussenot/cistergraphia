@@ -61,7 +61,8 @@ run against a service Terraform did not make.
 1. **A bucket for the state**, once, by hand (the one thing Terraform cannot make for itself):
    ```
    gcloud storage buckets create gs://STATE_BUCKET --project PROJECT_ID --location europe-west1 \
-     --uniform-bucket-level-access && gcloud storage buckets update gs://STATE_BUCKET --versioning
+     --uniform-bucket-level-access --public-access-prevention \
+     && gcloud storage buckets update gs://STATE_BUCKET --versioning
    ```
 2. **Apply**, as a project owner signed in to `gcloud` (`gcloud auth application-default login`):
    ```
@@ -76,6 +77,9 @@ run against a service Terraform did not make.
 4. **Deploy once by hand** (Actions, Deploy, Run workflow), or merge to master. Until then the
    service runs Google's hello image.
 
+Every setting made by hand, on the three accounts, with the checks to run afterwards:
+[going-live.md](going-live.md).
+
 What Terraform makes, and why:
 
 - **The runtime service account has no role.** The app calls no Google API, so it needs none. The
@@ -83,11 +87,13 @@ What Terraform makes, and why:
   must not run as it.
 - **The deployer can do three things:** push to the one image repository, deploy a revision of the
   one service (`roles/run.developer` on the service, not the project), and let the service run as
-  the runtime account. GitHub Actions becomes it only from this repository
-  (`assertion.repository == "chussenot/cistergraphia"`), with its OpenID token. No key exists.
+  the runtime account. GitHub Actions becomes it only from this repository, with its OpenID
+  token. No key exists.
 - **GitHub becomes the deployer only from the Deploy workflow on `master`**: the OpenID token names
   the workflow file and the branch, and the federation's condition reads both. A workflow on any
-  other branch, or any other workflow, gets nothing.
+  other branch, or any other workflow, gets nothing. The repository is matched by its numeric id
+  and its owner's, not only by its name: a name can be given up and claimed by someone else,
+  whose token would then carry it; an id is never reused.
 - **The image repository keeps the ten most recent images**, drops any older than thirty days (an
   image is about 150 MB, and storage is billed), and never lets a tag be rewritten: what CI tested
   is what runs.
@@ -142,6 +148,14 @@ Workers Scripts (edit), Workers Routes (edit), Zone WAF (edit), Zone Settings (e
   ten seconds from one address, then blocked for ten (`rate_limit_posts_per_10s`). A reader makes
   a few a minute; ten in ten seconds is a script. It is the one rule the free plan includes.
 - **HTTPS is forced** on the zone, and TLS 1.2 at least: a passphrase travels in the request.
+- **Cloudflare's Free Managed Ruleset** runs on every request (`managed_waf`): the rules against
+  what is widely exploited, a filter the app does not rely on, at no cost in front of it.
+- **The domain sends no mail, and says so** (a null MX, SPF `-all`, DMARC `p=reject`, unless
+  `domain_sends_mail`): a message forged in the site's name, asking a reader for a passphrase,
+  is refused by every receiver that checks.
+- **The door drops the query string of a GET** (except on the chapter's pages, whose board reads
+  `rejoined=1`): no other page reads one, so `?x=1`, `?x=2`, ... would only be as many cache
+  misses, each a request the service has to answer.
 - **The back door is shut.** Behind a front door, the service answers only requests that show the
   door's key (`web/front_door.rb`): the Worker adds it to every request, the service reads it from
   Secret Manager, and its own `run.app` address answers 403 to everyone else. So the rate limit,
@@ -183,6 +197,10 @@ attacker can see is also what they cannot use:
 | Post plates in a loop | Run up the bill | Ten posts in ten seconds per address at the edge; `max_instances` on the service; the Worker's daily allowance; the budget's warnings |
 | Post a 32 MB body | Make the service read it | Refused by its length at the door (3 MB) and at the service (2 MB and a little) before a byte is parsed |
 | Take over a dependency | Ship it unnoticed | Dependabot proposes updates, CI tests them, and Trivy refuses an image with a fixable high or critical vulnerability |
+| Move a tag of an action, a base image, a scanner image | Run their code in the workflows | Every action is pinned to a commit, the base image and Trivy's image to a digest, every gem to the checksum in `Gemfile.lock`; Dependabot moves the pins, CI proves them |
+| Delete and re-register the repository's name, or the owner's | Become the deployer with the new repository's token | The federation matches the repository's and the owner's numeric ids, which are never reused |
+| Send mail in the site's name | Have it delivered | The zone publishes that the domain sends no mail (null MX, SPF `-all`, DMARC `p=reject`) |
+| Ask for a page with a changing query string | Miss the edge cache every time | The door drops the query string of every GET but the chapter's |
 | Read the Terraform state | Learn more than the door's key | Keep the bucket private: the key is the one secret in it. The Cloudflare token and the Google credentials never enter it |
 
 What the app itself does, wherever it runs: a strict Content-Security-Policy (first-party only),
@@ -195,15 +213,38 @@ no record of any message anywhere ([security-study.md](security-study.md) covers
 the internet in seconds and costs nothing; `--ingress all` reopens it. Or set `max_instances = 1`
 and apply.
 
-**What only you can set, on GitHub** (Settings): branch protection on `master` requiring the CI
-checks and a pull request; the `production` environment's deployment branch rule (`master` only);
-secret scanning and push protection (free on a public repository); and, if you want every action
-pinned to a commit rather than a tag, the "require actions to be pinned to a full-length commit
-SHA" policy, after pinning them (`pin-github-action` does it in one run; Dependabot keeps the pins
-current).
+**Read as an attacker would**, with the deployment's code in hand, the ways in were these, and
+what each meets:
 
-**The Cloudflare token** Terraform uses should be scoped to the one zone with the permissions
-listed above, and can be limited to your address and given an expiry. It is used only at apply.
+- *A shell on a CI runner* is had for the asking: a pull request from a fork runs the Dockerfile
+  and the suites. It meets a runner with no secret, a token that can only read, no identity token
+  (`id-token: write` is the deploy's alone), and a cache scope of its own. The deploy runs only
+  on master's own pushes. What would make a runner worth having is a tag of an action moved to
+  other code, which is why every action is a commit now; or a gem or an npm package replaced,
+  which the lockfile's checksums refuse (`npm install --ignore-scripts` runs nothing of
+  Playwright's at install).
+- *Code in the Ruby app* has no door: no `eval`, `system`, `Marshal` or `YAML.load` of anything
+  a request brings; the one `public_send` dispatches on a layout name checked against a list;
+  REXML reads the plate without external entities and under its expansion limits; JSON is parsed,
+  never evaluated; the templates are the app's own files. What a request can do is cost CPU for
+  up to 1.3 s, which the rate limit, `max_instances` and the budget bound. The gems in
+  `Gemfile.lock` have no open advisory (`bundler-audit`, checked at review; Dependabot and Trivy
+  keep checking).
+- *The Cloudflare account* is reached through its login or an API token. The token Terraform uses
+  exists for the apply, scoped to the one zone, limited to your address, expiring the same day
+  (going-live.md). The state holds the Worker's secret binding (the door's key), not the token.
+  The domain itself is the larger prize: with the name, a copy of Inscribe collects passphrases;
+  hence DNSSEC, the registrar's lock, and two-factor on the three accounts.
+- *The Google project* is reached through the federation (a run of `deploy.yml` on `master`, of
+  this repository by id), or through a reader of the state bucket, who learns the door's key and
+  nothing more. The deployer can deploy a revision of the one service and push to the one
+  repository; the service runs as an account that can read one secret.
+
+**What only you can set**, on GitHub, Google Cloud and Cloudflare, is listed in
+[going-live.md](going-live.md): the branch ruleset, the `production` environment's branch rule,
+the Actions policies (pinned actions required, fork runs approved, read-only tokens), secret
+scanning and push protection, code scanning; the state bucket's access; DNSSEC, the registrar's
+lock, the API token's scope and expiry.
 
 ## What a request costs
 

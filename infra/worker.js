@@ -13,8 +13,12 @@
 // - the edge cache for GET and HEAD, as each page's Cache-Control allows:
 //   the pages are the same for every reader, and a page served from the edge
 //   costs the service nothing
+// What it drops: the query string of a GET, except on the chapter's pages
+// (the board's rejoined=1). No other page reads one, so ?x=1, ?x=2, ... would
+// only be as many cache misses, each a request the service has to answer.
 const METHODS = new Set(['GET', 'HEAD', 'POST']);
 const MAX_BODY = 3 * 1024 * 1024;
+const QUERY_READ = /^\/chapter(\/|$)/;
 
 export default {
   async fetch(request, env) {
@@ -28,6 +32,7 @@ export default {
     const readerHost = url.host;
     url.host = env.ORIGIN_HOST;
     url.protocol = 'https:';
+    if (request.method !== 'POST' && !QUERY_READ.test(url.pathname)) url.search = '';
     const headers = new Headers(request.headers);
     headers.set('X-Forwarded-Host', readerHost);
     headers.set('X-Forwarded-Proto', 'https');

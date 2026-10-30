@@ -109,8 +109,11 @@ resource "google_service_account_iam_member" "deployer_runs_as_runtime" {
 # A run of the Deploy workflow, from the one repository and its master
 # branch, proves who it is with its OpenID token and becomes the deployer.
 # No other workflow, branch or repository can: the token names the workflow
-# file and the branch it ran on, and the condition reads them. Nothing is
-# made, stored or rotated
+# file and the branch it ran on, and the condition reads them. The
+# repository is matched by its numeric id as well as its name: a name can be
+# given up (the repository deleted or renamed) and claimed by someone else,
+# whose token would then carry it; the id is never reused. Nothing is made,
+# stored or rotated
 resource "google_iam_workload_identity_pool" "github" {
   workload_identity_pool_id = "github"
   display_name              = "GitHub Actions"
@@ -124,11 +127,14 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   display_name                       = "GitHub"
 
   attribute_mapping = {
-    "google.subject"       = "assertion.sub"
-    "attribute.repository" = "assertion.repository"
+    "google.subject"          = "assertion.sub"
+    "attribute.repository"    = "assertion.repository"
+    "attribute.repository_id" = "assertion.repository_id"
   }
   attribute_condition = join(" && ", [
     "assertion.repository == \"${var.github_repository}\"",
+    "assertion.repository_id == \"${var.github_repository_id}\"",
+    "assertion.repository_owner_id == \"${var.github_repository_owner_id}\"",
     "assertion.workflow_ref == \"${var.github_repository}/.github/workflows/deploy.yml@refs/heads/master\"",
   ])
 
@@ -140,7 +146,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
 resource "google_service_account_iam_member" "github_becomes_deployer" {
   service_account_id = google_service_account.deployer.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repository}"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository_id/${var.github_repository_id}"
 }
 
 # ---------- The service ----------

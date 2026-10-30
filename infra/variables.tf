@@ -21,6 +21,18 @@ variable "github_repository" {
   default     = "chussenot/cistergraphia"
 }
 
+variable "github_repository_id" {
+  description = "The repository's numeric id (curl -s https://api.github.com/repos/OWNER/NAME | jq .id). A name can be given up and claimed by someone else; the id cannot"
+  type        = string
+  default     = "128968334"
+}
+
+variable "github_repository_owner_id" {
+  description = "The owner's numeric id (the same call, .owner.id)"
+  type        = string
+  default     = "748507"
+}
+
 variable "domain" {
   description = "The site's domain on Cloudflare, served through the front door (a Worker). Empty: no Cloudflare, the run.app address only"
   type        = string
@@ -42,6 +54,18 @@ variable "cloudflare_zone_id" {
   description = "The Cloudflare zone of the domain (Overview of the zone, API section)"
   type        = string
   default     = ""
+}
+
+variable "domain_sends_mail" {
+  description = "Whether mail is ever sent from the domain. False: the zone says so (no MX, SPF -all, DMARC reject), and a phishing mail in the site's name is refused by the receivers that check"
+  type        = bool
+  default     = false
+}
+
+variable "managed_waf" {
+  description = "Deploy Cloudflare's Free Managed Ruleset on the zone (Log4j, Shellshock, the widely exploited). If the zone already has it (Security, WAF, Managed rules), import it first: docs/going-live.md"
+  type        = bool
+  default     = true
 }
 
 variable "rate_limit_posts_per_10s" {
