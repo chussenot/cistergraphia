@@ -78,6 +78,7 @@ PLATFORMS
 
 DEPENDENCIES
   erubi
+  json (>= 2.19.2)
   minitest
   puma
   rack (~> 3.2)

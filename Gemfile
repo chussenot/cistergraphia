@@ -3,6 +3,7 @@
 source 'https://rubygems.org'
 
 gem 'erubi' # ERB engine with HTML auto-escaping (escape_html: true)
+gem 'json', '>= 2.19.2' # The notebook's answers; below 2.19.2, CVE-2026-33210 (the image's base ships 2.18.0)
 gem 'puma'
 gem 'rack', '~> 3.2'
 gem 'rackup', '~> 2.3'
