@@ -54,4 +54,9 @@ check "a page not in the index" 404 'Erratum' "$base/nowhere"
 check "static files are served and cacheable" 200 'plate' "$base/css/app.css"
 grep -qi '^cache-control: .*max-age' "$tmp/headers" || { echo "FAIL the stylesheet is not cacheable" >&2; exit 1; }
 echo "ok   the stylesheet is cacheable"
+if [[ "$base" == https://* ]]; then
+  check "/ over HTTPS" 200 'action="/generate"' "$base/"
+  grep -qi '^strict-transport-security:' "$tmp/headers" || { echo "FAIL no Strict-Transport-Security over HTTPS" >&2; exit 1; }
+  echo "ok   the browser is told to stay on HTTPS"
+fi
 echo "All pages answer at $base"

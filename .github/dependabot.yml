@@ -1,0 +1,27 @@
+# What the site is built from, kept current (docs/serving.md): the gems, the
+# base image, the actions the workflows run, the Terraform providers. One
+# pull request a week per ecosystem at most, grouped, for CI to prove
+version: 2
+updates:
+  - package-ecosystem: bundler
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      gems:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: terraform
+    directory: /infra
+    schedule:
+      interval: weekly

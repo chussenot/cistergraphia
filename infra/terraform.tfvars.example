@@ -7,3 +7,9 @@ project_id = "my-project"
 # domain                = "cistergraphia.example"
 # cloudflare_account_id = "0123456789abcdef0123456789abcdef"
 # cloudflare_zone_id    = "0123456789abcdef0123456789abcdef"
+
+# Warnings before the bill (monitoring.tf): an address for the alerts, and the
+# billing account for a budget of monthly_budget a month (10 EUR by default).
+# alert_email        = "you@example.com"
+# billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
+# budget_currency    = "EUR"

@@ -31,9 +31,21 @@ env:
 jobs:
   cloud-run:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The production environment holds the variables, and may hold a rule
+    # that only master deploys. A CI run counts only when it was master's
+    # own push: never a pull request's, never a fork's (a branch named
+    # master in a fork would pass the branch filter alone)
+    environment:
+      name: production
+      url: ${{ vars.SITE_URL }}
     if: >-
       vars.GCP_PROJECT_ID != '' &&
-      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'master' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
     steps:
       - uses: actions/checkout@v5
         with:
@@ -60,9 +72,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ${{ steps.image.outputs.name }}:${{ github.event.workflow_run.head_sha || github.sha }}
-            ${{ steps.image.outputs.name }}:latest
+          # One tag, the commit's, never rewritten (the repository refuses):
+          # what CI tested is what runs
+          tags: ${{ steps.image.outputs.name }}:${{ github.event.workflow_run.head_sha || github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -85,4 +97,8 @@ jobs:
           image: ${{ steps.image.outputs.name }}:${{ github.event.workflow_run.head_sha || github.sha }}
           skip_default_labels: true
 
-      - run: deploy/smoke.sh "${{ steps.deploy.outputs.url }}" | tee /tmp/smoke.log && tail -1 /tmp/smoke.log >> "$GITHUB_STEP_SUMMARY"
+      # Through the front door when there is one (SITE_URL): behind it, the
+      # service's own address answers nothing without the key
+      - run: deploy/smoke.sh "${SITE_URL:-${{ steps.deploy.outputs.url }}}" | tee /tmp/smoke.log && tail -1 /tmp/smoke.log >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}

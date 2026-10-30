@@ -45,9 +45,9 @@ stands in front of it. The pieces:
 | Piece | What it does |
 |---|---|
 | `Dockerfile` | The app under Puma on port 8080, as a user with no privileges, without the development and test gems |
-| `infra/` | Terraform: the Google Cloud project (APIs, the image repository, two service accounts, the federation that lets GitHub deploy without a key, the service itself) and, with a domain, the Cloudflare front door |
+| `infra/` | Terraform: the Google Cloud project (APIs, the image repository, two service accounts, the federation that lets GitHub deploy without a key, the service itself, a budget and alerts) and, with a domain, the Cloudflare front door and the key the service demands behind it |
 | `deploy/smoke.sh BASE_URL` | Asks every page of a served Cistergraphia and fails at the first wrong answer. CI runs it against the container; the deploy runs it against the live service |
-| `.github/workflows/ci.yml` | Job `container` builds the image and runs the smoke test on every change; job `infra` checks the Terraform's format and validity against the providers' schemas |
+| `.github/workflows/ci.yml` | Job `container` builds the image, runs the smoke test on it and scans it for known vulnerabilities; job `infra` checks the Terraform's format and validity against the providers' schemas and scans it for misconfigurations |
 | `.github/workflows/deploy.yml` | After CI passes on master: builds the image, pushes it to Artifact Registry, deploys it as a new revision, runs the smoke test on the result |
 
 **Who owns what.** Terraform owns the shape of the service: CPU, memory, concurrency, scaling,
@@ -70,8 +70,9 @@ run against a service Terraform did not make.
    terraform init -backend-config="bucket=STATE_BUCKET"
    terraform apply
    ```
-3. **Set the four repository variables** that `terraform output github_variables` prints
-   (Settings, Secrets and variables, Actions, Variables). The Deploy workflow runs once they exist.
+3. **Make a `production` environment** on the repository (Settings, Environments) with a
+   deployment branch rule allowing `master` only, and **set the five variables** that
+   `terraform output github_variables` prints on it. The Deploy workflow runs once they exist.
 4. **Deploy once by hand** (Actions, Deploy, Run workflow), or merge to master. Until then the
    service runs Google's hello image.
 
@@ -84,8 +85,17 @@ What Terraform makes, and why:
   one service (`roles/run.developer` on the service, not the project), and let the service run as
   the runtime account. GitHub Actions becomes it only from this repository
   (`assertion.repository == "chussenot/cistergraphia"`), with its OpenID token. No key exists.
-- **The image repository keeps the ten most recent images** and drops any older than thirty days:
-  an image is about 150 MB, and storage is billed.
+- **GitHub becomes the deployer only from the Deploy workflow on `master`**: the OpenID token names
+  the workflow file and the branch, and the federation's condition reads both. A workflow on any
+  other branch, or any other workflow, gets nothing.
+- **The image repository keeps the ten most recent images**, drops any older than thirty days (an
+  image is about 150 MB, and storage is billed), and never lets a tag be rewritten: what CI tested
+  is what runs.
+- **A budget and two alerts**, when `alert_email` (and, for the budget, `billing_account_id`) is
+  set: warnings at half, nine tenths and the line of `monthly_budget` (10 EUR), by spend and by
+  forecast; an alert when the service answers with errors; an alert when every instance has been
+  busy for five minutes, which is success or abuse. The budget warns and stops nothing: the caps
+  are below.
 - **The service:**
 
   | Setting | Value | Why |
@@ -95,6 +105,7 @@ What Terraform makes, and why:
   | Instances | 0 to 3 | None when nobody reads: the first reader of the day starts one (3 to 5 s, with CPU boost). Three at most: the bill is bounded |
   | CPU | only while a request runs, boosted at startup | An idle instance costs nothing; a cold start is shorter |
   | Timeout | 60 s | The slowest request is under 2 s |
+  | Probes | `/up`, at start and every 30 s | A revision takes traffic only once it answers; an instance that stops answering is replaced |
   | Access | public | |
   | Deletion protection | off | Nothing is stored in the service: a destroy loses no plate |
 
@@ -130,19 +141,69 @@ Workers Scripts (edit), Workers Routes (edit), Zone WAF (edit), Zone Settings (e
 - **The rate limit** the section below asks for: posts to `/generate`, `/decode` and `/ask`, ten in
   ten seconds from one address, then blocked for ten (`rate_limit_posts_per_10s`). A reader makes
   a few a minute; ten in ten seconds is a script. It is the one rule the free plan includes.
-- **HTTPS is forced** on the zone: a passphrase travels in the request.
-- **What it does not do.** The `run.app` address stays reachable, behind no rate limit: it is the
-  address the Deploy workflow smoke-tests. Closing it would need a load balancer in front of Cloud
-  Run, which costs more than the app. For a game, the open back door is fine.
+- **HTTPS is forced** on the zone, and TLS 1.2 at least: a passphrase travels in the request.
+- **The back door is shut.** Behind a front door, the service answers only requests that show the
+  door's key (`web/front_door.rb`): the Worker adds it to every request, the service reads it from
+  Secret Manager, and its own `run.app` address answers 403 to everyone else. So the rate limit,
+  the body limit and the edge cache cannot be walked around. `/up` stays open for the probes. The
+  Deploy workflow smoke-tests through the door (`SITE_URL`). To rotate the key:
+  `terraform taint 'random_password.front_door_key[0]' && terraform apply`, then deploy once (a new
+  revision reads the new version).
+- **The door refuses** what the app has no use for before Cloud Run is asked: methods other than
+  GET, HEAD and POST, and bodies over 3 MB.
+- **The pages are served from the edge.** The leaves (Inscribe, Read, About) say they may be kept
+  five minutes, the day's chapter until midnight, the static files an hour; the Worker lets
+  Cloudflare keep them. A page served from the edge costs the service nothing, in CPU or in egress.
+  The pages that carry a plate are `no-store` and never kept.
+- **A daily allowance.** The free plan serves 100,000 Worker requests a day, then answers errors
+  until midnight UTC. For a game that is far more than a day sees, and it is also the one cap the
+  edge puts on what reaches the service in a day.
 
 Without a domain, none of this is made, and the site is its `run.app` address.
 
 ### Changing the infrastructure
 
 Edit `infra/`, `terraform plan`, read the plan, `terraform apply`. CI checks the format and the
-validity of every change against the providers' schemas; it never plans or applies, so the
-credentials stay on your machine. The lock file (`infra/.terraform.lock.hcl`) pins the providers;
-update it with `terraform init -upgrade` on purpose.
+validity of every change against the providers' schemas and scans it for misconfigurations; it
+never plans or applies, so the credentials stay on your machine. The lock file
+(`infra/.terraform.lock.hcl`) pins the providers; update it with `terraform init -upgrade` on
+purpose, or let Dependabot propose it.
+
+### Security: what is protected, and from what
+
+The code is public; the site must be safe with every line of its deployment read. What an
+attacker can see is also what they cannot use:
+
+| They can | They cannot | Because |
+|---|---|---|
+| Read the workflows and the Terraform | Deploy, or run anything as the project | No key exists. The deployer is a Google account that only a run of `deploy.yml` on `master` of this repository can become, and the pool's condition says so |
+| Open a pull request from a fork | Have it deployed | The deploy runs on CI runs that were master's own push, never a pull request's; a fork's workflow has no identity token anyway |
+| Push a commit to `master` (with write access) | Deploy an untested image | The deploy waits for CI to pass; an image tag, once pushed, is never rewritten |
+| Find the `run.app` address (it is in the public logs) | Reach the service around the front door | It answers nothing without the door's key |
+| Post plates in a loop | Run up the bill | Ten posts in ten seconds per address at the edge; `max_instances` on the service; the Worker's daily allowance; the budget's warnings |
+| Post a 32 MB body | Make the service read it | Refused by its length at the door (3 MB) and at the service (2 MB and a little) before a byte is parsed |
+| Take over a dependency | Ship it unnoticed | Dependabot proposes updates, CI tests them, and Trivy refuses an image with a fixable high or critical vulnerability |
+| Read the Terraform state | Learn more than the door's key | Keep the bucket private: the key is the one secret in it. The Cloudflare token and the Google credentials never enter it |
+
+What the app itself does, wherever it runs: a strict Content-Security-Policy (first-party only),
+no referrer, `nosniff`, no camera or microphone, HSTS once over HTTPS, `no-store` on every page
+that carried a message or a passphrase, a 500-character limit on messages and 2 MB on plates, and
+no record of any message anywhere ([security-study.md](security-study.md) covers the cipher).
+
+**The kill switch.** If the budget's warning comes and the service is being abused:
+`gcloud run services update cistergraphia --region europe-west1 --ingress internal` closes it to
+the internet in seconds and costs nothing; `--ingress all` reopens it. Or set `max_instances = 1`
+and apply.
+
+**What only you can set, on GitHub** (Settings): branch protection on `master` requiring the CI
+checks and a pull request; the `production` environment's deployment branch rule (`master` only);
+secret scanning and push protection (free on a public repository); and, if you want every action
+pinned to a commit rather than a tag, the "require actions to be pinned to a full-length commit
+SHA" policy, after pinning them (`pin-github-action` does it in one run; Dependabot keeps the pins
+current).
+
+**The Cloudflare token** Terraform uses should be scoped to the one zone with the permissions
+listed above, and can be limited to your address and given an expiry. It is used only at apply.
 
 ## What a request costs
 

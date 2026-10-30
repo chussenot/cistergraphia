@@ -7,6 +7,8 @@
 # image runs: it deploys a new revision with the image alone, and every other
 # setting carries over. So the image is the one thing Terraform ignores.
 
+data "google_project" "current" {}
+
 locals {
   apis = [
     "run.googleapis.com",
@@ -14,6 +16,9 @@ locals {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "sts.googleapis.com",
+    "secretmanager.googleapis.com",
+    "monitoring.googleapis.com",
+    "billingbudgets.googleapis.com",
   ]
 }
 
@@ -26,13 +31,18 @@ resource "google_project_service" "api" {
 
 # ---------- The images ----------
 
-# One image per deploy, tagged with its commit. The ten most recent are kept;
+# One image per deploy, tagged with its commit, and a tag once pushed is
+# never rewritten: what CI tested is what runs. The ten most recent are kept;
 # older ones go: a plate's image is about 150 MB, and storage is billed
 resource "google_artifact_registry_repository" "images" {
   location      = var.region
   repository_id = var.service_name
   format        = "DOCKER"
   description   = "Cistergraphia images, pushed by the Deploy workflow"
+
+  docker_config {
+    immutable_tags = true
+  }
 
   cleanup_policy_dry_run = false
 
@@ -59,7 +69,8 @@ resource "google_artifact_registry_repository" "images" {
 
 # The app runs as this account, which has no role at all: it calls no Google
 # API. The default compute account has Editor on the whole project, and a
-# server that reads uploaded files must not run as it
+# server that reads uploaded files must not run as it. Behind a front door
+# it may read one secret, the door's key (cloudflare.tf)
 resource "google_service_account" "runtime" {
   account_id   = "${var.service_name}-run"
   display_name = "Cistergraphia runtime (no role)"
@@ -95,8 +106,11 @@ resource "google_service_account_iam_member" "deployer_runs_as_runtime" {
 
 # ---------- GitHub Actions, without a key ----------
 
-# A workflow run from the one repository proves who it is with its OpenID
-# token and becomes the deployer. Nothing is made, stored or rotated
+# A run of the Deploy workflow, from the one repository and its master
+# branch, proves who it is with its OpenID token and becomes the deployer.
+# No other workflow, branch or repository can: the token names the workflow
+# file and the branch it ran on, and the condition reads them. Nothing is
+# made, stored or rotated
 resource "google_iam_workload_identity_pool" "github" {
   workload_identity_pool_id = "github"
   display_name              = "GitHub Actions"
@@ -113,7 +127,10 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "google.subject"       = "assertion.sub"
     "attribute.repository" = "assertion.repository"
   }
-  attribute_condition = "assertion.repository == \"${var.github_repository}\""
+  attribute_condition = join(" && ", [
+    "assertion.repository == \"${var.github_repository}\"",
+    "assertion.workflow_ref == \"${var.github_repository}/.github/workflows/deploy.yml@refs/heads/master\"",
+  ])
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
@@ -130,10 +147,11 @@ resource "google_service_account_iam_member" "github_becomes_deployer" {
 
 # One vCPU and three threads, as config/puma.rb runs it: a request is
 # CPU-bound Ruby for up to 1.3 s, and three share the core inside Puma before
-# a second instance starts. No instance when nobody reads; three at most, so
-# the bill is bounded. The CPU is given only while a request runs, with a
-# boost at startup: the first reader of the day waits a few seconds, and an
-# idle instance costs nothing.
+# a second instance starts. No instance when nobody reads; max_instances at
+# most, so the bill is bounded. The CPU is given only while a request runs,
+# with a boost at startup: the first reader of the day waits a few seconds,
+# and an idle instance costs nothing. A revision takes traffic only once it
+# answers /up, and an instance that stops answering is replaced.
 resource "google_cloud_run_v2_service" "web" {
   name                = var.service_name
   location            = var.region
@@ -147,7 +165,7 @@ resource "google_cloud_run_v2_service" "web" {
 
     scaling {
       min_instance_count = 0
-      max_instance_count = 3
+      max_instance_count = var.max_instances
     }
 
     containers {
@@ -167,6 +185,27 @@ resource "google_cloud_run_v2_service" "web" {
         startup_cpu_boost = true
       }
 
+      startup_probe {
+        http_get {
+          path = "/up"
+          port = 8080
+        }
+        initial_delay_seconds = 0
+        period_seconds        = 1
+        timeout_seconds       = 1
+        failure_threshold     = 30
+      }
+
+      liveness_probe {
+        http_get {
+          path = "/up"
+          port = 8080
+        }
+        period_seconds    = 30
+        timeout_seconds   = 2
+        failure_threshold = 3
+      }
+
       env {
         name  = "RACK_ENV"
         value = "production"
@@ -178,6 +217,21 @@ resource "google_cloud_run_v2_service" "web" {
       env {
         name  = "WEB_CONCURRENCY"
         value = "0"
+      }
+
+      # Behind a front door, the key it must show (cloudflare.tf), read from
+      # the secret at each instance's start: a new key needs a new revision
+      dynamic "env" {
+        for_each = local.fronted == 1 ? [1] : []
+        content {
+          name = "FRONT_DOOR_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.front_door_key[0].secret_id
+              version = "latest"
+            }
+          }
+        }
       }
     }
   }
@@ -192,7 +246,7 @@ resource "google_cloud_run_v2_service" "web" {
     ]
   }
 
-  depends_on = [google_project_service.api]
+  depends_on = [google_project_service.api, google_secret_manager_secret_iam_member.runtime_reads_key]
 }
 
 resource "google_cloud_run_v2_service_iam_member" "everyone_reads" {
@@ -200,4 +254,46 @@ resource "google_cloud_run_v2_service_iam_member" "everyone_reads" {
   name     = google_cloud_run_v2_service.web.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+# ---------- The front door's key ----------
+
+# Behind a front door the service answers only requests that show the key
+# (web/front_door.rb): its own run.app address is then no way around the
+# rate limit. The key is drawn here, kept in Secret Manager, and read by the
+# runtime account alone (the one role it has). It is also in the Terraform
+# state: keep the state bucket private. To rotate: taint the password, apply,
+# deploy once (a new revision reads the new version)
+resource "random_password" "front_door_key" {
+  count = local.fronted
+
+  length  = 40
+  special = false
+}
+
+resource "google_secret_manager_secret" "front_door_key" {
+  count = local.fronted
+
+  secret_id = "${var.service_name}-front-door-key"
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [google_project_service.api]
+}
+
+resource "google_secret_manager_secret_version" "front_door_key" {
+  count = local.fronted
+
+  secret      = google_secret_manager_secret.front_door_key[0].id
+  secret_data = random_password.front_door_key[0].result
+}
+
+resource "google_secret_manager_secret_iam_member" "runtime_reads_key" {
+  count = local.fronted
+
+  secret_id = google_secret_manager_secret.front_door_key[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = google_service_account.runtime.member
 }

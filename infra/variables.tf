@@ -49,3 +49,33 @@ variable "rate_limit_posts_per_10s" {
   type        = number
   default     = 10
 }
+
+variable "max_instances" {
+  description = "Instances at most: the bound on the bill. One costs about $63 a month running flat out; three, about $190"
+  type        = number
+  default     = 3
+}
+
+variable "alert_email" {
+  description = "Where the budget's warnings and the service's alerts go (monitoring.tf). Empty: no alert is made"
+  type        = string
+  default     = ""
+}
+
+variable "billing_account_id" {
+  description = "The billing account the project is on (XXXXXX-XXXXXX-XXXXXX), for the budget; needs Billing Account Costs Manager to apply. Empty: no budget"
+  type        = string
+  default     = ""
+}
+
+variable "monthly_budget" {
+  description = "The budget a month, in budget_currency: warnings at half, nine tenths, the line, and the forecast"
+  type        = number
+  default     = 10
+}
+
+variable "budget_currency" {
+  description = "The billing account's currency: a budget in another is refused"
+  type        = string
+  default     = "EUR"
+}

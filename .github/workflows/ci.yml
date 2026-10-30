@@ -127,6 +127,11 @@ jobs:
       - run: deploy/smoke.sh http://127.0.0.1:8080 | tee /tmp/smoke.log && tail -1 /tmp/smoke.log >> "$GITHUB_STEP_SUMMARY"
       - run: docker logs web
         if: always()
+      # What the image carries (the base image's packages, the gems): no known
+      # vulnerability of high or critical severity that has a fix
+      - run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.1
+          image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed --scanners vuln cistergraphia:ci
 
   # The infrastructure as code (infra/): formatted, and valid against the
   # providers' schemas. No credentials: nothing is planned or applied here
@@ -138,3 +143,8 @@ jobs:
       - run: terraform -chdir=infra fmt -check -diff
       - run: terraform -chdir=infra init -backend=false -input=false
       - run: terraform -chdir=infra validate
+      # The Terraform read as a security reviewer would (.trivyignore names
+      # what is meant, and why)
+      - run: >-
+          docker run --rm -v "$PWD:/src:ro" -w /src aquasec/trivy:0.76.1
+          config --exit-code 1 --severity HIGH,CRITICAL infra
