@@ -1,0 +1,4 @@
+# For a deploy from source (gcloud run deploy --source .): upload what the
+# Dockerfile needs, as .dockerignore says, and the Dockerfile itself
+#!include:.dockerignore
+!Dockerfile

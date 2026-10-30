@@ -78,6 +78,59 @@ class AppTest < Minitest::Test
     Thread.current[:parses] = nil
   end
 
+  def test_the_leaves_may_be_kept_a_while_and_say_so
+    %w[/ /decode /about].each do |path|
+      get path
+
+      assert_includes last_response.headers['Cache-Control'], 'max-age=300', path
+      assert_includes last_response.headers['Cache-Control'], 'public', path
+    end
+  end
+
+  def test_over_https_the_browser_is_told_to_stay_there
+    get '/', {}, 'HTTPS' => 'on'
+
+    assert_equal 'max-age=31536000; includeSubDomains', last_response.headers['Strict-Transport-Security']
+    get '/'
+
+    assert_nil last_response.headers['Strict-Transport-Security']
+  end
+
+  def test_a_request_larger_than_any_plate_is_refused_before_it_is_read
+    post '/decode', {}, 'CONTENT_LENGTH' => (CistergraphiaApp::MAX_SVG_BYTES + (65 * 1024)).to_s,
+                        'CONTENT_TYPE' => 'application/x-www-form-urlencoded'
+
+    assert_equal 413, last_response.status
+    assert_includes last_response.body, 'larger than any plate'
+  end
+
+  # Behind the front door (FRONT_DOOR_KEY set), only a request through it is
+  # answered: the key in its header; the probe's /up open
+  def test_behind_the_front_door_only_a_request_with_the_key_is_answered
+    door = FrontDoor.new(app, 'abbey-of-molesme')
+    session = Rack::Test::Session.new(door)
+    session.get '/'
+
+    assert_equal 403, session.last_response.status
+    session.get '/up'
+
+    assert_predicate session.last_response, :ok?
+    session.get '/', {}, 'HTTP_X_FRONT_DOOR_KEY' => 'abbey-of-molesme'
+
+    assert_predicate session.last_response, :ok?
+    session.get '/', {}, 'HTTP_X_FRONT_DOOR_KEY' => 'abbey-of-molesmf'
+
+    assert_equal 403, session.last_response.status
+  end
+
+  def test_without_a_key_every_door_is_open
+    open = FrontDoor.new(app, '')
+    session = Rack::Test::Session.new(open)
+    session.get '/'
+
+    assert_predicate session.last_response, :ok?
+  end
+
   def test_results_carrying_messages_are_never_cached
     post '/generate', message: 'hello', mode: 'secret', passphrase: 'abbey of molesme'
 

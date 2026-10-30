@@ -1,0 +1,105 @@
+name: Deploy
+
+# Ships master to Cloud Run once CI has passed on it (docs/serving.md): the
+# image is built here, pushed to Artifact Registry and deployed, then every
+# page of the live service is asked for (deploy/smoke.sh).
+#
+# The service itself is Terraform's (infra/): its CPU, memory, scaling and
+# account are set there, and this workflow changes one thing, the image.
+# Nothing runs until the GitHub variables are set (terraform output prints
+# them): a fork, or the repository before its project exists, stays green.
+# No key is stored anywhere: the job proves who it is to Google with its
+# OpenID token (Workload Identity Federation).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  SERVICE: cistergraphia
+
+jobs:
+  cloud-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The production environment holds the variables, and may hold a rule
+    # that only master deploys. A CI run counts only when it was master's
+    # own push: never a pull request's, never a fork's (a branch named
+    # master in a fork would pass the branch filter alone)
+    environment:
+      name: production
+      url: ${{ vars.SITE_URL }}
+    if: >-
+      vars.GCP_PROJECT_ID != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'master' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - id: auth
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ${{ vars.GCP_REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - id: image
+        run: echo "name=${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.SERVICE }}/web" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          push: true
+          # One tag, the commit's, never rewritten (the repository refuses):
+          # what CI tested is what runs
+          tags: ${{ steps.image.outputs.name }}:${{ github.event.workflow_run.head_sha || github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The service must exist, as Terraform made it: a deploy that created
+      # it would run as the default account, with Editor on the project
+      - run: |
+          gcloud run services describe "$SERVICE" --region "${{ vars.GCP_REGION }}" --project "${{ vars.GCP_PROJECT_ID }}" \
+            --format 'value(name)' >/dev/null \
+            || { echo "::error::No service $SERVICE in ${{ vars.GCP_REGION }}: apply infra/ first (docs/serving.md)"; exit 1; }
+
+      # Only the image: every other setting carries over from the revision
+      # Terraform shaped. No labels of the action's own, which Terraform
+      # would see as drift
+      - id: deploy
+        uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2.7.6
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ vars.GCP_REGION }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          image: ${{ steps.image.outputs.name }}:${{ github.event.workflow_run.head_sha || github.sha }}
+          skip_default_labels: true
+
+      # Through the front door when there is one (SITE_URL): behind it, the
+      # service's own address answers nothing without the key
+      - run: deploy/smoke.sh "${SITE_URL:-${{ steps.deploy.outputs.url }}}" | tee /tmp/smoke.log && tail -1 /tmp/smoke.log >> "$GITHUB_STEP_SUMMARY"
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}

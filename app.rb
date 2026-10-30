@@ -44,6 +44,9 @@ require_relative 'web/reader_game'
 require_relative 'web/figures'
 require_relative 'web/chapter'
 require_relative 'web/chapter_page'
+require_relative 'web/body_limit'
+require_relative 'web/front_door'
+require_relative 'web/leaf_headers'
 
 class CistergraphiaApp < Sinatra::Base
   MAX_MESSAGE_LENGTH = 500 # ~1000 symbols, a 32x32 grid
@@ -53,12 +56,16 @@ class CistergraphiaApp < Sinatra::Base
                              "form-action 'self'", "frame-ancestors 'none'"].join('; ')
 
   helpers ViewHelpers, BenchHelpers, TrayHelpers, Figures, FormParams, Refusals, PlateInput, ReaderGame,
-          ChapterPage
+          ChapterPage, LeafHeaders
 
   # Pages and assets go compressed to a browser that accepts it: the scripts and
   # styles weigh a quarter of their raw size on the wire (the behaviour suite's
   # budget is on what is transferred: docs/quality.md)
   use Rack::Deflater
+  # Refused before a byte is parsed: a body larger than any plate, and, behind
+  # the front door (docs/serving.md), a request that did not come through it
+  use BodyLimit, MAX_SVG_BYTES + (64 * 1024)
+  use FrontDoor
 
   configure do
     set :root, __dir__
@@ -78,13 +85,7 @@ class CistergraphiaApp < Sinatra::Base
     also_reload File.join(__dir__, 'web/**/*.rb')
   end
 
-  before do
-    headers 'Content-Security-Policy' => CONTENT_SECURITY_POLICY,
-            'Referrer-Policy' => 'no-referrer',
-            'X-Content-Type-Options' => 'nosniff',
-            'Permissions-Policy' => 'camera=(), microphone=(), geolocation=()'
-    cache_control :no_store if request.post?
-  end
+  before { leaf_headers } # web/leaf_headers.rb: the CSP, HSTS, how long a page may be kept
 
   # A plate read in the request is not kept past it (SVG::Parsed)
   after { Cistergraphia::SVG::Parsed.forget }

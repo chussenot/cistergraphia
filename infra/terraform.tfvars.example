@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars (which git ignores) and fill in.
+project_id = "my-project"
+# region     = "europe-west1"
+
+# With a domain on Cloudflare: the front door, the rate limit, HTTPS forced.
+# Leave out for the run.app address alone.
+# domain                = "cistergraphia.example"
+# cloudflare_account_id = "0123456789abcdef0123456789abcdef"
+# cloudflare_zone_id    = "0123456789abcdef0123456789abcdef"
+
+# Warnings before the bill (monitoring.tf): an address for the alerts, and the
+# billing account for a budget of monthly_budget a month (10 EUR by default).
+# alert_email        = "you@example.com"
+# billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
+# budget_currency    = "EUR"
+
+# With a domain: the mail records that say the domain sends none, and
+# Cloudflare's Free Managed Ruleset (import it first if the zone has it:
+# docs/going-live.md). Both on by default.
+# domain_sends_mail = false
+# managed_waf       = true

@@ -22,8 +22,10 @@ jobs:
       matrix:
         ruby: ['3.3', '3.4', '4.0']
     steps:
-      - uses: actions/checkout@v5
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
@@ -37,8 +39,10 @@ jobs:
   cryptanalysis:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           ruby-version: '4.0'
           bundler-cache: true
@@ -54,16 +58,18 @@ jobs:
       matrix:
         browser: [chromium, firefox, webkit]
     steps:
-      - uses: actions/checkout@v5
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           ruby-version: '4.0'
           bundler-cache: true
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-1.56.1-${{ matrix.browser }}
-      - run: npm install --no-save --no-package-lock playwright@1.56.1 axe-core@4.10.2
+      - run: npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1 axe-core@4.10.2
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: bundle exec rake ui:play | tee /tmp/play.log && tail -1 /tmp/play.log >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -78,16 +84,18 @@ jobs:
       matrix:
         browser: [chromium, firefox, webkit]
     steps:
-      - uses: actions/checkout@v5
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           ruby-version: '4.0'
           bundler-cache: true
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-1.56.1-${{ matrix.browser }}
-      - run: npm install --no-save --no-package-lock playwright@1.56.1
+      - run: npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: bundle exec rake ui:e2e | tee /tmp/e2e.log && tail -1 /tmp/e2e.log >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -99,11 +107,58 @@ jobs:
   stability:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           ruby-version: '4.0'
           bundler-cache: true
-      - run: npm install --no-save --no-package-lock playwright@1.56.1
+      - run: npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
       - run: npx playwright install --with-deps chromium
       - run: bundle exec rake ui:stability | tee /tmp/stability.log && tail -1 /tmp/stability.log >> "$GITHUB_STEP_SUMMARY"
+
+  # The container the site is served from (Dockerfile): built, run, and every
+  # page asked for (deploy/smoke.sh), so a change cannot break the image
+  # before the deploy workflow ships it
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          load: true
+          tags: cistergraphia:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - run: docker run --detach --name web --publish 8080:8080 cistergraphia:ci
+      - run: deploy/smoke.sh http://127.0.0.1:8080 | tee /tmp/smoke.log && tail -1 /tmp/smoke.log >> "$GITHUB_STEP_SUMMARY"
+      - run: docker logs web
+        if: always()
+      # What the image carries (the base image's packages, the gems): no known
+      # vulnerability of high or critical severity that has a fix
+      - run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+          image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed --scanners vuln cistergraphia:ci
+
+  # The infrastructure as code (infra/): formatted, and valid against the
+  # providers' schemas. No credentials: nothing is planned or applied here
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      - run: terraform -chdir=infra fmt -check -diff
+      - run: terraform -chdir=infra init -backend=false -input=false
+      - run: terraform -chdir=infra validate
+      # The Terraform read as a security reviewer would (.trivyignore names
+      # what is meant, and why)
+      - run: >-
+          docker run --rm -v "$PWD:/src:ro" -w /src ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+          config --exit-code 1 --severity HIGH,CRITICAL infra

@@ -1,0 +1,50 @@
+# Cistergraphia, as a container (docs/serving.md): the web app under Puma,
+# listening on PORT (8080), as a user with no privileges.
+#
+# Two stages: the gems are built where a compiler is (Puma has a native
+# extension) and copied into an image that has none. Development and test
+# gems are left out. Nothing of the app is built: it is Ruby, templates and
+# static files, copied as they are (what .dockerignore lets through).
+#
+# The base image is named by its digest as well as its tag: a tag can be
+# moved, a digest cannot, so the image built is the one that was reviewed.
+# Dependabot proposes the next one (tag and digest together).
+
+FROM ruby:4.0.9-slim@sha256:e41d40671d359ccc3431371e0af7c6430bd1b3886b47ac0667443525b7dcec1a AS gems
+ENV BUNDLE_WITHOUT=development:test \
+    BUNDLE_DEPLOYMENT=1 \
+    BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_JOBS=4
+RUN apt-get update -qq \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY Gemfile Gemfile.lock ./
+RUN bundle install \
+    && rm -rf "${BUNDLE_PATH}"/ruby/*/cache
+
+FROM ruby:4.0.9-slim@sha256:e41d40671d359ccc3431371e0af7c6430bd1b3886b47ac0667443525b7dcec1a
+ENV RACK_ENV=production \
+    BUNDLE_WITHOUT=development:test \
+    BUNDLE_DEPLOYMENT=1 \
+    BUNDLE_PATH=/usr/local/bundle \
+    PORT=8080 \
+    PUMA_THREADS=3 \
+    WEB_CONCURRENCY=0
+RUN groupadd --system --gid 1000 app \
+    && useradd --system --uid 1000 --gid app --create-home app
+# The json gem the base image ships (2.18.0) has CVE-2026-33210; the app runs
+# on the Gemfile's (>= 2.19.2, in the bundle). The old one is taken out, so
+# that neither the app nor the image scan (ci.yml) can find it.
+RUN (gem uninstall json --all --ignore-dependencies --executables --force >/dev/null 2>&1 || true) \
+    && rm -f /usr/local/lib/ruby/gems/*/specifications/json-*.gemspec \
+             /usr/local/lib/ruby/gems/*/specifications/default/json-*.gemspec \
+    && ! gem list --installed --exact json --version 2.18.0 >/dev/null
+WORKDIR /app
+COPY --from=gems /usr/local/bundle /usr/local/bundle
+COPY --chown=app:app . .
+# The app's json is the fixed one (the bundle's, not the base image's)
+RUN bundle exec ruby -e 'require "json"; v = Gem::Version.new(JSON::VERSION); abort "json #{v} is below 2.19.2" unless v >= Gem::Version.new("2.19.2")'
+USER app
+EXPOSE 8080
+CMD ["bundle", "exec", "puma", "-C", "config/puma.rb", "config.ru"]
