@@ -78,6 +78,12 @@ module Cistergraphia
       [WIDTH - x1, HEIGHT - y1, WIDTH - x2, HEIGHT - y2]
     end
 
+    # The number a sign reads as once turned half round: its units trade
+    # places with its thousands, its tens with its hundreds
+    def turned(num)
+      read(strokes(num).map { |stroke| turn(stroke) })
+    end
+
     # Turns the strokes of one symbol (relative to its origin) back into a number
     def read(strokes)
       strokes = strokes.map(&CANONICAL)
