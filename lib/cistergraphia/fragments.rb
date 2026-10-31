@@ -146,10 +146,23 @@ module Cistergraphia
 
         damage = weathered ? Weathering.weather(sequence, random: random) : {}
         pieces = Breaking.cut(Integer.sqrt(sequence.size), random)
-        svg = Tray.render(sequence, layout, pieces, random, damage)
-        return [sequence, svg, pieces, damage] if Join.all(read(svg), Layout::KEYLESS).one?
+        svg, fragments = drawn(sequence, layout, pieces, random, damage)
+        return [sequence, svg, pieces, damage] if Join.all(fragments, Layout::KEYLESS).one?
       end
       raise Error, 'Could not break this plate so that it rejoins one way only'
+    end
+
+    # [the tray's document, its fragments as #read would read them back]:
+    # whether a new plate rejoins one way only is asked of the fragments it
+    # was drawn from, not of its file (reading the file back cost twenty
+    # times the search). The tray is drawn all the same, before the
+    # question: it takes from the random, and a seeded plate stays the same
+    def drawn(sequence, layout, pieces, random, damage = {})
+      size = Integer.sqrt(sequence.size)
+      tray = Tray.tray_below(size, layout)
+      laid = Tray.lay(pieces, [sequence, damage], layout, tray, random)
+      [Tray.document(tray.room + (2 * BOARD), tray.bottom + BOARD, Tray.defs(size, layout, damage), laid.map(&:first)),
+       laid.map { |_, signs| Reading.of_signs(signs) }]
     end
 
     def refuse(layout)
@@ -253,6 +266,21 @@ module Cistergraphia
 
       def turned(lines)
         lines.map { |stroke| Glyphs.turn(stroke) }
+      end
+
+      # The fragment #fragment reads from a group, from the signs the group
+      # was drawn from (Tray.signs), as the file gives them back
+      def of_signs(signs)
+        cells = signs.to_h { |sign| [[sign.row, sign.col], sign_reading(sign)] }
+        Fragment.of(cells.transform_values(&:first), cells.transform_values(&:last))
+      end
+
+      # [what #readings reads of a sign, its lost positions as #gone gives
+      # them]: its surviving strokes and its lost ones, turned as it lies
+      def sign_reading(sign)
+        gone = sign.lost.map { |stroke| sign.turned ? Glyphs.turn(stroke) : stroke }
+        seen = sign.strokes
+        [[candidates(seen, gone), candidates(turned(seen), turned(gone)), gone.any?], gone.map(&Glyphs::CANONICAL)]
       end
     end
 
@@ -554,11 +582,12 @@ module Cistergraphia
       # The board, and below it a tray a little wider: fragments as wide as the
       # board fit side by side. Damage is Weathering's, by reading index
       def render(sequence, layout, pieces, random, damage = {})
-        size = Integer.sqrt(sequence.size)
-        tray = tray_below(size, layout)
-        fragments = lay(pieces, [sequence, damage], layout, tray, random)
-        defs = damage.empty? ? board(size, layout) : "  #{Lacunae::PATTERN}\n#{board(size, layout)}"
-        document(tray.room + (2 * BOARD), tray.bottom + BOARD, defs, fragments)
+        Fragments.drawn(sequence, layout, pieces, random, damage).first
+      end
+
+      # The board, with the hatch of a break first when the plate is worn
+      def defs(size, layout, damage)
+        damage.empty? ? board(size, layout) : "  #{Lacunae::PATTERN}\n#{board(size, layout)}"
       end
 
       def tray_below(size, layout)
@@ -566,12 +595,14 @@ module Cistergraphia
         Skyline.new(BOARD + height + GAP, width + ((MAX_PIECES - 1) * GAP))
       end
 
-      # The fragments drawn in the tray, the tallest first (in shuffled order among equals)
+      # The fragments drawn in the tray, the tallest first (in shuffled order
+      # among equals), each as [its markup, the signs it was drawn from]
       def lay(pieces, (sequence, damage), layout, tray, random)
         where = reading_order(Integer.sqrt(sequence.size), layout)
         tallest = pieces.shuffle(random: random).each_with_index.sort_by { |piece, i| [-piece.rows, i] }.map(&:first)
         tallest.map do |piece|
-          fragment(box(piece, layout), signs(piece, [sequence, damage], where), tray, random)
+          signs = signs(piece, [sequence, damage], where)
+          [fragment(box(piece, layout), signs, tray, random), signs]
         end
       end
 

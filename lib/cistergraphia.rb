@@ -138,8 +138,9 @@ module Cistergraphia
     Tablet.check(passphrase, layout) if tablet
     100.times do
       sequence = encode(message, passphrase: passphrase, even: layout.is_a?(Grille), tablet: tablet, random: random)
-      svg = to_svg(sequence, layout: layout, tally: tally, pathless: pathless, tablet: tablet)
-      return [sequence, svg] if passphrase || layout.is_a?(Grille) || unambiguous?(svg, layout)
+      next unless passphrase || layout.is_a?(Grille) || Along.alone?(sequence, layout)
+
+      return [sequence, to_svg(sequence, layout: layout, tally: tally, pathless: pathless, tablet: tablet)]
     end
     raise Error, 'Could not draw an unambiguous plate for this message'
   end
@@ -218,6 +219,7 @@ require_relative 'cistergraphia/glyphs'
 require_relative 'cistergraphia/stylus'
 require_relative 'cistergraphia/grille'
 require_relative 'cistergraphia/layout'
+require_relative 'cistergraphia/along'
 require_relative 'cistergraphia/pathless'
 require_relative 'cistergraphia/tablet'
 require_relative 'cistergraphia/notebook'

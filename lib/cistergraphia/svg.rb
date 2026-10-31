@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rexml/document'
+require 'rexml/parsers/baseparser'
 
 module Cistergraphia
   # Lays a sequence out along a reading path (a layout) in an SVG document,
@@ -96,9 +97,9 @@ module Cistergraphia
 
     # True for a plate written under a grille: only those are square
     def square?(svg)
-      root = Parsed.of(svg).root
-      width = root&.attributes&.[]('width').to_s
-      root&.name == 'svg' && !width.empty? && width == root.attributes['height'].to_s
+      root = Layers.of(svg)[:root]
+      width = root&.[](:width).to_s
+      root&.[](:name) == 'svg' && !width.empty? && width == root[:height].to_s
     end
 
     # The grille as a stencil to print and cut, at the scale of its n x n plate:
@@ -137,12 +138,17 @@ module Cistergraphia
     # or (layer: :lacunae) the stroke positions a weathered plate has lost, or
     # (layer: :tally) the tally signs. Frozen: the layers are read once per file
     def lines(svg, layer: :strokes)
-      Layers.of(svg).fetch(layer)
+      found = Layers.of(svg)
+      raise DecodeError, 'Not an SVG document' unless found[:root]&.[](:name) == 'svg'
+
+      found.fetch(layer)
     end
 
-    # A file's lines by layer, read in one pass from its document (Parsed)
-    # and kept for the file last read on this thread: a page lays a puzzle from
-    # one file a dozen times (the survey, the tally, the decoder, the way)
+    # A file's root and lines by layer, read in one pass and kept for the file
+    # last read on this thread: a page lays a puzzle from one file a dozen
+    # times (the survey, the tally, the decoder, the way). The pass streams
+    # the file (Stream) unless its document is parsed already, or will be: a
+    # broken plate's fragments are read from the document (Fragments.read)
     module Layers
       module_function
 
@@ -156,15 +162,26 @@ module Cistergraphia
       end
 
       def read(text)
-        root = Parsed.of(text).root
-        raise DecodeError, 'Not an SVG document' unless root&.name == 'svg'
+        found = streamed(text) || from(Parsed.of(text).root)
+        found.transform_values { |value| value.is_a?(Array) ? value.each(&:freeze).freeze : value }.freeze
+      end
 
-        found = { strokes: [], lacunae: [], tally: [] }
-        root.each_recursive do |node|
+      # The file streamed, unless its document is parsed already or will be
+      # (a broken plate's fragments are read from it); nil then
+      def streamed(text)
+        Stream.read(text) unless Parsed.kept(text) || Fragments.broken?(text)
+      end
+
+      # { root: { name:, width:, height: } (nil without one), strokes: [...],
+      # lacunae: [...], tally: [...] } from a parsed document
+      def from(root)
+        found = { root: root && { name: root.name, width: root.attributes['width'], height: root.attributes['height'] },
+                  strokes: [], lacunae: [], tally: [] }
+        root&.each_recursive do |node|
           layer = layer_of(node)
           found[layer] << line(node) if layer
         end
-        found.transform_values { |lines| lines.each(&:freeze).freeze }.freeze
+        found
       end
 
       # Strokes are lines in no named layer; lacunae and tally signs have their own
@@ -180,6 +197,92 @@ module Cistergraphia
 
       def line(node)
         %w[x1 y1 x2 y2].map { |attr| SVG.coordinate(node.attributes[attr]) }
+      end
+
+      # The layer a line's parent's class names (nil: not a line of any)
+      def layer_named(parent_class)
+        case parent_class
+        when nil then :strokes
+        when Lacunae::CLASS then :lacunae
+        when Tally::CLASS then :tally
+        end
+      end
+    end
+
+    # A file's root and lines read as its document would give them, without
+    # building the document: a plate is ten thousand elements, nearly all of
+    # them wedges the decoder never reads, and building them cost more than
+    # half the reading. The same parser underneath (REXML's), so a file that
+    # is not well-formed is refused as the document refuses it. Only the files
+    # this library writes, and those like them, are read this way: anything a
+    # document would read differently (a DOCTYPE and its entities, an entity
+    # in a value, a prefixed name, text) gives nil, and is read whole
+    class Stream
+      QUIET = %i[comment xmldecl processing_instruction].freeze # events a plate may hold that change no reading
+      MALFORMED = 'Unreadable SVG: not well-formed XML'
+
+      def self.read(text)
+        return if text.empty? # a document without a root, never parsed
+
+        new.read(REXML::Parsers::BaseParser.new(text))
+      rescue REXML::ParseException
+        raise DecodeError, MALFORMED
+      end
+
+      def initialize
+        @found = { root: nil, strokes: [], lacunae: [], tally: [] }
+        @open = [] # the class of each element not yet closed
+      end
+
+      def read(parser)
+        loop do
+          event = parser.pull
+          case event.first
+          when :end_document then return @found
+          when :end_element then @open.pop
+          else return unless take(*event)
+          end
+        end
+      end
+
+      private
+
+      # Whether an event is read; false when the document should read the file
+      def take(kind, *details)
+        case kind
+        when :start_element then start(*details)
+        when :text then details.first.strip.empty?
+        else QUIET.include?(kind)
+        end
+      end
+
+      def start(name, attributes)
+        return false unless plain?(name, attributes)
+
+        root(name, attributes)
+        line(name, attributes)
+        @open << attributes['class']
+      end
+
+      def root(name, attributes)
+        raise DecodeError, MALFORMED if @open.empty? && @found[:root] # a second root, which the document refuses
+
+        @found[:root] ||= { name: name, width: attributes['width'], height: attributes['height'] }
+      end
+
+      # A line in its parent's layer. The document reads the root's
+      # descendants, never the root itself
+      def line(name, attributes)
+        return unless name == 'line' && !@open.empty?
+
+        layer = Layers.layer_named(@open.last) or return
+        @found[layer] << %w[x1 y1 x2 y2].map { |attr| SVG.coordinate(attributes[attr]) }
+      end
+
+      def plain?(name, attributes)
+        !name.include?(':') && attributes.none? do |key, value|
+          (key.include?(':') && !key.start_with?('xmlns:')) || value.include?('&')
+        end
       end
     end
 
@@ -198,6 +301,11 @@ module Cistergraphia
           kept.clear
           kept[text] = SVG.parse(text)
         end
+      end
+
+      # The document of a file already parsed on this thread, or nil
+      def kept(svg)
+        Thread.current[:cistergraphia_document]&.[](svg.to_s)
       end
 
       # What the thread keeps of the last file read (its document, its lines),

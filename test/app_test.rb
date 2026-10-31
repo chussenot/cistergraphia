@@ -40,14 +40,16 @@ class AppTest < Minitest::Test
     assert_includes last_response.headers['Cache-Control'], 'no-store'
   end
 
-  # Counts the plates parsed on this thread while Thread.current[:parses] is set
+  # Counts the plates parsed on this thread while Thread.current[:parses] is
+  # set, whether the file is built into a document or streamed (SVG::Stream):
+  # either way, REXML's parser reads it once
   module CountParses
     def initialize(*args)
       Thread.current[:parses] += 1 if Thread.current[:parses] && args.first.is_a?(String) && args.first.size > 1000
       super
     end
   end
-  REXML::Document.prepend(CountParses)
+  REXML::Parsers::BaseParser.prepend(CountParses)
 
   # Parsing a large plate costs a quarter of a second: a page laid from one
   # file, or its transcription, parses it once (SVG::Parsed), cleaner and
@@ -826,6 +828,14 @@ class AppTest < Minitest::Test
 
     assert_equal 400, last_response.status
     assert_includes last_response.body, 'No signs found on this plate'
+  end
+
+  # Read for its puzzle, a file that does not parse is refused as the decoder refuses it
+  def test_decode_rejects_a_file_that_is_not_well_formed
+    post '/decode', svg: '<svg xmlns="http://www.w3.org/2000/svg"><g></svg>'
+
+    assert_equal 400, last_response.status
+    assert_includes last_response.body, 'Unreadable SVG: not well-formed XML'
   end
 
   def test_secret_mode_round_trip_through_the_web

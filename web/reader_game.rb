@@ -13,6 +13,7 @@ module ReaderGame
   def playable?(svg)
     return false if passphrase || params[:decipher] == '1'
 
+    parse_whole(svg)
     read_marks(svg)
     return false if two_to_find?
 
@@ -20,6 +21,16 @@ module ReaderGame
     return false unless @svg_content
 
     !lay(svg).nil?
+  end
+
+  # The puzzle redraws the file from its document (PlateFile.clean), so the
+  # document is parsed first: the readers that come before it (the marks, the
+  # survey) then read it too, and the file is parsed once, not streamed then
+  # parsed (SVG::Layers). A file that does not parse is refused where it is read
+  def parse_whole(svg)
+    Cistergraphia::SVG::Parsed.of(svg)
+  rescue Cistergraphia::DecodeError
+    nil
   end
 
   # A plate with its own tablet is a game only intact: the bench and the board
