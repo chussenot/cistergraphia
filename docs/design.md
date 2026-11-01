@@ -235,7 +235,8 @@ downloaded SVG is unchanged.
 The site is silent by default, and stays so until a reader presses **Hear the hand** in the
 colophon (pressed: **Silence**; kept in the browser as `cistergraphia.sound`, off by default;
 the press is also the gesture browsers require before a page may sound, so nothing is ever
-autoplayed). What is then heard is only the hand at work, the motions the page already makes.
+autoplayed, and is itself heard: one bite, so the reader knows at once that the hand can be
+heard). What is then heard is only the hand at work, the motions the page already makes.
 Nothing is heard that is not seen; no sound stands for a state; mistakes are silent (the
 absence is the mark); nothing loops. One pitched sound, the bell, rings once when a plate is
 complete, and the reader rings it. Everything is synthesised in `public/js/sound.js` with the
@@ -258,9 +259,25 @@ balance, navigation, forms, downloads, the toast, Lectio's ranks, pointing and w
 **Where the hand is.** Pan follows the sign's column within ±0.6, brightness its row (a
 low-pass from 6 kHz at the top row to 2.5 kHz at the bottom), so the snail is audible as it
 coils inward. Bites are thinned to at most 25 a second: a long plate is a patter that follows
-the drying front, never a hail. Peaks sit around −20 dBFS for the bite, −14 for the sherd and
-the turn, −10 for the bell, through one soft limiter; no reverb but the bell's own decay; in
-Vigils everything is 6 dB quieter. The context sleeps after 30 s without a sound.
+the drying front, never a hail.
+
+**How loud.** Levels are set for what a laptop's or a phone's speaker gives back, which is
+nothing below about 300 Hz: the bite is heard by its tick, its knock is body for headphones.
+Measured as the loudest 50 ms above 300 Hz, the bell sits near −20 dB, the sherd, the turn,
+the join and the parchment near −24 to −28, the bite and the lift, the most frequent, near
+−32 to −36 (a bite between −39 and −28 by its stroke, the same stroke always alike: its noise
+is seeded too); peaks stay well under full scale. The gains are `LEVELS` in `sound.js`, and `rake ui:play` renders
+every sound and holds each above −38 dB, under −1 dBFS, and the bell above all ("sound
+levels"). The sum passes through a stateless soft clip, untouched below −6 dBFS: a
+compressor made with the context squashes its first 50 ms by 15 dB, which is where the
+reader's first press falls. No reverb but the bell's own decay; in Vigils everything is 6 dB
+quieter. The context sleeps after 30 s without a sound.
+
+**When the browser lets it.** A page opened with the sound already on (a reload, a link, a
+return visit) may not sound before a press on it: Safari and Firefox ask for one, and Chrome
+too unless the page was reached by one. Until then what is asked is dropped, not queued (a
+queue would sound all at once at the first press), and the first press or key on the page
+wakes the context.
 
 **One clock.** Sound is bound to the hand's timing (`ink:press` carries the wedge and its
 delay), not to the data. Under `prefers-reduced-motion` the hand is instant, so a sign set

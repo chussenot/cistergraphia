@@ -32,9 +32,10 @@
     return ((h >>> 0) % 10007) / 10007;
   }
 
-  // The bite's band centre (Hz), length (s) and knock (Hz) for a stroke: a short
-  // stroke bites bright and brief, the stem duller and longer; each a little
-  // uneven by its seed, as the wedge is by the hand
+  // The bite's band centre (Hz), length (s), knock (Hz) and grain (where in the
+  // noise it starts, s) for a stroke: a short stroke bites bright and brief,
+  // the stem duller and longer; each a little uneven by its seed, as the wedge
+  // is by the hand, and always the same for the same stroke
   function biteParams(coords, seed = 0) {
     const [x1, y1, x2, y2] = coords;
     const length = Math.min(1, Math.hypot(x2 - x1, y2 - y1) / 150); // a sign is 100 x 150
@@ -42,7 +43,8 @@
     return {
       centre: Math.round(3200 - (1400 * length) + (300 * wobble)),
       duration: 0.004 + (0.004 * length) + (0.001 * wobble),
-      knock: Math.round(150 + (30 * wobble) - (20 * length))
+      knock: Math.round(150 + (30 * wobble) - (20 * length)),
+      grain: 0.9 * seed
     };
   }
 
@@ -69,7 +71,41 @@
   // tierce, quint, nominal: a bronze bell's inharmonic voice
   const BELL = [[0.5, 0.5, 5], [1, 1, 4], [1.2, 0.6, 3], [1.5, 0.4, 2.5], [2, 0.3, 2]];
 
-  const pure = { seedOf, biteParams, placeOf, headOf, BELL, MIN_GAP };
+  // How loud each part of each sound is: its gain at the peak. A laptop's or
+  // a phone's speaker gives nothing below about 300 Hz, so what must be heard
+  // sits above it: the bite is its tick (the knock is body, for headphones),
+  // the sherd its thud and rings. test/ui/play.js renders every sound and
+  // holds each above a floor ("sound levels"); docs/design.md has the targets
+  const LEVELS = {
+    tick: 4.5, knock: 0.12, lift: 0.4, thud: 1.1, ring: 0.4,
+    turn: 1.8, parchment: 0.45, bell: 0.22, strike: 0.12
+  };
+
+  // The guard on the sum, instead of a compressor: what any sound or sum of
+  // sounds is below -6 dBFS passes untouched, above it is rounded off, and
+  // nothing ever reaches full scale. Stateless, so it has no attack, release
+  // or warm-up: a compressor made with the context squashes the first 50 ms
+  // it hears by 15 dB, and the first sound heard is the reader's first press
+  function softClip(x) {
+    const size = Math.abs(x);
+    if (size <= 0.5) return x;
+    return Math.sign(x) * (0.5 + (0.5 * Math.tanh((size - 0.5) / 0.5)));
+  }
+
+  // A second of white noise in [-1, 1), the same on every page (a small
+  // linear congruential generator): a stroke's bite is cut from it at its
+  // grain, so it sounds the same on every visit, and as loud
+  function noiseOf(length) {
+    const samples = new Float32Array(length);
+    let state = 0x2545f491;
+    for (let i = 0; i < length; i += 1) {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+      samples[i] = (state / 2147483648) - 1;
+    }
+    return samples;
+  }
+
+  const pure = { seedOf, noiseOf, biteParams, placeOf, headOf, BELL, MIN_GAP, LEVELS, softClip };
   if (typeof module !== 'undefined' && module.exports) module.exports = pure;
   if (typeof document === 'undefined') return;
 
@@ -78,9 +114,10 @@
   let ctx = null;
   let master = null;
   let noiseBuffer = null;
-  let lastBite = 0;
-  let bellUntil = 0;
+  let lastBite = -Infinity;
+  let bellUntil = -Infinity;
   let sleep = null;
+  let heard = false; // the context has run once: the browser lets this page sound
   const voices = new Set(); // the teardown timers of the voices still sounding
 
   // A promise the page need not wait for: resume() and suspend() reject once
@@ -98,23 +135,25 @@
     ctx = new Context();
     master = ctx.createGain();
     master.gain.value = level();
-    const limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -12;
-    limiter.ratio.value = 12;
-    limiter.attack.value = 0.002;
-    limiter.release.value = 0.1;
-    master.connect(limiter).connect(ctx.destination);
+    const guard = ctx.createWaveShaper();
+    const curve = new Float32Array(1025);
+    for (let i = 0; i < curve.length; i += 1) curve[i] = softClip(((2 * i) / (curve.length - 1)) - 1);
+    guard.curve = curve;
+    master.connect(guard).connect(ctx.destination);
+    const running = () => { if (ctx.state === 'running') heard = true; };
+    ctx.addEventListener('statechange', running);
+    running();
     noiseBuffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-    const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2) - 1;
+    noiseBuffer.getChannelData(0).set(noiseOf(ctx.sampleRate));
     night.addEventListener('change', () => { if (master) master.gain.setTargetAtTime(level(), ctx.currentTime, 0.05); });
     return ctx;
   }
 
   // The context wakes for a sound and sleeps after a while without one
+  // ('interrupted': Safari's, by a call or another app)
   function awake() {
     if (!instrument()) return null;
-    if (ctx.state === 'suspended') quietly(ctx.resume());
+    if (ctx.state !== 'running') quietly(ctx.resume());
     clearTimeout(sleep);
     sleep = setTimeout(() => { if (ctx && ctx.state === 'running') quietly(ctx.suspend()); }, IDLE);
     return ctx;
@@ -143,12 +182,12 @@
     clearTimeout(sleep);
   });
 
-  function noise(when, until) {
+  // Noise from `grain` s into the buffer: the bite's own grain, anywhere for the rest
+  function noise(when, until, grain = Math.random() * 0.9) {
     const source = ctx.createBufferSource();
     source.buffer = noiseBuffer;
     source.loop = true;
-    source.loopStart = Math.random() * 0.5;
-    source.start(when);
+    source.start(when, grain);
     source.stop(until);
     return source;
   }
@@ -168,7 +207,7 @@
   }
 
   // The stylus biting clay: a dry tick in its band, with a faint low knock
-  function bite(when, { centre, duration, knock }, { pan = 0, depth = 0 } = {}) {
+  function bite(when, { centre, duration, knock, grain }, { pan = 0, depth = 0 } = {}) {
     if (when < lastBite + MIN_GAP) return; // thinned to a patter
     lastBite = when;
     const until = when + duration + 0.05;
@@ -176,12 +215,12 @@
     const far = filter('lowpass', 6000 - (3500 * depth));
     far.connect(out);
     const tick = ctx.createGain();
-    envelope(tick, when, 0.45, 0.0005, when + duration);
-    noise(when, when + duration + 0.005).connect(filter('bandpass', centre, 5)).connect(tick).connect(far);
+    envelope(tick, when, LEVELS.tick, 0.0005, when + duration);
+    noise(when, when + duration + 0.005, grain).connect(filter('bandpass', centre, 5)).connect(tick).connect(far);
     const osc = ctx.createOscillator();
     osc.frequency.value = knock;
     const thud = ctx.createGain();
-    envelope(thud, when, 0.12, 0.001, when + 0.04);
+    envelope(thud, when, LEVELS.knock, 0.001, when + 0.04);
     osc.connect(thud).connect(far);
     osc.start(when);
     osc.stop(when + 0.05);
@@ -191,7 +230,7 @@
   function lift(when, pan = 0) {
     const until = when + 0.015;
     const out = voice(pan, until);
-    envelope(out, when, 0.15, 0.002, until);
+    envelope(out, when, LEVELS.lift, 0.002, until);
     noise(when, until).connect(filter('highpass', 3000)).connect(out);
   }
 
@@ -200,13 +239,13 @@
     const until = when + 0.13;
     const out = voice(pan, until);
     const thud = ctx.createGain();
-    envelope(thud, when, 0.7, 0.003, when + 0.1);
+    envelope(thud, when, LEVELS.thud, 0.003, when + 0.1);
     noise(when, when + 0.1).connect(filter('lowpass', 600)).connect(thud).connect(out);
     [320, 530].forEach((hz, i) => {
       const osc = ctx.createOscillator();
       osc.frequency.value = hz;
       const ring = ctx.createGain();
-      envelope(ring, when, 0.25 / (i + 1), 0.002, when + 0.12);
+      envelope(ring, when, LEVELS.ring / (i + 1), 0.002, when + 0.12);
       osc.connect(ring).connect(out);
       osc.start(when);
       osc.stop(until);
@@ -217,7 +256,7 @@
   function join(when, pan = 0) {
     const params = biteParams([0, 0, 40, 0], 0.5);
     [0, 0.012].forEach((gap) => {
-      lastBite = 0;
+      lastBite = -Infinity;
       bite(when + gap, params, { pan });
     });
   }
@@ -229,7 +268,7 @@
     const until = start + 0.4;
     const out = voice(0, until);
     out.gain.setValueAtTime(0.0001, start);
-    out.gain.linearRampToValueAtTime(0.9, start + 0.12);
+    out.gain.linearRampToValueAtTime(LEVELS.turn, start + 0.12);
     out.gain.exponentialRampToValueAtTime(0.0001, until);
     const band = filter('bandpass', 420, 2);
     band.frequency.linearRampToValueAtTime(240, until);
@@ -244,9 +283,9 @@
     const out = voice(0, until);
     if (kind === 'lift') {
       out.gain.setValueAtTime(0.0001, when);
-      out.gain.linearRampToValueAtTime(0.3, until - 0.02);
+      out.gain.linearRampToValueAtTime(LEVELS.parchment, until - 0.02);
       out.gain.linearRampToValueAtTime(0, until);
-    } else envelope(out, when, 0.3, 0.02, until);
+    } else envelope(out, when, LEVELS.parchment, 0.02, until);
     const band = filter('bandpass', kind === 'turn' ? 4500 : 4000, 1);
     if (kind === 'turn') band.frequency.linearRampToValueAtTime(3000, until);
     noise(when, until).connect(filter('highpass', 1500)).connect(band).connect(out);
@@ -264,14 +303,14 @@
       const osc = ctx.createOscillator();
       osc.frequency.value = BELL_HZ * ratio;
       const partial = ctx.createGain();
-      partial.gain.setValueAtTime(0.22 * amount, when);
+      partial.gain.setValueAtTime(LEVELS.bell * amount, when);
       partial.gain.exponentialRampToValueAtTime(0.0001, when + decay);
       osc.connect(partial).connect(out);
       osc.start(when);
       osc.stop(when + decay + 0.1);
     });
     const strike = ctx.createGain();
-    envelope(strike, when, 0.12, 0.001, when + 0.01);
+    envelope(strike, when, LEVELS.strike, 0.001, when + 0.01);
     noise(when, when + 0.015).connect(filter('bandpass', 2000, 2)).connect(strike).connect(out);
   }
 
@@ -288,22 +327,29 @@
     return head ? placeOf(head, layouts.get(frame)) : { pan: 0, depth: 0 };
   }
 
+  // When a sound asked for now (or after a delay, in ms) is to start, or null
+  // when it cannot sound. A context the browser has not yet let run (a page
+  // opened with the sound on, no press on it yet) stays at time 0, and what is
+  // asked of it is dropped: queued, it would all sound at once when the reader
+  // first presses something. Asleep, it keeps its place and wakes for it
   function at(delay = 0) {
-    return awake() && ctx.currentTime + (delay / 1000);
+    if (!awake()) return null;
+    if (ctx.state !== 'running' && !heard) return null;
+    return ctx.currentTime + (delay / 1000);
   }
 
   document.addEventListener('ink:press', (event) => {
     if (!enabled) return;
     const { mark, delay } = event.detail;
     const when = at(delay);
-    if (!when) return;
+    if (when === null) return;
     const coords = (mark.dataset.stroke || '0,0,0,150').split(',').map(Number);
     bite(when, biteParams(coords, seedOf(mark.dataset.stroke || mark.getAttribute('d'))), whereIs(mark));
   });
   document.addEventListener('ink:lift', (event) => {
     if (!enabled) return;
     const when = at();
-    if (when) lift(when, whereIs(event.detail.mark).pan);
+    if (when !== null) lift(when, whereIs(event.detail.mark).pan);
   });
   const hands = {
     bite: (when) => bite(when, biteParams([0, 0, 60, 0], 0.5)),
@@ -317,8 +363,17 @@
     document.addEventListener(`hand:${kind}`, (event) => {
       if (!enabled) return;
       const when = at();
-      if (when) play(when, event.detail || {});
+      if (when !== null) play(when, event.detail || {});
     });
+  });
+
+  // A page opened with the sound on may not sound before the reader's first
+  // press on it (Safari, Firefox; Chrome after a while away): the first press
+  // or key wakes the context, inside the gesture the browser asks for
+  ['pointerdown', 'keydown', 'touchend'].forEach((type) => {
+    document.addEventListener(type, () => {
+      if (enabled && !(ctx && ctx.state === 'running')) awake();
+    }, { capture: true, passive: true });
   });
 
   // ---------- The one control: Hear the hand / Silence ----------
@@ -333,8 +388,15 @@
     control.addEventListener('click', () => {
       enabled = !enabled;
       try { localStorage.setItem(KEY, enabled ? 'on' : 'off'); } catch (error) { /* private mode: for this page */ }
-      if (enabled) awake(); // the press is the gesture the browser asks for
-      else if (ctx) quietly(ctx.suspend());
+      if (enabled) {
+        // The press is the gesture the browser asks for, and is itself heard:
+        // one bite, once the context runs, so the reader knows at once
+        if (awake()) {
+          quietly(ctx.resume().then(() => {
+            if (enabled) hands.bite(ctx.currentTime);
+          }));
+        }
+      } else if (ctx) quietly(ctx.suspend());
       show();
     });
   }

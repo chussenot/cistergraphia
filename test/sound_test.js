@@ -2,7 +2,7 @@
 // from what made it. Run: node --test test/sound_test.js (or bundle exec rake test:sound)
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { seedOf, biteParams, placeOf, headOf, BELL, MIN_GAP } = require('../public/js/sound.js');
+const { seedOf, noiseOf, biteParams, placeOf, headOf, BELL, MIN_GAP, LEVELS, softClip } = require('../public/js/sound.js');
 
 test('a stroke always seeds the same, and different strokes differ', () => {
   assert.equal(seedOf('0,0,0,150'), seedOf('0,0,0,150'));
@@ -61,4 +61,46 @@ test('the bell is one bronze voice: five partials, the prime loudest, the hum lo
 
 test('bites are thinned to a patter: at most twenty-five a second', () => {
   assert.ok(1 / MIN_GAP <= 25);
+});
+
+test('the guard on the sum: untouched below -6 dBFS, rounded above, never full scale', () => {
+  for (const x of [0, 0.1, -0.25, 0.5, -0.5]) assert.equal(softClip(x), x, `${x} passes untouched`);
+  let last = -Infinity;
+  for (let x = -4; x <= 4; x += 0.01) {
+    const y = softClip(x);
+    assert.ok(y >= last, 'never folds back');
+    assert.ok(Math.abs(y) < 1, `${x.toFixed(2)} stays under full scale`);
+    assert.equal(Math.sign(y), Math.sign(x) || Math.sign(y));
+    last = y;
+  }
+  assert.ok(softClip(0.6) < 0.6 && softClip(0.6) > 0.55, 'rounded off gently');
+});
+
+test('every part of every sound has a level, and the bite is carried by its tick', () => {
+  for (const part of ['tick', 'knock', 'lift', 'thud', 'ring', 'turn', 'parchment', 'bell', 'strike']) {
+    assert.ok(LEVELS[part] > 0 && Number.isFinite(LEVELS[part]), part);
+  }
+  // A laptop's or phone's speaker gives nothing of the knock (120 to 180 Hz):
+  // the tick is what is heard of a bite, and must lead it
+  assert.ok(LEVELS.tick > 10 * LEVELS.knock, 'the tick leads the knock by more than 20 dB');
+});
+
+test('the noise is the same on every page, white, and within [-1, 1)', () => {
+  const a = noiseOf(48000);
+  assert.deepEqual(noiseOf(48000), a);
+  let sum = 0;
+  let squares = 0;
+  for (const v of a) {
+    assert.ok(v >= -1 && v < 1);
+    sum += v;
+    squares += v * v;
+  }
+  assert.ok(Math.abs(sum / a.length) < 0.01, 'centred');
+  assert.ok(Math.abs((squares / a.length) - (1 / 3)) < 0.01, 'the power of uniform white noise');
+});
+
+test('a stroke bites from its own grain of the noise, the same every time', () => {
+  const seed = seedOf('50,0,50,150');
+  assert.equal(biteParams([50, 0, 50, 150], seed).grain, biteParams([50, 0, 50, 150], seed).grain);
+  assert.ok(biteParams([0, 0, 0, 150], 0.999).grain < 0.9, 'within the second of noise');
 });

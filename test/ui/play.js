@@ -586,6 +586,86 @@ async function sounds() {
   await ctx.close();
 }
 
+// ---------- Sound levels: every sound heard through a small speaker ----------
+// The node counts above prove that sounds are made, not that they can be
+// heard: the bite once sat 27 dB under the bell, its weight in a knock no
+// laptop speaker gives back, and a reader heard nothing. Here sound.js, as the
+// site serves it, renders each sound offline, and each is held to a floor
+// (heard at an ordinary volume) and a ceiling (never full scale), with the bell
+// above all. Loudness: the loudest 50 ms, high-passed at 300 Hz (what a
+// laptop's or a phone's speaker gives back), in dB below full scale
+const LEVEL_SHIM = (seconds) => `
+  localStorage.setItem('cistergraphia.sound', 'on');
+  window.AudioContext = function () {
+    if (!window.__ctx) {
+      window.__ctx = new OfflineAudioContext(2, 48000 * ${seconds}, 48000);
+      window.__ctx.resume = () => Promise.resolve();
+      Object.defineProperty(window.__ctx, 'state', { get: () => 'running' });
+    }
+    return window.__ctx;
+  };
+  AudioNode.prototype.disconnect = function () {};
+`;
+const LEVEL_SOUNDS = [
+  ['the bite', 'ink:press', { stroke: '50,0,50,150' }],
+  ['the lift', 'ink:lift', { stroke: '50,0,100,0' }],
+  ['the sherd', 'hand:sherd', { pan: 0 }],
+  ['the join', 'hand:sherd', { pan: 0, joined: true }],
+  ['the turn', 'hand:turn', {}],
+  ['the parchment laid', 'hand:parchment', { kind: 'lay' }],
+  ['the parchment turned', 'hand:parchment', { kind: 'turn' }],
+  ['the parchment lifted', 'hand:parchment', { kind: 'lift' }],
+  ['the bell', 'hand:bell', {}]
+];
+const FLOOR = -38; // dB: the bite once measured -47
+async function soundLevels() {
+  const ctx = await context({ colorScheme: 'light' });
+  await ctx.route(`${baseUrl}/sound-levels`, (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>levels</title><script src="/js/sound.js"></script>' }));
+  const heard = {};
+  for (const [name, type, detail] of LEVEL_SOUNDS) {
+    const page = await ctx.newPage();
+    await page.addInitScript(LEVEL_SHIM(6));
+    await page.goto(`${baseUrl}/sound-levels`);
+    heard[name] = await page.evaluate(async ([type, detail]) => {
+      const ctx = new AudioContext();
+      ctx.suspend(0.05).then(() => {
+        const mark = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        mark.dataset.stroke = detail.stroke || '';
+        document.dispatchEvent(new CustomEvent(type, { detail: type.startsWith('ink:') ? { mark, delay: 0 } : detail }));
+        OfflineAudioContext.prototype.resume.call(ctx);
+      });
+      const buffer = await ctx.startRendering();
+      const [left, right] = [buffer.getChannelData(0), buffer.getChannelData(1)];
+      const w = (2 * Math.PI * 300) / buffer.sampleRate;
+      const alpha = Math.sin(w) / (2 * Math.SQRT1_2);
+      const cos = Math.cos(w);
+      const a0 = 1 + alpha;
+      const [b0, b1, a1, a2] = [(1 + cos) / 2 / a0, -(1 + cos) / a0, (-2 * cos) / a0, (1 - alpha) / a0];
+      const span = Math.round(0.05 * buffer.sampleRate);
+      const squares = new Float64Array(left.length);
+      let [x1, x2, y1, y2, peak, sum, loudest] = [0, 0, 0, 0, 0, 0, 0];
+      for (let i = 0; i < left.length; i += 1) {
+        peak = Math.max(peak, Math.abs(left[i]), Math.abs(right[i]));
+        const x = (left[i] + right[i]) / 2;
+        const y = (b0 * x) + (b1 * x1) + (b0 * x2) - (a1 * y1) - (a2 * y2);
+        [x2, x1, y2, y1] = [x1, x, y1, y];
+        squares[i] = y * y;
+        sum += squares[i] - (i >= span ? squares[i - span] : 0);
+        loudest = Math.max(loudest, sum / span);
+      }
+      const db = (v) => Math.round(20 * Math.log10(Math.max(v, 1e-9)) * 10) / 10;
+      return { peak: db(peak), loudness: db(Math.sqrt(loudest)) };
+    }, [type, detail]);
+    await page.close();
+    const { peak, loudness } = heard[name];
+    check('levels', `${name}: heard (${loudness} dB), never full scale (peak ${peak} dBFS)`, loudness >= FLOOR && peak <= -1, `floor ${FLOOR} dB, ceiling -1 dBFS`);
+  }
+  const bell = heard['the bell'].loudness;
+  check('levels', 'the bell above every other sound', Object.entries(heard).every(([name, { loudness }]) => name === 'the bell' || loudness < bell), JSON.stringify(heard));
+  check('levels', 'the bite, the most frequent, below the sherd and the turn', heard['the bite'].loudness < Math.min(heard['the sherd'].loudness, heard['the turn'].loudness), JSON.stringify(heard));
+  await ctx.close();
+}
+
 // ---------- Accessibility: axe-core on every page state, both themes ----------
 async function accessibility() {
   const axe = fs.readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
@@ -676,8 +756,10 @@ async function budgets() {
   await board();
   await lectio();
   await grille();
-  if (BROWSER === 'chromium') await sounds();
-  else console.log('skip  sound     the node counts are taken on Chromium');
+  if (BROWSER === 'chromium') {
+    await sounds();
+    await soundLevels();
+  } else console.log('skip  sound     the node counts and the levels are taken on Chromium');
   await accessibility();
   await budgets();
   await browser.close();
