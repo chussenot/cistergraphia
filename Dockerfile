@@ -10,7 +10,7 @@
 # moved, a digest cannot, so the image built is the one that was reviewed.
 # Dependabot proposes the next one (tag and digest together).
 
-FROM ruby:4.0.9-slim@sha256:e41d40671d359ccc3431371e0af7c6430bd1b3886b47ac0667443525b7dcec1a AS gems
+FROM ruby:4.0.9-slim@sha256:d8cb2c0714bdaba0f318af897a01d2dbde3cfa8e62d47e99cea55feb13c0e90d AS gems
 ENV BUNDLE_WITHOUT=development:test \
     BUNDLE_DEPLOYMENT=1 \
     BUNDLE_PATH=/usr/local/bundle \
@@ -23,7 +23,7 @@ COPY Gemfile Gemfile.lock ./
 RUN bundle install \
     && rm -rf "${BUNDLE_PATH}"/ruby/*/cache
 
-FROM ruby:4.0.9-slim@sha256:e41d40671d359ccc3431371e0af7c6430bd1b3886b47ac0667443525b7dcec1a
+FROM ruby:4.0.9-slim@sha256:d8cb2c0714bdaba0f318af897a01d2dbde3cfa8e62d47e99cea55feb13c0e90d
 ENV RACK_ENV=production \
     BUNDLE_WITHOUT=development:test \
     BUNDLE_DEPLOYMENT=1 \
